@@ -48,9 +48,12 @@ write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo)))
 if (skipOsm) console.log('osm: skipped (--no-osm), keeping', existsSync(`${OUT}/osm.json`) ? 'the existing file' : 'nothing (run without --no-osm somewhere Overpass works)')
 else {
   let last
-  for (const ep of EPS) {
+  // Overpass answers 406 to clients without a User-Agent / Accept header, and 429 when busy: identify ourselves and retry the list.
+  const OVERPASS_HEADERS = { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json', 'user-agent': 'zaragoza-free-map data refresh (https://github.com/IFAKA/zaragoza-free-map)' }
+  for (const ep of [...EPS, ...EPS]) {
+    if (last) await new Promise(r => setTimeout(r, 15000))
     try {
-      const j = await get(ep, 'json', 120000, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(OSM_QUERY) })
+      const j = await get(ep, 'json', 120000, { method: 'POST', headers: OVERPASS_HEADERS, body: 'data=' + encodeURIComponent(OSM_QUERY) })
       if (!Array.isArray(j.elements)) throw new Error('bad response')
       const o = splitOsm(j.elements)
       const n = o.wifi.length + o.water.length + o.toilets.length + o.charge.length
