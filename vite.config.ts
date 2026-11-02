@@ -32,7 +32,7 @@ export default defineConfig({
         navigateFallback: 'index.html',
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.hostname.endsWith('basemaps.cartocdn.com'),
+            urlPattern: ({ url }) => url.hostname === 'server.arcgisonline.com',
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'map-tiles', expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 30 }, cacheableResponse: { statuses: [0, 200] } },
           },

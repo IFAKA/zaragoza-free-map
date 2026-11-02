@@ -19,7 +19,8 @@ const VARIANT: Record<Variant, string> = {
 const BTN = 'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:transform_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] disabled:opacity-50 motion-reduce:active:scale-100'
 /** Primary = solid red. Secondary = grey border, red text (always next to a primary). Link = text only. */
 export function Button({ variant = 'primary', className, ...p }: ComponentProps<typeof BaseButton> & { variant?: Variant }) {
-  return <BaseButton className={cn(BTN, VARIANT[variant], className as string)} {...p} />
+  const link = 'render' in p && !!p.render
+  return <BaseButton className={cn(BTN, VARIANT[variant], className as string)} {...p} {...(link ? { role: 'link' } : {})} />
 }
 /** A Button that is really a link (opens a page): use `render` with an <a>. */
 export const linkProps = (href: string) => ({ render: <a href={href} target="_blank" rel="noopener" />, nativeButton: false as const })

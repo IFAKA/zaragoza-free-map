@@ -23,7 +23,7 @@ const en = {
   privacy: 'Your location never leaves your device. No ads, no tracking. The app makes no data requests: everything is saved in it. Only map tiles load from the internet.',
   disclaimer: 'Independent project, not affiliated with the Ayuntamiento de Zaragoza. Visual style follows the city’s public design system.',
   dataRefreshed: 'Data refreshed', sources: 'Sources',
-  creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'toiletsgo community list', creditsTiles: 'Map tiles: CARTO and OpenStreetMap',
+  creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'toiletsgo community list', creditsTiles: 'Map tiles: Esri, HERE, Garmin and OpenStreetMap contributors',
   noGuarantee: 'Being listed does not mean a place works or is open right now.',
   fixOsm: 'Fix it on OpenStreetMap',
 }
@@ -50,7 +50,7 @@ const es: Record<Key, string> = {
   privacy: 'Tu ubicación no sale de tu dispositivo. Sin anuncios ni rastreo. La app no pide datos por internet: todo va guardado en ella. Solo los mapas se cargan de internet.',
   disclaimer: 'Proyecto independiente, sin relación con el Ayuntamiento de Zaragoza. El estilo visual sigue el sistema de diseño público del Ayuntamiento.',
   dataRefreshed: 'Datos actualizados', sources: 'Fuentes',
-  creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Lista comunitaria toiletsgo', creditsTiles: 'Mapas: CARTO y OpenStreetMap',
+  creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Lista comunitaria toiletsgo', creditsTiles: 'Mapas: Esri, HERE, Garmin y colaboradores de OpenStreetMap',
   noGuarantee: 'Aparecer en la lista no garantiza que el sitio funcione o esté abierto ahora.',
   fixOsm: 'Corrígelo en OpenStreetMap',
 }

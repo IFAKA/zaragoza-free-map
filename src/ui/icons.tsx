@@ -1,6 +1,5 @@
 import { BatteryCharging, Bicycle, BookOpenText, Drop, Toilet, WifiHigh, type Icon } from '@phosphor-icons/react'
-import { flushSync } from 'react-dom'
-import { createRoot } from 'react-dom/client'
+import { renderToStaticMarkup } from 'react-dom/server'
 import type { IconKey } from '../lib/types'
 
 export const ICONS: Record<IconKey, Icon> = { drop: Drop, toilet: Toilet, charge: BatteryCharging, wifi: WifiHigh, library: BookOpenText, bike: Bicycle }
@@ -10,12 +9,8 @@ const cache = new Map<IconKey, string>()
 export function iconHtml(key: IconKey): string {
   let h = cache.get(key)
   if (h === undefined) {
-    const host = document.createElement('div')
-    const root = createRoot(host)
     const I = ICONS[key]
-    flushSync(() => root.render(<I weight="fill" aria-hidden />))
-    h = host.innerHTML
-    root.unmount()
+    h = renderToStaticMarkup(<I weight="fill" aria-hidden />)
     cache.set(key, h)
   }
   return h

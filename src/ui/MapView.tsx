@@ -24,7 +24,10 @@ const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const dark = () => matchMedia('(prefers-color-scheme: dark)').matches
 /** WiFi range estimate in metres: ~40 m around a city building, ~25 m around an OpenStreetMap venue. */
 export const rangeMetres = (it: { building?: boolean }) => (it.building ? 40 : 25)
-const TILES = (d: boolean) => `https://{s}.basemaps.cartocdn.com/${d ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`
+// Esri light/dark gray canvas: keyless, looks like Positron / Dark Matter. CARTO's own tile URLs now answer "API KEY REQUIRED".
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/'
+const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`
+const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
 export function MapView({ layer, items, selected, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label }: Props) {
@@ -61,9 +64,10 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
     if (desktop) L.control.zoom({ position: 'topright' }).addTo(m)
     m.attributionControl.setPosition(desktop ? 'bottomright' : 'topleft')
     m.on('click', () => cb.current.onBackgroundClick())
-    const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, subdomains: 'abcd', attribution: '© OpenStreetMap contributors © CARTO' }).addTo(m)
+    const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(m)
+    const labels = L.tileLayer(LABELS(dark()), { maxZoom: 19, maxNativeZoom: 16, pane: 'shadowPane' }).addTo(m)
     const mq = matchMedia('(prefers-color-scheme: dark)')
-    const onScheme = () => tiles.setUrl(TILES(dark()))
+    const onScheme = () => { tiles.setUrl(TILES(dark())); labels.setUrl(LABELS(dark())) }
     mq.addEventListener('change', onScheme)
     rings.current = L.layerGroup().addTo(m)
     group.current = L.layerGroup().addTo(m)

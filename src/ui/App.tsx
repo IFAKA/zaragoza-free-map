@@ -17,8 +17,8 @@ const UP: Record<Page, Page | null> = { home: null, more: 'home', language: 'mor
 const up = (p: Page) => UP[p]
 
 // Drawer heights. Peek shows the tabs and the nearest place; half shows the controls too; full is the whole list.
-const PEEK = '248px', HALF = '500px', FULL = 1
-const PEEK_PX = 248, HALF_PX = 500
+const PEEK = '284px', HALF = '500px', FULL = 1
+const PEEK_PX = 284, HALF_PX = 500
 const SNAPS: (string | number)[] = [PEEK, HALF, FULL]
 
 const isLayer = (v: string | null): v is LayerId => !!v && v in LAYERS
