@@ -33,3 +33,6 @@ export function biziLine(t: TF, it: Pick<Item, 'bikes' | 'docks' | 'ebikes'>, el
 }
 /** Madrid clock time of a moment, "14:32". */
 export const clockMadrid = (ms: number) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }).format(ms)
+
+/** The " · " between two parts of a line, only when both parts have something to show ("", undefined and null count as nothing). */
+export const dotBetween = (a: unknown, b: unknown): string => (a && b ? ' · ' : '')

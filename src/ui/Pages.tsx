@@ -13,7 +13,7 @@ import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS, ORDER } from '../layers'
 import { rangeMetres } from './MapView'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
-import { BUZ_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, biziLine, busUrl, clockMadrid, dotBetween, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { ICONS } from './icons'
 import { useT } from './lang'
@@ -237,12 +237,13 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
 function Row({ item, layer, selected, counting, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; counting: boolean; onSelect: () => void }) {
   const { t, type } = useT()
   const closed = layer.hours && item.open === false
+  const rowLine = item.type === 'bizi' ? (biziLine(t, item) || (counting ? <span aria-hidden className="inline-block h-[0.8em] w-32 rounded-sm bg-surface align-middle" /> : type(item.type))) : item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note
   return (
     <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
       <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] after:absolute after:inset-0 hov:bg-surface active:scale-[.97] motion-reduce:active:scale-100">
         <span className={cn('min-w-0', closed && 'opacity-60')}>
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
-          <span className={cn(sub, 'block truncate')}>{item.type === 'bizi' ? (biziLine(t, item) || (counting ? <span aria-hidden className="inline-block h-[0.8em] w-32 rounded-sm bg-surface align-middle" /> : type(item.type))) : item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
+          <span className={cn(sub, 'block truncate')}>{rowLine}{dotBetween(rowLine, layer.hours)}{layer.hours && <Status item={item} layer={layer} />}</span>
         </span>
         <span className={cn('whitespace-nowrap text-right font-bold', closed && 'opacity-60')}>{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
       </BaseButton>
