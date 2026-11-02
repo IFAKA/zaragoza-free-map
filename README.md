@@ -1,6 +1,6 @@
-# Free services · Zaragoza
+# Zaragoza a mano (Zaragoza at hand)
 
-Mobile-first map of free water, toilets, phone charging, WiFi (plus libraries and Bizi) in Zaragoza. Nearest first. React 19, Vite, strict TypeScript, Tailwind v4, Base UI (`@base-ui/react`), Leaflet, vite-plugin-pwa.
+Tagline: "Lo que necesitas, cerca de ti" / "What you need, near you". Mobile-first map of public services in Zaragoza: toilets, water, Bizi, bus stops, pharmacies on duty, WiFi, phone charging, libraries and climate shelters. Nearest first. Not everything is free: bus and Bizi cost money and a bar toilet is for customers, so the app never calls a whole tab free (only single places, like a fountain). The repository folder and package name keep their old names. React 19, Vite, strict TypeScript, Tailwind v4, Base UI (`@base-ui/react`), Leaflet, vite-plugin-pwa.
 
 ## Run
     npm install

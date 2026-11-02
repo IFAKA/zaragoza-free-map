@@ -12,9 +12,9 @@ export default defineConfig({
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         lang: 'es',
-        name: 'Servicios gratis · Zaragoza',
-        short_name: 'Zaragoza gratis',
-        description: 'Agua, aseos, carga del móvil y WiFi gratis en Zaragoza. Lo más cercano primero.',
+        name: 'Zaragoza a mano',
+        short_name: 'Zaragoza a mano',
+        description: 'Aseos, agua, bus, farmacias de guardia, Bizi, WiFi y más en Zaragoza. Lo que necesitas, cerca de ti.',
         theme_color: '#D92A22',
         background_color: '#ffffff',
         display: 'standalone',

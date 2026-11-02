@@ -297,9 +297,9 @@ todo.push(async () => {
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, null) // browser says en-US, nothing saved
   ok(await p.evaluate(() => document.documentElement.lang) === 'es', 'default language is Spanish although the browser says English')
-  ok(await p.title() === 'Servicios gratis · Zaragoza', 'page title in Spanish')
+  ok(await p.title() === 'Zaragoza a mano · Lo que necesitas, cerca de ti', 'page title in Spanish')
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
-  ok(man.lang === 'es' && /gratis/.test(man.name), `manifest lang es (${man.lang}, ${man.name})`)
+  ok(man.lang === 'es' && man.name === 'Zaragoza a mano', `manifest lang es (${man.lang}, ${man.name})`)
   const labels = await p.locator('[role=tab]').allInnerTexts()
   const base = labels.filter(l => l !== 'Calor'), calor = labels.indexOf('Calor')
   ok(JSON.stringify(base) === JSON.stringify(['Aseos', 'Agua', 'Bizi', 'Bus', 'Farmacia', 'WiFi', 'Cargar', 'Biblio.']) && (calor === 2 || calor === 8), 'tab row (Calor 3rd in its season, else last): ' + labels.join(' | '))

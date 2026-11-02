@@ -67,11 +67,11 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
   const L = (id: LayerId, c: Omit<LayerConfig, 'id' | 'items'>, items: Item[], m = 15): LayerConfig => ({ id, ...c, items: dedupe(items, m) })
   return {
     water: L('water', { icon: 'drop', color: 'var(--color-water)', label: { en: 'Water', es: 'Agua' }, short: { en: 'Water', es: 'Agua' }, hint: { en: 'Drinking fountains', es: 'Fuentes de agua' }, hours: false }, [...fountains, ...waterOsm]),
-    toilets: L('toilets', { icon: 'toilet', color: 'var(--color-toilet)', label: { en: 'Toilets', es: 'Aseos' }, short: { en: 'Toilets', es: 'Aseos' }, hint: { en: 'Free public toilets', es: 'Aseos gratis' }, hours: true }, toilets),
+    toilets: L('toilets', { icon: 'toilet', color: 'var(--color-toilet)', label: { en: 'Toilets', es: 'Aseos' }, short: { en: 'Toilets', es: 'Aseos' }, hint: { en: 'Public toilets', es: 'Aseos públicos' }, hours: true }, toilets),
     // two buildings can share a street, but never a doorstep: city libraries / centres are never merged with each other
     charge: L('charge', { icon: 'charge', color: 'var(--color-charge)', label: { en: 'Charge', es: 'Cargar' }, short: { en: 'Charge', es: 'Cargar' }, hint: { en: 'Charge your phone', es: 'Cargar el móvil' }, hours: true }, [...lib, ...civic, ...chargers], 8),
-    wifi: L('wifi', { icon: 'wifi', color: 'var(--color-wifi)', label: { en: 'WiFi', es: 'WiFi' }, short: { en: 'WiFi', es: 'WiFi' }, hint: { en: 'Free WiFi', es: 'WiFi gratis' }, hours: true, cats: ['muni', 'food', 'other'] }, [...wifiCity, ...without(wifiOsm, wifiCity, 30)]),
-    libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Library', es: 'Biblio.' }, hint: { en: 'Quiet and free', es: 'Tranquilas y gratis' }, hours: true }, lib, 8),
+    wifi: L('wifi', { icon: 'wifi', color: 'var(--color-wifi)', label: { en: 'WiFi', es: 'WiFi' }, short: { en: 'WiFi', es: 'WiFi' }, hint: { en: 'WiFi hotspots', es: 'Puntos WiFi' }, hours: true, cats: ['muni', 'food', 'other'] }, [...wifiCity, ...without(wifiOsm, wifiCity, 30)]),
+    libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Library', es: 'Biblio.' }, hint: { en: 'Quiet places to sit and read', es: 'Sitios tranquilos para leer' }, hours: true }, lib, 8),
     // Bizi tab: stations (cat 'station', live counts joined at runtime) and the street bike racks (cat 'mine'). Racks are never merged into stations.
     bizi: {
       id: 'bizi', icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Take or return a bike', es: 'Coger o dejar una bici' }, hours: false, peek: 388, cats: ['take', 'return', 'mine'], catDefault: 'take',

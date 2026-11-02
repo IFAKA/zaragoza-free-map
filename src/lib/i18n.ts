@@ -2,14 +2,14 @@ import { lsGet } from './cache'
 
 export type Lang = 'en' | 'es'
 const en = {
-  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
+  title: 'Zaragoza at hand', subtitle: 'What you need, near you', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
   langTitle: 'Language', langEn: 'English', langEs: 'Español', close: 'Close',
   handle: 'Expand or collapse the panel', map: 'Map', zoomIn: 'Zoom in', zoomOut: 'Zoom out', panel: 'Services panel',
   openNow: 'Open now', openNowHint: 'Hide places that are closed', showRange: 'Show range', showRangeHint: 'WiFi range circles (estimate)',
   open: 'Open now', closed: 'Closed now', hoursUnknown: 'Hours unknown', alwaysOn: 'Always available', hours: 'Hours', holidays: 'Hours can differ on public holidays.',
   walk: 'Walk there', details: 'Details', useLocation: 'Use my location', locating: 'Finding you…', fromCentre: 'from the city centre', fromYou: 'from you', minWalk: 'min walk',
   distCentre: 'Distances from the city centre', distYou: 'Distances from you', locDenied: 'Location is blocked, so distances stay from the city centre. To use yours, allow location for this site in your browser settings.',
-  nearestwater: 'Nearest drinking fountain', nearesttoilets: 'Nearest free toilet', nearestcharge: 'Nearest place to charge', nearestwifi: 'Nearest free WiFi', nearestlibraries: 'Nearest library', nearestbizitake: 'Nearest bike to take', nearestbizireturn: 'Nearest free dock', nearestbizimine: 'Nearest bike rack',
+  nearestwater: 'Nearest drinking fountain', nearesttoilets: 'Nearest toilet', nearestcharge: 'Nearest place to charge', nearestwifi: 'Nearest WiFi', nearestlibraries: 'Nearest library', nearestbizitake: 'Nearest bike to take', nearestbizireturn: 'Nearest free dock', nearestbizimine: 'Nearest bike rack',
   selected: 'Selected', places: 'places', all: 'All', muni: 'Public buildings', food: 'Cafés and bars', other: 'Other',
   allClosed: 'Everything here is closed right now. Showing all places, nearest first.', noneOpen: 'Nothing known to be open. Turn off “Open now” to see everything.', showMore: 'Show more',
   srcCity: 'City record', srcOsm: 'OpenStreetMap', srcTgo: 'City equipment catalogue (toilet list by toiletsgo)', snapshot: 'snapshot', notVerified: 'not verified by us',
@@ -38,14 +38,14 @@ const en = {
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
-  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
+  title: 'Zaragoza a mano', subtitle: 'Lo que necesitas, cerca de ti', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
   langTitle: 'Idioma', langEn: 'English', langEs: 'Español', close: 'Cerrar',
   handle: 'Expandir o contraer el panel', map: 'Mapa', zoomIn: 'Acercar', zoomOut: 'Alejar', panel: 'Panel de servicios',
   openNow: 'Abierto ahora', openNowHint: 'Oculta los sitios cerrados', showRange: 'Ver alcance', showRangeHint: 'Círculos de alcance WiFi (estimación)',
   open: 'Abierto ahora', closed: 'Cerrado ahora', hoursUnknown: 'Horario desconocido', alwaysOn: 'Siempre disponible', hours: 'Horario', holidays: 'El horario puede cambiar en festivos.',
   walk: 'Cómo llegar a pie', details: 'Detalles', useLocation: 'Usar mi ubicación', locating: 'Buscándote…', fromCentre: 'desde el centro', fromYou: 'desde ti', minWalk: 'min a pie',
   distCentre: 'Distancias desde el centro', distYou: 'Distancias desde ti', locDenied: 'La ubicación está bloqueada, así que las distancias siguen desde el centro. Para usar la tuya, permite la ubicación para este sitio en los ajustes del navegador.',
-  nearestwater: 'Fuente de agua más cercana', nearesttoilets: 'Aseo gratis más cercano', nearestcharge: 'Sitio más cercano para cargar', nearestwifi: 'WiFi gratis más cercano', nearestlibraries: 'Biblioteca más cercana', nearestbizitake: 'Bici más cercana para coger', nearestbizireturn: 'Anclaje libre más cercano', nearestbizimine: 'Aparcabicis más cercano',
+  nearestwater: 'Fuente de agua más cercana', nearesttoilets: 'Aseo más cercano', nearestcharge: 'Sitio más cercano para cargar', nearestwifi: 'WiFi más cercano', nearestlibraries: 'Biblioteca más cercana', nearestbizitake: 'Bici más cercana para coger', nearestbizireturn: 'Anclaje libre más cercano', nearestbizimine: 'Aparcabicis más cercano',
   selected: 'Elegido', places: 'sitios', all: 'Todos', muni: 'Edificios públicos', food: 'Cafés y bares', other: 'Otros',
   allClosed: 'Todo está cerrado ahora. Se muestran todos los sitios, del más cercano al más lejano.', noneOpen: 'Nada abierto que sepamos. Quita «Abierto ahora» para verlo todo.', showMore: 'Ver más',
   srcCity: 'Dato municipal', srcOsm: 'OpenStreetMap', srcTgo: 'Catálogo de equipamientos del Ayuntamiento (lista de aseos de toiletsgo)', snapshot: 'copia del', notVerified: 'sin verificar por nosotros',

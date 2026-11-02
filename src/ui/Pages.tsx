@@ -413,6 +413,7 @@ export function AboutPage({ onBack, locked }: { onBack: () => void; locked: bool
       <PageHeader title={t('aboutTitle')} onBack={onBack} />
       <Scroll locked={locked}>
         <div className="flex flex-col gap-3 px-4 pb-8 pt-2 leading-relaxed">
+          <h2 className="font-title text-[1.1em] font-semibold text-brand-text" data-testid="app-name">{t('title')} · {t('subtitle')}</h2>
           <p className="m-0 font-bold">{t('disclaimer')}</p>
           <p className="m-0">{t('privacy')}</p>
           <p className="m-0">{t('noGuarantee')}</p>
