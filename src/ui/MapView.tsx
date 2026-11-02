@@ -85,7 +85,7 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
     m.on('moveend zoomend', drawRings)
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
-    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null }
+    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null; group.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
