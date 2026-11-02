@@ -11,9 +11,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Free services · Zaragoza',
-        short_name: 'Zaragoza Free',
-        description: 'Free water, toilets, phone charging and WiFi in Zaragoza. Nearest first.',
+        lang: 'es',
+        name: 'Servicios gratis · Zaragoza',
+        short_name: 'Zaragoza gratis',
+        description: 'Agua, aseos, carga del móvil y WiFi gratis en Zaragoza. Lo más cercano primero.',
         theme_color: '#D92A22',
         background_color: '#ffffff',
         display: 'standalone',

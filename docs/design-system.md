@@ -48,9 +48,23 @@ Button radius 0.46em, tiles 0.467em, cards 0.26em, modal sheet 0.73em. Touch tar
 - Reduced motion: opacity only (no slides).
 
 ## Layout
-- Mobile: bottom drawer with three snap points (peek, half, full), non-modal at peek and half so the map stays usable; scroll only at full.
+- Mobile: bottom drawer with four snap points (closed, peek, half, full), non-modal at peek and half so the map stays usable; scroll only at full.
 - Desktop (900px and up): persistent 400px left panel with the same pages.
-- Submenus (More, Language, About, Details) are pages inside the same drawer. Back, Escape and swipe go up a page.
+- The tab row is one horizontal scroll row: Water, Toilets, Charge, WiFi, Libraries, Bizi, Settings (gear, last). It snaps, shows edge fades, and scrolls the active tab into view. There is no More tab.
+- Settings holds only Language and About. Language defaults to Spanish whatever the browser says; the user's choice is saved.
+- Pages (Settings, Language, About, Details) are pages inside the same drawer. Back, Escape and swipe go up a page.
+
+## Drawer behaviour
+- Four levels: closed (only the tab bar, safe-area aware, map fully visible), peek, half, full.
+- Drag the handle or the header to move between levels. A fast flick moves one level. A drag ends on the nearest level.
+- The list scrolls only at full. When the list is at its top, a new downward touch drag lowers the sheet.
+- Tap the map: the sheet lowers one level (full goes to peek). Tap a tab while closed: opens to half. Tap the active tab while open: lowers one level.
+- Tap the handle: closed or peek goes to half, half to full, full to peek. The handle is 96 by 28px (not 44px tall, so it does not cover the tabs).
+- Choosing a marker or a row opens half and pans the marker above the sheet.
+- Back goes up one page. Escape goes up a page, then lowers one level. Closing returns to the home page.
+- When closed, the page body is inert (not focusable, not read), so only the tabs work.
+- Motion: 450ms cubic-bezier(.22,1,.36,1) on transform only; page fade 300ms. With reduced motion, opacity only.
+- Mouse: a drag works only downward from the handle (Base UI limit). Clicking the handle cycles the levels.
 
 ## Honesty rules
 Every record shows its source and date ("City record, 2023", "OpenStreetMap, snapshot 2026-11-02, not verified by us"). Library occupancy is a live link only for University of Zaragoza libraries; others say "Occupancy not published". Bizi shows station places only. Footer shows "Data refreshed <date>". Each place has a "Wrong or missing? Report" link (OpenStreetMap note).

@@ -19,6 +19,7 @@ interface Props {
   onSelect: (id: string) => void
   onBackgroundClick: () => void
   label: string
+  zoomTitles: { in: string; out: string }
 }
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const dark = () => matchMedia('(prefers-color-scheme: dark)').matches
@@ -30,7 +31,7 @@ const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Ligh
 const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
-export function MapView({ layer, items, selected, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label }: Props) {
+export function MapView({ layer, items, selected, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
@@ -42,6 +43,15 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
   cb.current = { onSelect, onBackgroundClick, inset }
   const live = useRef({ layer, items, selected, showRange })
   live.current = { layer, items, selected, showRange }
+
+  // the zoom buttons are made once by Leaflet: follow a language change here
+  useEffect(() => {
+    const c = el.current
+    c?.querySelector('.leaflet-control-zoom-in')?.setAttribute('title', zoomTitles.in)
+    c?.querySelector('.leaflet-control-zoom-in')?.setAttribute('aria-label', zoomTitles.in)
+    c?.querySelector('.leaflet-control-zoom-out')?.setAttribute('title', zoomTitles.out)
+    c?.querySelector('.leaflet-control-zoom-out')?.setAttribute('aria-label', zoomTitles.out)
+  }, [zoomTitles.in, zoomTitles.out])
 
   const drawRings = () => {
     const m = map.current, g = rings.current
@@ -61,7 +71,7 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
 
   useEffect(() => {
     const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: L.canvas({ padding: 0.5 }) }).setView(CENTER, 15)
-    if (desktop) L.control.zoom({ position: 'topright' }).addTo(m)
+    if (desktop) L.control.zoom({ position: 'topright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
     m.attributionControl.setPosition(desktop ? 'bottomright' : 'topleft')
     m.on('click', () => cb.current.onBackgroundClick())
     const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(m)

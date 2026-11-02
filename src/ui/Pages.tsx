@@ -2,15 +2,15 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { Tabs } from '@base-ui/react/tabs'
-import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, DotsThree, Translate, Info as InfoIcon } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
+import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon } from '@phosphor-icons/react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { dataRefreshed } from '../data'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
-import { LAYERS, MORE, ORDER } from '../layers'
+import { LAYERS, ORDER } from '../layers'
 import { rangeMetres } from './MapView'
-import { BUZ_URL, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import { ICONS } from './icons'
 import { useT } from './lang'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -55,28 +55,52 @@ function Occupancy({ item }: { item: RankedItem }) {
 const DIST_MIN = 'min'
 
 // ---------- tabs ----------
-export function NeedTabs({ layer, onPick, onMore }: { layer: LayerId; onPick: (id: LayerId) => void; onMore: () => void }) {
+/** One scrollable row: every service, then Settings. Fades at an edge hint that more tabs are off-screen; the active tab is scrolled into view. */
+export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick: (id: LayerId) => void; onSettings: () => void }) {
   const { lang, t } = useT()
-  const moreActive = MORE.includes(layer)
-  const value = moreActive ? 'more' : layer
-  const tab = 'group relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 text-ink [transition:transform_120ms_var(--ease-out)] active:scale-[.95] data-[active]:text-brand-text'
-  const label = 'border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
+  const list = useRef<HTMLDivElement>(null)
+  const first = useRef(true)
+  const [edge, setEdge] = useState({ left: false, right: false })
+  const measure = useCallback(() => {
+    const e = list.current
+    if (e) setEdge({ left: e.scrollLeft > 4, right: e.scrollLeft + e.clientWidth < e.scrollWidth - 4 })
+  }, [])
+  useEffect(() => {
+    const e = list.current
+    if (!e) return
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(e)
+    return () => ro.disconnect()
+  }, [measure])
+  useEffect(() => {
+    const e = list.current, a = e?.querySelector<HTMLElement>('[data-active]')
+    if (!e || !a) return
+    const left = Math.max(0, Math.min(e.scrollWidth - e.clientWidth, a.offsetLeft - (e.clientWidth - a.offsetWidth) / 2))
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+    e.scrollTo({ left, behavior: first.current || reduced ? 'auto' : 'smooth' })
+    first.current = false
+  }, [layer])
+  const tab = 'group relative flex min-h-14 w-[4.8rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 text-ink [transition:transform_120ms_var(--ease-out)] active:scale-[.95] data-[active]:text-brand-text'
+  const label = 'max-w-full truncate border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
+  const fade = 'pointer-events-none absolute inset-y-0 w-8 from-paper to-transparent transition-opacity duration-150'
   return (
-    <Tabs.Root value={value} className="shrink-0 border-b border-line">
-      <Tabs.List className="flex px-1" aria-label="Services">
+    <Tabs.Root value={layer} className="relative shrink-0 border-b border-line">
+      <Tabs.List ref={list} onScroll={measure} className="flex snap-x snap-proximity overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
         {ORDER.map(id => {
           const I = ICONS[LAYERS[id].icon]
           return (
             <Tabs.Tab key={id} value={id} className={tab} onClick={() => onPick(id)} data-testid={`tab-${id}`}>
-              <I size="1.6em" weight={value === id ? 'fill' : 'regular'} aria-hidden /><span className={label}>{LAYERS[id].label[lang]}</span>
+              <I size="1.6em" weight={layer === id ? 'fill' : 'regular'} aria-hidden /><span className={label}>{LAYERS[id].label[lang]}</span>
             </Tabs.Tab>
           )
         })}
-        <Tabs.Tab value="more" className={tab} onClick={onMore} data-testid="tab-more">
-          {moreActive ? (() => { const I = ICONS[LAYERS[layer].icon]; return <I size="1.6em" weight="fill" aria-hidden /> })() : <DotsThree size="1.6em" weight="bold" aria-hidden />}
-          <span className={label}>{moreActive ? LAYERS[layer].label[lang] : t('more')}</span>
+        <Tabs.Tab value="settings" className={tab} onClick={onSettings} data-testid="tab-settings">
+          <GearSix size="1.6em" aria-hidden /><span className={label}>{t('settings')}</span>
         </Tabs.Tab>
       </Tabs.List>
+      <div aria-hidden className={cn(fade, 'left-0 bg-linear-to-r', edge.left ? 'opacity-100' : 'opacity-0')} />
+      <div aria-hidden className={cn(fade, 'right-0 bg-linear-to-l', edge.right ? 'opacity-100' : 'opacity-0')} />
     </Tabs.Root>
   )
 }
@@ -135,7 +159,7 @@ export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange
     <div className="px-4 pb-2">
       {layer.hours && <Switch checked={openOnly} onCheckedChange={setOpenOnly} label={t('openNow')} hint={t('openNowHint')} testId="switch-open" />}
       {layer.id === 'wifi' && <Switch checked={showRange} onCheckedChange={setShowRange} label={t('showRange')} hint={t('showRangeHint')} testId="switch-range" />}
-      {layer.cats && <div className="mt-1"><Chips value={cat} onChange={setCat} label="WiFi" options={[{ value: 'all', label: t('all') }, ...layer.cats.map(c => ({ value: c, label: t(c as Key) }))]} /></div>}
+      {layer.cats && <div className="mt-1"><Chips value={cat} onChange={setCat} label={t('typeLabel')} options={[{ value: 'all', label: t('all') }, ...layer.cats.map(c => ({ value: c, label: t(c as Key) }))]} /></div>}
       {layer.id === 'bizi' && <p className={cn(sub, 'm-0 py-1')}>{t('bizi')}</p>}
     </div>
   )
@@ -156,7 +180,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 export function HomePage(p: {
   layer: LayerConfig; arr: RankedItem[]; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
-  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onMore: () => void
+  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onSettings: () => void
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; title?: ReactNode
 }) {
@@ -164,7 +188,7 @@ export function HomePage(p: {
   return (
     <>
       {p.title}
-      <NeedTabs layer={p.layer.id} onPick={p.onPick} onMore={p.onMore} />
+      <NeedTabs layer={p.layer.id} onPick={p.onPick} onSettings={p.onSettings} />
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} locating={p.locating} onLocate={p.onLocate} onDetails={p.onDetails} onWalk={p.onWalk} />
         <Separator />
@@ -192,15 +216,14 @@ function PageRow({ icon, title, description, status, onClick, testId, active }: 
   )
 }
 
-export function MorePage({ layer, lang, onBack, onLayer, go, locked }: { layer: LayerId; lang: Lang; onBack: () => void; onLayer: (id: LayerId) => void; go: (p: 'language' | 'about') => void; locked: boolean }) {
-  const { t, lang: l } = useT()
+export function SettingsPage({ lang, onBack, go, locked }: { lang: Lang; onBack: () => void; go: (p: 'language' | 'about') => void; locked: boolean }) {
+  const { t } = useT()
   return (
     <>
-      <PageHeader title={t('moreTitle')} onBack={onBack} />
+      <PageHeader title={t('settingsTitle')} onBack={onBack} />
       <Scroll locked={locked}>
-        {MORE.map(id => { const I = ICONS[LAYERS[id].icon]; return <PageRow key={id} testId={`more-${id}`} icon={<I size="1.4em" aria-hidden />} title={LAYERS[id].label[l]} description={LAYERS[id].hint[l]} active={layer === id} onClick={() => onLayer(id)} /> })}
-        <PageRow testId="more-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
-        <PageRow testId="more-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
+        <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
+        <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
       </Scroll>
     </>
   )
@@ -249,10 +272,11 @@ export function AboutPage({ onBack, locked }: { onBack: () => void; locked: bool
 }
 
 export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked }: { layer: LayerConfig; item: RankedItem | null; hasPos: boolean; onBack: () => void; onWalk: () => void; locked: boolean }) {
-  const { t, type } = useT()
+  const { t, type, lang } = useT()
   if (!item) return <PageHeader title={t('details')} onBack={onBack} />
   const tel = item.phone?.replace(/[^\d+]/g, '')
-  const hours = item.sched ? item.sched.r : item.hours
+  const hoursRaw = item.sched ? item.sched.r : item.hours
+  const hours = hoursRaw && fmtHours(lang, hoursRaw)
   const field = (k: Key, v: ReactNode) => v ? <div><div className={overline}>{t(k)}</div><div className="mt-0.5">{v}</div></div> : null
   return (
     <>

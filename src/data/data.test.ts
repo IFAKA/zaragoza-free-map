@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { DATA, dataRefreshed } from './index'
-import { ORDER, MORE, LAYERS } from '../layers'
+import { ORDER, LAYERS } from '../layers'
 import { dist } from '../lib/geo'
 import { rank } from '../lib/rank'
 import type { LayerId } from '../lib/types'
 
-const ALL = [...ORDER, ...MORE] as LayerId[]
+const ALL = ORDER as LayerId[]
 
 describe('bundled data', () => {
   it('every city file has rows and a snapshot date', () => {

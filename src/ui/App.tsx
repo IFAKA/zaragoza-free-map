@@ -4,16 +4,16 @@ import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
 import { rank } from '../lib/rank'
 import type { LatLon, LayerId } from '../lib/types'
-import { LAYERS, MORE } from '../layers'
+import { LAYERS } from '../layers'
 import { LangCtx } from './lang'
 import { SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
-import { AboutPage, HomePage, LanguagePage, MorePage, PlacePage } from './Pages'
+import { AboutPage, HomePage, LanguagePage, PlacePage, SettingsPage } from './Pages'
 import { ToastHost, toasts } from './ToastHost'
 import { useLocation } from './useLocation'
 
-type Page = 'home' | 'more' | 'language' | 'about' | 'place'
+type Page = 'home' | 'settings' | 'language' | 'about' | 'place'
 
 // Drawer levels. Closed shows only the tab bar; peek adds the nearest place; half shows the controls too; full is the whole list.
 const CLOSED = 0, PEEK = 1, HALF = 2, FULL = 3
@@ -69,11 +69,12 @@ export function App() {
   const viewport = useRef<HTMLDivElement>(null)
 
   const layer = LAYERS[layerId]
+  const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
   const setLang = (l: Lang) => { setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
   const setOpenOnly = (v: boolean) => { setOpenOnlyS(v); lsSet('open', v ? '1' : '0') }
   const setShowRange = (v: boolean) => { setShowRangeS(v); lsSet('range', v ? '1' : '0') }
 
-  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  useEffect(() => { document.documentElement.lang = lang; document.title = `${t.title} · ${t.subtitle}` }, [lang, t])
   useEffect(() => { const i = setInterval(() => setTick(x => x + 1), 60_000); return () => clearInterval(i) }, [])
 
   const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
@@ -152,8 +153,7 @@ export function App() {
 
   const pageEl = (() => {
     switch (page) {
-      case 'more': return <MorePage layer={layerId} lang={lang} onBack={back} locked={mobileLow} go={turnTo}
-        onLayer={id => { if ((MORE as string[]).includes(id)) pickLayer(id) }} />
+      case 'settings': return <SettingsPage lang={lang} onBack={back} locked={mobileLow} go={turnTo} />
       case 'language': return <LanguagePage lang={lang} setLang={setLang} onBack={back} locked={mobileLow} />
       case 'about': return <AboutPage onBack={back} locked={mobileLow} />
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
@@ -162,7 +162,7 @@ export function App() {
           layer={layer} arr={arr} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
-          onPick={pickLayer} onMore={() => turnTo('more')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
+          onPick={pickLayer} onSettings={() => turnTo('settings')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
           title={desktop ? <div className="px-4 pb-1 pt-4"><div className="font-title text-[1.15em] font-bold text-brand-text">{t.title} · {t.subtitle}</div></div> : undefined}
         />
       )
@@ -176,7 +176,7 @@ export function App() {
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
               layer={layer} items={arr} selected={chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
-              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} label={t.map}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
           {desktop ? (

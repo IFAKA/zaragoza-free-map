@@ -13,3 +13,11 @@ export const srcExplain = (t: TF, it: Item): string => (it.part === 'osm' ? t('s
 /** One tap to tell the map's owners something is wrong: opens the OpenStreetMap note form at this spot. */
 export const reportUrl = (it: Item) => `https://www.openstreetmap.org/note/new#map=19/${it.lat}/${it.lon}`
 export const BUZ_URL = 'https://biblioteca.unizar.es/servicios/ocupacion-bibliotecas'
+
+const DAYS_ES: Record<string, string> = { Mo: 'Lu', Tu: 'Ma', We: 'Mi', Th: 'Ju', Fr: 'Vi', Sa: 'Sá', Su: 'Do', PH: 'festivos', off: 'cerrado', '24/7': '24 h' }
+const DAYS_EN: Record<string, string> = { PH: 'holidays', off: 'closed', '24/7': '24 h' }
+/** OpenStreetMap opening hours ("Mo-Fr 08:30-21:30; Sa-Su off") in the reader's language. */
+export function fmtHours(lang: 'en' | 'es', s: string): string {
+  const map = lang === 'es' ? DAYS_ES : DAYS_EN
+  return s.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\b|24\/7/g, m => map[m] ?? m)
+}

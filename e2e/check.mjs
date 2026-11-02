@@ -7,8 +7,9 @@ const out = process.env.SHOTS || '/tmp/zgz-pw'
 let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++ }
 const b = await chromium.launch()
-async function open(vp, mobile, extra = {}) {
+async function open(vp, mobile, extra = {}, lang = 'en') {
   const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: mobile, isMobile: mobile, locale: 'en-US', timezoneId: 'Europe/Madrid', ...extra })
+  if (lang) await ctx.addInitScript(l => { if (!localStorage.getItem('zgz:v2:lang')) localStorage.setItem('zgz:v2:lang', l) }, lang)
   const p = await ctx.newPage()
   const blocked = []
   p.on('pageerror', e => { fails++; console.log('FAIL pageerror', e.message) })
@@ -71,33 +72,31 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   await p.getByTestId('back').click(); await p.waitForTimeout(500)
   ok(await p.getByTestId('back').count() === 0, 'Back goes up a page')
   // More: libraries, bizi, language, about
-  await p.getByTestId('tab-more').click(); await p.waitForTimeout(600)
-  await p.screenshot({ path: out + '/m-more.png' })
-  await p.getByTestId('more-libraries').click(); await p.waitForTimeout(700)
+  await p.getByTestId('tab-libraries').click(); await p.waitForTimeout(700)
   ok(await markers(p) > 0, 'libraries render')
   ok(await p.getByText(/Live occupancy|Occupancy not published/).count() > 0, 'library occupancy line honest')
   const pop = p.getByRole('button', { name: 'Why no numbers?' }).first()
   if (await pop.count()) { await pop.click(); await p.waitForTimeout(300); ok(await p.getByText(/do not guess/).isVisible(), 'occupancy info popover opens'); await p.keyboard.press('Escape') }
   await p.screenshot({ path: out + '/m-libs.png' })
-  await p.getByTestId('tab-more').click(); await p.waitForTimeout(500)
-  await p.getByTestId('more-bizi').click(); await p.waitForTimeout(700)
+  await p.getByTestId('tab-bizi').click(); await p.waitForTimeout(700)
   ok(await markers(p) > 0, 'bizi locations render')
   ok(await p.getByText(/no live connection/).count() > 0, 'bizi says no availability numbers')
-  await p.getByTestId('tab-more').click(); await p.waitForTimeout(500)
-  await p.getByTestId('more-language').click(); await p.waitForTimeout(600)
+  await p.getByTestId('tab-settings').click(); await p.waitForTimeout(600)
+  await p.screenshot({ path: out + '/m-settings.png' })
+  await p.getByTestId('row-language').click(); await p.waitForTimeout(600)
   await p.getByTestId('lang-es').click(); await p.waitForTimeout(300)
   ok(await p.getByText('Idioma').count() > 0, 'Spanish applied')
   await p.getByTestId('back').click(); await p.waitForTimeout(500)
-  ok(await p.getByTestId('more-about').count() === 1, 'language back to More')
-  await p.getByTestId('more-about').click(); await p.waitForTimeout(600)
+  ok(await p.getByTestId('row-about').count() === 1, 'language back to Settings')
+  await p.getByTestId('row-about').click(); await p.waitForTimeout(600)
   ok(await p.getByText(/Datos actualizados/).count() > 0, 'about shows data refreshed date')
   ok(await p.getByText(/sin relación con el Ayuntamiento/).count() > 0, 'disclaimer')
   await p.screenshot({ path: out + '/m-about.png' })
   await p.getByTestId('back').click(); await p.waitForTimeout(500)
-  ok(await p.getByTestId('more-about').count() === 1, 'About opened from More: Back returns to More')
+  ok(await p.getByTestId('row-about').count() === 1, 'About opened from Settings: Back returns to Settings')
   await p.getByTestId('back').click(); await p.waitForTimeout(500)
   ok(await p.getByTestId('tab-water').count() === 1, 'then Back returns to the first page')
-  await p.getByTestId('tab-more').click(); await p.getByTestId('more-language').click(); await p.getByTestId('lang-en').click(); await p.getByTestId('back').click(); await p.getByTestId('back').click()
+  await p.getByTestId('tab-settings').click(); await p.getByTestId('row-language').click(); await p.getByTestId('lang-en').click(); await p.getByTestId('back').click(); await p.getByTestId('back').click()
   await ctx.close()
 }
 
@@ -143,7 +142,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
     await drag(195, 380, 520, 300); ok(await lvl(p) === 'peek', 'half -> peek by dragging down')
     await drag(195, 580, 760, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
     await p.screenshot({ path: out + '/g-closed.png' })
-    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('tab-water').bottom, more: r('tab-more').bottom, h: innerHeight, handle: r('handle') } })
+    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('tab-water').bottom, more: r('tab-settings').bottom, h: innerHeight, handle: r('handle') } })
     ok(vis.tab <= vis.h && vis.more <= vis.h, `closed: whole tab bar on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
     ok(vis.handle.bottom <= vis.h && vis.handle.height >= 24 && vis.handle.width >= 44, 'closed: handle visible, at least 44 wide and 24 tall')
     ok(await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), 'closed: page body is inert (no focus off-screen)')
@@ -211,20 +210,94 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
     await p.getByRole('button', { name: 'About' }).tap(); await p.waitForTimeout(800)
     ok(await p.getByTestId('back').count() === 1, 'About opens from the footer')
     await p.getByTestId('back').tap(); await p.waitForTimeout(800)
-    ok(await p.getByTestId('tab-water').count() === 1 && await p.getByTestId('more-about').count() === 0, 'About from footer: Back returns to home, not More')
-    await p.getByTestId('tab-more').tap(); await p.getByTestId('more-about').tap(); await p.waitForTimeout(600)
+    ok(await p.getByTestId('tab-water').count() === 1 && await p.getByTestId('row-about').count() === 0, 'About from footer: Back returns to home, not Settings')
+    await p.getByTestId('tab-settings').tap(); await p.getByTestId('row-about').tap(); await p.waitForTimeout(600)
     await p.keyboard.press('Escape'); await p.waitForTimeout(700)
-    ok(await p.getByTestId('more-about').count() === 1, 'Escape on About goes back to More')
+    ok(await p.getByTestId('row-about').count() === 1, 'Escape on About goes back to Settings')
     await p.keyboard.press('Escape'); await p.waitForTimeout(700)
-    ok(await p.getByTestId('tab-water').count() === 1, 'Escape on More goes back to home')
+    ok(await p.getByTestId('tab-water').count() === 1, 'Escape on Settings goes back to home')
     const l0 = await lvl(p)
     await p.keyboard.press('Escape'); await p.waitForTimeout(800)
     ok(l0 === 'full' && await lvl(p) === 'half', `Escape on home lowers one step (${l0} -> ${await lvl(p)})`)
     // closing from a sub page lands on home
-    await p.getByTestId('tab-more').tap(); await p.waitForTimeout(600)
+    await p.getByTestId('tab-settings').tap(); await p.waitForTimeout(600)
     await p.getByTestId('handle').tap(); await p.waitForTimeout(500)
     await ctx.close()
   }
+}
+
+// ---- Spanish by default, one scrollable tab row, Settings page ----
+{
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, null) // browser says en-US, nothing saved
+  ok(await p.evaluate(() => document.documentElement.lang) === 'es', 'default language is Spanish although the browser says English')
+  ok(await p.title() === 'Servicios gratis · Zaragoza', 'page title in Spanish')
+  const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
+  ok(man.lang === 'es' && /gratis/.test(man.name), `manifest lang es (${man.lang}, ${man.name})`)
+  const labels = await p.locator('[role=tab]').allInnerTexts()
+  ok(JSON.stringify(labels) === JSON.stringify(['Agua', 'Aseos', 'Cargar', 'WiFi', 'Bibliotecas', 'Bizi', 'Ajustes']), 'tab row: ' + labels.join(' | '))
+  const row = () => p.evaluate(() => { const e = document.querySelector('[role=tablist]'); return { l: Math.round(e.scrollLeft), max: e.scrollWidth - e.clientWidth, w: e.clientWidth, sw: e.scrollWidth, fades: [...e.parentElement.querySelectorAll(':scope > div[aria-hidden]')].map(d => getComputedStyle(d).opacity) } })
+  const r0 = await row()
+  ok(r0.l < 8 && r0.max > 40, `tab row scrolls (left ${r0.l}, max ${r0.max}, width ${r0.w}, content ${r0.sw})`)
+  ok(r0.fades[0] === '0' && r0.fades[1] === '1', 'edge fade: right shown, left hidden at the start')
+  await p.screenshot({ path: out + '/t-start.png' })
+  // a horizontal swipe on the tab row scrolls the row and leaves the sheet where it is
+  const cdp = await ctx.newCDPSession(p)
+  const swipeX = async (y, x0, x1) => {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y }] })
+    for (let i = 1; i <= 12; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (x1 - x0) * i / 12, y }] }); await p.waitForTimeout(16) }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await p.waitForTimeout(700)
+  }
+  const top0 = await snapTop(p)
+  const ty = await p.getByTestId('tab-water').evaluate(e => Math.round(e.getBoundingClientRect().top + 25))
+  await swipeX(ty, 330, 40)
+  const r1 = await row()
+  ok(r1.l > 50 && Math.abs(await snapTop(p) - top0) < 3, `swipe left on the tab row scrolls it (${r1.l}px) and the sheet stays`)
+  await swipeX(ty, 330, 40); await swipeX(ty, 330, 40)
+  const r2 = await row()
+  ok(r2.l >= r2.max - 4 && r2.fades[0] === '1' && r2.fades[1] === '0', 'scrolled to the end: Settings reachable, left fade shown, right hidden')
+  await p.screenshot({ path: out + '/t-end.png' })
+  const bx = await p.getByTestId('tab-settings').boundingBox()
+  ok(bx.x >= 0 && bx.x + bx.width <= 390 && bx.height >= 44 && bx.width >= 44, `Settings tab on screen, at least 44px (${Math.round(bx.width)}x${Math.round(bx.height)})`)
+  // vertical drag that starts on the tab row still moves the sheet
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 200, y: ty }] })
+  for (let i = 1; i <= 14; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y: ty - 18 * i }] }); await p.waitForTimeout(16) }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await p.waitForTimeout(800)
+  ok(await snapTop(p) < top0 - 100, 'vertical drag starting on the tab row moves the sheet')
+  // selecting a tab: one tap, no menu; active tab is scrolled into view
+  await p.evaluate(() => { document.querySelector('[role=tablist]').scrollLeft = 0 })
+  await p.getByTestId('tab-bizi').tap(); await p.waitForTimeout(900)
+  ok(await p.getByTestId('tab-bizi').getAttribute('aria-selected') === 'true' && await p.locator('.mk').count() > 0, 'Bizi: one tap selects it and draws its markers')
+  const inView = await p.getByTestId('tab-bizi').evaluate(e => { const a = e.getBoundingClientRect(), b = e.parentElement.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1 })
+  ok(inView, 'the active tab is scrolled into view')
+  await p.getByTestId('tab-libraries').tap(); await p.waitForTimeout(900)
+  ok(await p.getByTestId('tab-libraries').getAttribute('aria-selected') === 'true' && await p.getByTestId('list').count() === 1, 'Libraries is a normal tab with its own list')
+  await p.getByTestId('tab-water').tap(); await p.waitForTimeout(900)
+  // Settings page in Spanish
+  await p.getByTestId('tab-settings').tap(); await p.waitForTimeout(900)
+  ok(await p.getByRole('heading', { name: 'Ajustes' }).count() === 1, 'Settings page titled Ajustes')
+  ok(await p.getByTestId('row-language').count() === 1 && await p.getByTestId('row-about').count() === 1, 'Settings has Language and About')
+  ok(await p.getByRole('button').filter({ hasText: /Biblioteca|Bizi/ }).count() === 0, 'Settings does not hold Libraries or Bizi')
+  await p.screenshot({ path: out + '/t-settings-es.png' })
+  // no English left in the chrome, on every page
+  const EN = /\b(Nearest|Walk there|Details|Settings|Open now|Closed now|Show more|Use my location|Selected|Wrong or missing|Data refreshed|Zoom in|Zoom out|Expand or collapse|Language|Back|Close|Sources)\b/
+  const text = async () => (await p.evaluate(() => document.body.innerText + ' ' + [...document.querySelectorAll('[aria-label],[title]')].map(e => (e.getAttribute('aria-label') || '') + ' ' + (e.title || '')).join(' ')))
+  const leaks = []
+  const scan = async name => { const m = (await text()).match(EN); if (m) leaks.push(name + ':' + m[0]) }
+  await scan('settings')
+  await p.getByTestId('row-language').tap(); await p.waitForTimeout(600); await scan('language')
+  await p.getByTestId('back').tap(); await p.waitForTimeout(500)
+  await p.getByTestId('row-about').tap(); await p.waitForTimeout(600); await scan('about')
+  await p.getByTestId('back').tap(); await p.waitForTimeout(400); await p.getByTestId('back').tap(); await p.waitForTimeout(500)
+  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi']) { await p.getByTestId('tab-' + id).tap(); await p.waitForTimeout(500); await scan(id) }
+  await p.getByTestId('details').tap(); await p.waitForTimeout(600); await scan('details')
+  ok(leaks.length === 0, 'no English left in Spanish mode ' + JSON.stringify(leaks))
+  // Language choice persists, and the html lang follows
+  await p.getByTestId('back').tap(); await p.waitForTimeout(500)
+  await p.getByTestId('tab-settings').tap(); await p.getByTestId('row-language').tap(); await p.getByTestId('lang-en').tap(); await p.waitForTimeout(300)
+  ok(await p.evaluate(() => document.documentElement.lang) === 'en', 'choosing English sets html lang')
+  await p.reload(); await p.waitForTimeout(1000)
+  ok(await p.evaluate(() => document.documentElement.lang) === 'en', 'the choice persists after reload')
+  await ctx.close()
 }
 // ---- narrow desktop window with a mouse ----
 {
@@ -263,7 +336,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   console.log('measured snap peek->half:', JSON.stringify(m))
   ok(Math.abs(m.transformMs - 450) < 60, `measured transform ${m.transformMs}ms ~ 450ms`)
   await p.waitForTimeout(500)
-  await p.getByTestId('tab-more').click()
+  await p.getByTestId('tab-settings').click()
   const f = await p.evaluate(() => { const el = document.querySelector('.page-in'); const cs = getComputedStyle(el); return { dur: cs.animationDuration, name: cs.animationName } })
   console.log('page fade:', JSON.stringify(f))
   ok(f.dur === '0.3s', 'page fade 300ms')
@@ -272,7 +345,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
 // ---- reduced motion ----
 {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { reducedMotion: 'reduce' })
-  await p.getByTestId('tab-more').click()
+  await p.getByTestId('tab-settings').click()
   const f = await p.evaluate(() => { const el = document.querySelector('.page-in'); return getComputedStyle(el).animationName })
   console.log('reduced-motion page animation:', f)
   await ctx.close()
@@ -308,7 +381,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   ok(w === 400, 'desktop panel 400px')
   await p.screenshot({ path: out + '/d-water.png' })
   for (const id of ['toilets', 'charge', 'wifi', 'water']) { await p.getByTestId('tab-' + id).click(); await p.waitForTimeout(400); ok(await markers(p) > 0, `desktop ${id} renders`) }
-  await p.getByTestId('tab-more').click(); await p.getByTestId('more-libraries').click(); await p.waitForTimeout(700)
+  await p.getByTestId('tab-libraries').click(); await p.waitForTimeout(700)
   await p.screenshot({ path: out + '/d-libs.png' })
   await ctx.close()
 }

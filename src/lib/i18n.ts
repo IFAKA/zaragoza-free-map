@@ -2,9 +2,9 @@ import { lsGet } from './cache'
 
 export type Lang = 'en' | 'es'
 const en = {
-  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', more: 'More', moreTitle: 'More', language: 'Language', about: 'About and credits', aboutTitle: 'About',
+  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
   langTitle: 'Language', langEn: 'English', langEs: 'Español', close: 'Close',
-  handle: 'Expand or collapse the panel', map: 'Map', panel: 'Services panel',
+  handle: 'Expand or collapse the panel', map: 'Map', zoomIn: 'Zoom in', zoomOut: 'Zoom out', panel: 'Services panel',
   openNow: 'Open now', openNowHint: 'Hide places that are closed', showRange: 'Show range', showRangeHint: 'WiFi range circles (estimate)',
   open: 'Open now', closed: 'Closed now', hoursUnknown: 'Hours unknown', alwaysOn: 'Always available', hours: 'Hours', holidays: 'Hours can differ on public holidays.',
   walk: 'Walk there', details: 'Details', useLocation: 'Use my location', locating: 'Finding you…', fromCentre: 'from the city centre', fromYou: 'from you', minWalk: 'min walk',
@@ -29,9 +29,9 @@ const en = {
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
-  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', more: 'Más', moreTitle: 'Más', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
+  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
   langTitle: 'Idioma', langEn: 'English', langEs: 'Español', close: 'Cerrar',
-  handle: 'Expandir o contraer el panel', map: 'Mapa', panel: 'Panel de servicios',
+  handle: 'Expandir o contraer el panel', map: 'Mapa', zoomIn: 'Acercar', zoomOut: 'Alejar', panel: 'Panel de servicios',
   openNow: 'Abierto ahora', openNowHint: 'Oculta los sitios cerrados', showRange: 'Ver alcance', showRangeHint: 'Círculos de alcance WiFi (estimación)',
   open: 'Abierto ahora', closed: 'Cerrado ahora', hoursUnknown: 'Horario desconocido', alwaysOn: 'Siempre disponible', hours: 'Horario', holidays: 'El horario puede cambiar en festivos.',
   walk: 'Cómo llegar a pie', details: 'Detalles', useLocation: 'Usar mi ubicación', locating: 'Buscándote…', fromCentre: 'desde el centro', fromYou: 'desde ti', minWalk: 'min a pie',
@@ -67,5 +67,5 @@ export const typeLabel = (lang: Lang, type: string) => TYPES[lang][type] || type
 export function initialLang(): Lang {
   const saved = lsGet('lang')
   if (saved === 'en' || saved === 'es') return saved
-  return (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en'
+  return 'es' // Spanish unless the user chose otherwise, whatever the browser language is
 }
