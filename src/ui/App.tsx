@@ -16,6 +16,7 @@ import { SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { AboutPage, HomePage, LanguagePage, PlacePage, SettingsPage } from './Pages'
+import { SettingsFab } from './SettingsFab'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
@@ -24,7 +25,7 @@ type Page = 'home' | 'settings' | 'language' | 'about' | 'place'
 
 // Drawer levels. Closed shows only the tab bar; peek adds the nearest place; half shows the controls too; full is the whole list.
 const CLOSED = 0, PEEK = 1, HALF = 2, FULL = 3
-const PEEK_PX = 284, HALF_PX = 500
+const PEEK_PX = 250, HALF_PX = 500 // measured: the nearest card (with its bottom padding) ends at 247-249 px of sheet on Toilets, Water and WiFi
 const DEFAULT_CLOSED_PX = 78
 /** Height of the closed sheet: the handle and the tab bar, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
@@ -195,7 +196,7 @@ export function App() {
           layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
-          onPick={pickLayer} onSettings={() => turnTo('settings')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
+          onPick={pickLayer} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
           desktop={desktop}
         />
       )
@@ -224,6 +225,7 @@ export function App() {
             </SheetClosedCtx.Provider>
           )}
         </div>
+        {(page === 'home' || page === 'place') && <SettingsFab label={t.settings} onClick={() => turnTo('settings')} />}
       </ToastHost>
     </LangCtx.Provider>
   )

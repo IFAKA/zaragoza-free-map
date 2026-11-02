@@ -71,8 +71,8 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
 
   useEffect(() => {
     const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: L.canvas({ padding: 0.5 }) }).setView(CENTER, 15)
-    if (desktop) L.control.zoom({ position: 'topright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
-    m.attributionControl.setPosition(desktop ? 'bottomright' : 'topleft')
+    if (desktop) L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
+    m.attributionControl.setPosition('topleft') // top left: the Settings button floats at the top right
     m.on('click', () => cb.current.onBackgroundClick())
     const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(m)
     const labels = L.tileLayer(LABELS(dark()), { maxZoom: 19, maxNativeZoom: 16, pane: 'shadowPane' }).addTo(m)

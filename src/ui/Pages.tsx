@@ -2,7 +2,7 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { Tabs } from '@base-ui/react/tabs'
-import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
+import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { revealDelta } from '../lib/reveal'
@@ -193,19 +193,6 @@ export function NeedTabs({ layer, onPick }: { layer: LayerId; onPick: (id: Layer
   )
 }
 
-/** The home page title row with the Settings button (gear, 44px) at the right. */
-function HomeHeader({ onSettings, desktop }: { onSettings: () => void; desktop: boolean }) {
-  const { t } = useT()
-  return (
-    <div className={cn('flex shrink-0 items-center justify-between gap-2 pl-4 pr-1', desktop ? 'pt-2' : 'border-b border-line')}>
-      <div className="min-w-0 truncate font-title text-[1.15em] font-bold text-brand-text">{t('title')} · {t('subtitle')}</div>
-      <BaseButton onClick={onSettings} aria-label={t('settings')} title={t('settings')} data-testid="open-settings" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:scale_120ms_var(--ease-out)] active:scale-[.97]">
-        <GearSix size="1.5em" aria-hidden />
-      </BaseButton>
-    </div>
-  )
-}
-
 // ---------- the block with the nearest (or selected) place ----------
 export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
@@ -301,7 +288,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
-  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onSettings: () => void
+  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
@@ -337,9 +324,7 @@ export function HomePage(p: {
   }, [p.selected]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
-      {p.desktop && <HomeHeader onSettings={p.onSettings} desktop />}
       <NeedTabs layer={p.layer.id} onPick={p.onPick} />
-      {!p.desktop && <HomeHeader onSettings={p.onSettings} desktop={false} />}
       <div className="shrink-0">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} onDetails={p.onDetails} onWalk={p.onWalk} />}
