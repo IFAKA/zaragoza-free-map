@@ -1,10 +1,10 @@
 import type { CitySched } from './cityHours'
 
-export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'shelter' | 'bus' | 'pharmacy'
+export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'shelter' | 'bus' | 'pharmacy' | 'tram' | 'cercanias'
 /** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
-export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter' | 'bus' | 'pharmacy'
+export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter' | 'bus' | 'pharmacy' | 'tram' | 'train'
 
 export interface Item {
   id: string
@@ -38,6 +38,8 @@ export interface Item {
   lines?: string
   /** Bus stop: number of the city stop (has a live times page). Rural stops have none. */
   stop?: string
+  /** Cercanías station: Renfe station code (key of the baked timetable). */
+  code?: string
   /** Pharmacy on duty: today's duty hours (free text from the city) and sector (area of the city). */
   duty?: string
   sector?: string

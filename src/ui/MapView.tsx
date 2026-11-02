@@ -26,6 +26,8 @@ interface Props {
   onBackgroundClick: () => void
   /** A bus line to show instead of the markers (the map frames it above the sheet), and a stop of it tapped. `fitN` counts up to frame it again (the sheet changed height). */
   route?: RouteView | null
+  /** A rail line drawn thin under the stops (tram, Cercanías). */
+  track?: LatLon[][] | null
   fitN?: number
   onRouteStop?: (post: string) => void
   label: string
@@ -41,7 +43,7 @@ const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Ligh
 const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, fitN = 0, onRouteStop, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
@@ -140,7 +142,17 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const g = routeGroup.current
     if (!g) return
     g.clearLayers()
-    if (!route) return
+    if (!route) {
+      if (track) {
+        const col = getComputedStyle(document.documentElement).getPropertyValue(layer.color.replace(/^var\(|\)$/g, '')).trim()
+        const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
+        for (const path of track) {
+          L.polyline(path, { color: white, weight: 6, opacity: 0.9, interactive: false }).addTo(g)
+          L.polyline(path, { color: col, weight: 3, interactive: false }).addTo(g)
+        }
+      }
+      return
+    }
     const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
     for (const path of route.paths) {
@@ -161,7 +173,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     })
     const cur = route.stops[route.cur]
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
-  }, [route])
+  }, [route, track, layer.color])
   useEffect(() => {
     const m = map.current
     if (!m || !route) return

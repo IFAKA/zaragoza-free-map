@@ -4,7 +4,6 @@ import { seasonOf } from '../lib/season'
 /**
  * Goals: what the person is trying to do. The tab bar has one fixed column per goal, and each goal holds its services as a row of chips.
  * Adding a service = add its id to ONE goal here (and its layer in build.ts). Nothing else. A goal holds at most MAX_SERVICES.
- * Planned, not built yet (add the id to `move` once its data exists): 'tram', 'cercanias'.
  */
 export type GoalId = 'now' | 'move' | 'connect'
 export interface GoalConfig { id: GoalId; label: { en: string; es: string }; layers: LayerId[] }
@@ -13,7 +12,7 @@ export const MAX_SERVICES = 4
 /** Default goal order (a new visitor). The person's own taps re-sort it when the app opens (lib/usage.ts). */
 export const GOALS: GoalConfig[] = [
   { id: 'now', label: { en: 'Now', es: 'Ahora' }, layers: ['toilets', 'water', 'pharmacy', 'shelter'] },
-  { id: 'move', label: { en: 'Getting around', es: 'Moverse' }, layers: ['bus', 'bizi'] },
+  { id: 'move', label: { en: 'Getting around', es: 'Moverse' }, layers: ['bus', 'tram', 'cercanias', 'bizi'] },
   { id: 'connect', label: { en: 'Connect', es: 'Conectar' }, layers: ['wifi', 'charge', 'libraries'] },
 ]
 export const GOAL_IDS: GoalId[] = GOALS.map(g => g.id)

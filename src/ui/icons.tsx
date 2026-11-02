@@ -1,8 +1,8 @@
-import { BatteryCharging, Bicycle, BookOpenText, Bus, Drop, LockKey, Pill, Thermometer, Toilet, WifiHigh, type Icon } from '@phosphor-icons/react'
+import { BatteryCharging, Bicycle, BookOpenText, Bus, Drop, LockKey, Pill, Thermometer, Toilet, Train, Tram, WifiHigh, type Icon } from '@phosphor-icons/react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { IconKey } from '../lib/types'
 
-export const ICONS: Record<IconKey, Icon> = { drop: Drop, toilet: Toilet, charge: BatteryCharging, wifi: WifiHigh, library: BookOpenText, bike: Bicycle, lock: LockKey, shelter: Thermometer, bus: Bus, pharmacy: Pill }
+export const ICONS: Record<IconKey, Icon> = { drop: Drop, toilet: Toilet, charge: BatteryCharging, wifi: WifiHigh, library: BookOpenText, bike: Bicycle, lock: LockKey, shelter: Thermometer, bus: Bus, pharmacy: Pill, tram: Tram, train: Train }
 
 const cache = new Map<IconKey, string>()
 /** SVG markup of a need's icon (for Leaflet markers, which are plain HTML). Rendered once per icon. */

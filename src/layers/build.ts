@@ -83,6 +83,10 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
     shelter: L('shelter', { icon: 'shelter', color: 'var(--color-shelter)', ...shelterName(seasonOf(now)), hint: { en: 'Public buildings with climate control', es: 'Edificios públicos con clima' }, hours: true }, shelters, 0),
     bus: L('bus', { icon: 'bus', color: 'var(--color-bus)', label: { en: 'Bus stops', es: 'Paradas de bus' }, short: { en: 'Bus', es: 'Bus' }, hint: { en: 'Next buses at your stop', es: 'Próximos buses en tu parada' }, hours: false },
       d.bus.rows.map(r => ({ id: 'u' + r[0], part: 'city' as const, type: 'bus', name: r[1], lines: r[2], stop: /^\d+$/.test(r[0]) ? r[0] : undefined, lat: r[3], lon: r[4], upd: d.bus.updated ?? undefined })), 0),
+    tram: L('tram', { icon: 'tram', color: 'var(--color-tram)', label: { en: 'Tram stops', es: 'Paradas de tranvía' }, short: { en: 'Tram', es: 'Tranvía' }, hint: { en: 'Line T1, both directions', es: 'Línea T1, en los dos sentidos' }, hours: false },
+      d.tram.rows.map(r => ({ id: 't' + r[0], part: 'city' as const, type: 'tram', name: r[1], lat: r[2], lon: r[3], upd: d.tram.updated ?? undefined })), 0),
+    cercanias: L('cercanias', { icon: 'train', color: 'var(--color-train)', label: { en: 'Cercanías stations', es: 'Estaciones de Cercanías' }, short: { en: 'Cercanías', es: 'Cercanías' }, hint: { en: 'Planned trains from your station', es: 'Trenes previstos en tu estación' }, hours: false },
+      d.cercanias.rows.map(r => ({ id: 'z' + r[0], part: 'city' as const, type: 'train', name: r[1], code: r[0], lat: r[2], lon: r[3], upd: d.cercanias.updated ?? undefined })), 0),
     // live layer: its items come from lib/duty.ts when the tab is opened (see dutyItems), so it starts empty
     pharmacy: { id: 'pharmacy', icon: 'pharmacy', color: 'var(--color-pharmacy)', label: { en: 'Pharmacies on duty', es: 'Farmacias de guardia' }, short: { en: 'Pharmacy', es: 'Farmacia' }, hint: { en: 'Open today, day and night', es: 'Abiertas hoy, de día y de noche' }, hours: false, live: true, items: [] },
   }

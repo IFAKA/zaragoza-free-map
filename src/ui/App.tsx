@@ -8,7 +8,8 @@ import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
 import { canShowInstallHint, installEnv } from '../lib/install'
 import { rankOrAll } from '../lib/rank'
-import { loadBusRoutes } from '../data/lazy'
+import { DATA } from '../data'
+import { loadBusRoutes, loadCercaniasTimes, type CercaniasTimes } from '../data/lazy'
 import { decodePolyline, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
 import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
@@ -113,6 +114,7 @@ export function App() {
   // a bus line chosen on a stop card: its route replaces the markers until the person goes back
   const [lineSel, setLineSel] = useState<{ line: string; dir: number; anchor: string } | null>(null)
   const [routes, setRoutes] = useState<BusRoutes | null>(null)
+  const [times, setTimes] = useState<CercaniasTimes | null>(null)
   const [fitN, setFitN] = useState(0)
   const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
   const askedLocation = useRef(false)
@@ -137,6 +139,7 @@ export function App() {
   // Bizi: live bike and dock counts while that tab is open (see lib/bizi.ts); the places always show
   const bizi = useBizi(layerId === 'bizi', BIZI_STATIONS)
   const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layerId === 'bizi' ? withCounts(layer.items, bizi.counts) : layer.items), [layer, layerId, dutyRows, bizi.counts])
+  useEffect(() => { if (layerId === 'cercanias' && !times) void loadCercaniasTimes().then(setTimes) }, [layerId, times])
   useEffect(() => { if (layerId === 'bus' && !routes) void loadBusRoutes().then(setRoutes) }, [layerId, routes])
   const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
   const setLang = (l: Lang) => { if (l !== lang) track('lang', l); setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
@@ -180,6 +183,9 @@ export function App() {
     const route: RouteView = { key: lineSel.line + '|' + dir, paths: d.p.map(decodePolyline), stops, cur: idx }
     return { view, route }
   }, [lineSel, routes, layerId, layer])
+
+  // the rail line of the tram / Cercanías tab, drawn under the stops
+  const track_ = useMemo(() => (layerId === 'tram' ? DATA.tram.line : layerId === 'cercanias' ? DATA.cercanias.line : null)?.map(decodePolyline) ?? null, [layerId])
 
   const insetPx = useCallback(() => {
     if (desktop) return 0
@@ -294,7 +300,7 @@ export function App() {
       default: return (
         <HomePage
           layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating} nearby={nearby} peekRef={setPeekEl}
-          routes={routes} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
+          routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
           onPick={pickLayer} onGoal={pickGoal} goalOrder={goalOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
@@ -312,7 +318,7 @@ export function App() {
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
               layer={layer} items={lineData ? [] : arr} pick={pick} selected={lineData ? null : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
-              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} fitN={fitN} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
           {desktop ? (

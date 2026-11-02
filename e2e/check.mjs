@@ -69,7 +69,7 @@ const fits = (p, sel) => p.evaluate(s => {
 }, sel)
 const markers = p => p.locator('.mk').count()
 // A service chip only shows for the active goal: open its goal first if the chip is hidden (at most 2 taps), then the chip.
-const GOAL_OF = { toilets: 'now', water: 'now', pharmacy: 'now', shelter: 'now', bus: 'move', bizi: 'move', wifi: 'connect', charge: 'connect', libraries: 'connect' }
+const GOAL_OF = { toilets: 'now', water: 'now', pharmacy: 'now', shelter: 'now', bus: 'move', tram: 'move', cercanias: 'move', bizi: 'move', wifi: 'connect', charge: 'connect', libraries: 'connect' }
 const go = async (p, id, how = 'click') => {
   if (!(await p.getByTestId('tab-' + id).isVisible())) { await p.getByTestId('goal-' + GOAL_OF[id])[how](); await settle(p) }
   await p.getByTestId('tab-' + id)[how]()
@@ -405,6 +405,32 @@ todo.push(async () => {
   const next = p.getByTestId('next-buses')
   ok(await next.count() === 1 && /poste=\d+/.test(await next.getAttribute('href') || ''), 'Bus card: one Next buses link to the bus company page')
   ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() >= 1, 'Bus card: shows the lines and a Walk button')
+  await ctx.close()
+})
+// tram: the stop card shows the line, both ends, one link to the tram company, and the track is drawn
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
+  await p.waitForSelector('[data-testid=tram-info]'); await settle(p)
+  const info = await p.getByTestId('tram-info').innerText()
+  ok(/T1/.test(info) && /Parque Goya/.test(info) && /Valdespartera/.test(info), `tram card: line and both ends (${info.replace(/\n/g, ' ')})`)
+  ok(/tranviasdezaragoza\.es/.test(await p.getByTestId('tram-times').getAttribute('href') || ''), 'tram card: one link to the tram company times')
+  ok(await markers(p) >= 10, 'tram: the stops are drawn')
+  ok(await p.getByTestId('nearest').innerText().then(x => !/en vivo|tiempo real/i.test(x)), 'tram card does not claim live times')
+  await p.screenshot({ path: out + '/tram-es.png' })
+  await ctx.close()
+})
+// Cercanias: the next 3 planned trains, labelled as not real time, with the date of the data and a Renfe link
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'cercanias' })
+  await p.waitForSelector('[data-testid=train-row]'); await settle(p)
+  const n = await p.getByTestId('train-row').count()
+  ok(n >= 1 && n <= 3, `cercanias: ${n} next trains shown (1 to 3)`)
+  const rows = await p.getByTestId('train-row').allInnerTexts()
+  ok(rows.every(r => /\d\d:\d\d/.test(r) && /\ba /.test(r)), `cercanias: each row has a time and a destination (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  const note = await p.getByTestId('train-planned').innerText()
+  ok(/Horario programado \(no es tiempo real\)/.test(note) && /\d\d\/\d\d\/\d{4}/.test(note), `cercanias: planned label and data date (${note})`)
+  ok(/renfe\.com/.test(await p.getByTestId('train-times').getAttribute('href') || ''), 'cercanias: Renfe link')
+  await p.screenshot({ path: out + '/cercanias-es.png' })
   await ctx.close()
 })
 // a bus line: tap a line chip on the stop card, the route replaces the markers, the sheet shows the stepper; back returns

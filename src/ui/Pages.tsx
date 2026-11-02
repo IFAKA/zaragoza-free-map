@@ -2,11 +2,13 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
-import { chipSplit, type BusRoutes } from '../lib/transit'
+import { chipSplit, nextDepartures, type BusRoutes } from '../lib/transit'
+import { nowMadrid } from '../lib/hours'
+import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS } from '../layers'
@@ -17,7 +19,7 @@ import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from './MapView'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
-import { BUZ_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -100,6 +102,56 @@ function BusActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) 
         {walk}
       </div>
       <p className={cn(sub, 'm-0 mt-1.5')}>{item.stop ? t('nextBusesHint') : t('noLive')}</p>
+    </>
+  )
+}
+
+/** Tram stop: the line and its two ends, then ONE primary button to the tram company's times page (a browser cannot read them), then Walk. */
+function TramActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
+  const { t } = useT()
+  const [a, b] = DATA.tram.ends
+  return (
+    <>
+      <p className="m-0 mt-2 text-[0.93em] leading-snug" data-testid="tram-info"><span className="mr-1.5 rounded-[0.3em] bg-[var(--color-tram)] px-1.5 py-0.5 font-bold text-on-brand">T1</span>{t('tramDirs').replace('{a}', a).replace('{b}', b)}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button {...linkProps(TRAM_URL)} onClick={() => track('times', 'tram')} data-testid="tram-times">{t('tramTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+        <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+      </div>
+      <p className={cn(sub, 'm-0 mt-1.5')}>{t('tramHint')}</p>
+    </>
+  )
+}
+
+/** Cercanías station: the next 3 trains from the baked timetable, plainly labelled as planned (not real time), with the date of the data. Renfe link-out for delays. */
+function TrainActions({ item, times, onWalk }: { item: RankedItem; times: CercaniasTimes | null; onWalk: () => void }) {
+  const { t } = useT()
+  const [tick, setTick] = useState(0)
+  useEffect(() => { const i = setInterval(() => setTick(n => n + 1), 30_000); return () => clearInterval(i) }, [])
+  const tt = times && item.code ? times.t[item.code] : undefined
+  void tick
+  const next = tt ? nextDepartures(tt, nowMadrid(), 3) : []
+  const [y, mo, d] = DATA.cercanias.updated?.split('-') ?? []
+  return (
+    <>
+      <div className="mt-2" data-testid="train-next">
+        <div className={overline}>{t('trainNext')}</div>
+        {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
+          <ul className="m-0 flex list-none flex-col p-0">
+            {next.map((n, i) => (
+              <li key={i} className="flex items-baseline gap-2 leading-snug" data-testid="train-row">
+                <span className="font-bold tabular-nums">{n.at}</span>
+                <span className="min-w-0 flex-1 truncate">{t('trainTo').replace('{to}', DATA.cercanias.dests[n.dest] ?? '')}</span>
+                <span className="text-ink-soft">{n.tomorrow ? t('trainTomorrow') : t('trainIn').replace('{n}', String(n.inMin))}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className={cn(sub, 'm-0 mt-0.5')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button {...linkProps(RENFE_URL)} onClick={() => track('times', 'cercanias')} data-testid="train-times">{t('trainTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+        <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+      </div>
     </>
   )
 }
@@ -231,9 +283,9 @@ export function LineBlock({ view, onBack, onDir }: { view: LineView; onBack: () 
 }
 
 // ---------- the block with the nearest (or selected) place ----------
-export function NearestBlock({ layer, item, isSelected, hasPos, cat, routes, onLine, onDetails, onWalk }: {
+export function NearestBlock({ layer, item, isSelected, hasPos, cat, routes, times, onLine, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
-  routes: BusRoutes | null; onLine: (line: string) => void
+  routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void
   onDetails: () => void; onWalk: () => void
 }) {
   const { t, type } = useT()
@@ -249,7 +301,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, routes, onL
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
+      {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
           <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
@@ -326,7 +378,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
-  routes: BusRoutes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
+  routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onPick: (id: LayerId) => void; onGoal: (id: GoalId) => void; goalOrder: GoalId[]
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
@@ -341,7 +393,7 @@ export function HomePage(p: {
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.lineView ? <LineBlock view={p.lineView} onBack={p.onLineBack} onDir={p.onLineDir} />
-          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} routes={p.routes} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
+          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
         {!p.liveState && !p.lineView && <Nearby items={p.nearby} onSelect={p.onSelect} />}
@@ -414,7 +466,7 @@ export function AboutPage({ onBack, onClose, locked }: { onBack?: () => void; on
           <p className="m-0">{t('noGuarantee')}</p>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
-            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsBizi')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
+            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsTram')} ({DATA.tram.updated})</li><li>{t('creditsTrain')} ({DATA.cercanias.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsBizi')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
           </ul>
           {d && <p className="m-0 font-bold" data-testid="refreshed">{t('dataRefreshed')}: {d}</p>}
           <a className="font-bold text-brand-text" href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">{t('fixOsm')}</a>

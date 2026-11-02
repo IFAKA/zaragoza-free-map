@@ -24,7 +24,7 @@ describe('goals', () => {
     expect(goalServices(goalById('now'), winter)).toEqual(['toilets', 'water', 'shelter', 'pharmacy'])
     expect(goalServices(goalById('now'), summer)).toEqual(['toilets', 'water', 'pharmacy', 'shelter'])
     expect(goalServices(goalById('now'), spring)).toEqual(['toilets', 'water', 'pharmacy', 'shelter'])
-    expect(goalServices(goalById('move'), winter)).toEqual(['bus', 'bizi'])
+    expect(goalServices(goalById('move'), winter)).toEqual(['bus', 'tram', 'cercanias', 'bizi'])
   })
   it('a goal opens on the service last used there, else its first', () => {
     expect(serviceFor(goalById('now'), {})).toBe('toilets')
