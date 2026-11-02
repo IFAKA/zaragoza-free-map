@@ -1,141 +1,159 @@
-import { Button } from '@base-ui/react/button'
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { getVersion, loadAll, retryLayer, runtime, subscribe } from '../layer-data'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lsGet, lsSet } from '../lib/cache'
-import { initialLang, type Lang } from '../lib/i18n'
-import { nearestOf, rank } from '../lib/rank'
+import { initialLang, DICT, type Lang } from '../lib/i18n'
+import { nowMadrid } from '../lib/hours'
+import { rank } from '../lib/rank'
 import type { LatLon, LayerId } from '../lib/types'
-import { press } from './cls'
-import { Foot } from './Foot'
-import { Hint } from './Hint'
-import { Home } from './Home'
-import { LangCtx, useT } from './lang'
-import { LayerHead, LayerList } from './LayerView'
+import { LAYERS, MORE } from '../layers'
+import { LangCtx } from './lang'
 import { MapView, type FlyRequest } from './MapView'
+import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
+import { AboutPage, HomePage, LanguagePage, MorePage, PlacePage } from './Pages'
+import { ToastHost, toasts } from './ToastHost'
 import { useLocation } from './useLocation'
-import { useSheet } from './useSheet'
 
-const PAGE = 25
+type Page = 'home' | 'more' | 'language' | 'about' | 'place'
+const UP: Record<Page, Page | null> = { home: null, more: 'home', language: 'more', about: 'more', place: 'home' }
+const up = (p: Page) => UP[p]
+
+// Drawer heights. Peek shows the tabs and the nearest place; half shows the controls too; full is the whole list.
+const PEEK = '248px', HALF = '500px', FULL = 1
+const PEEK_PX = 248, HALF_PX = 500
+const SNAPS: (string | number)[] = [PEEK, HALF, FULL]
+
+const isLayer = (v: string | null): v is LayerId => !!v && v in LAYERS
+function useDesktop() {
+  const q = '(min-width: 900px)'
+  const [d, setD] = useState(() => matchMedia(q).matches)
+  useEffect(() => { const m = matchMedia(q); const f = () => setD(m.matches); m.addEventListener('change', f); return () => m.removeEventListener('change', f) }, [])
+  return d
+}
+const saved = <T,>(k: string, def: T, parse: (s: string) => T | undefined): T => { const s = lsGet(k); const v = s == null ? undefined : parse(s); return v === undefined ? def : v }
 
 export function App() {
-  const [lang, setLang] = useState<Lang>(initialLang)
-  return (
-    <LangCtx.Provider value={lang}>
-      <Shell lang={lang} setLang={l => { setLang(l); lsSet('lang', l) }} />
-    </LangCtx.Provider>
-  )
-}
-
-function Shell({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
-  const { t } = useT()
-  const version = useSyncExternalStore(subscribe, getVersion)
-  const sheet = useSheet()
-  const loc = useLocation()
-  const [view, setView] = useState<LayerId | null>(null)
+  const desktop = useDesktop()
+  const [lang, setLangState] = useState<Lang>(initialLang)
+  const t = DICT[lang]
+  const [layerId, setLayerId] = useState<LayerId>(() => saved<LayerId>('layer', 'water', s => (isLayer(s) ? s : undefined)))
+  const [openOnly, setOpenOnlyS] = useState(() => saved('open', true, s => s !== '0'))
+  const [showRange, setShowRangeS] = useState(() => saved('range', true, s => s !== '0'))
+  const [cat, setCat] = useState('all')
   const [selected, setSelected] = useState<string | null>(null)
-  const [openOnly, setOpenOnly] = useState(false)
-  const [cat, setCat] = useState<string | null>(null)
-  const [limit, setLimit] = useState(PAGE)
+  const [limit, setLimit] = useState(30)
+  const [snap, setSnap] = useState<string | number>(PEEK)
   const [fly, setFly] = useState<FlyRequest | null>(null)
-  const [hint, setHint] = useState(false)
+  const [tick, setTick] = useState(0)
+  const { pos, locating, locate, alreadyGranted } = useLocation()
   const flyN = useRef(0)
-  const pending = useRef(false) // a need was tapped and the nearest item is not picked yet
+  const viewport = useRef<HTMLDivElement>(null)
 
-  const rt = view ? runtime[view] : null
+  const layer = LAYERS[layerId]
+  const setLang = (l: Lang) => { setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
+  const setOpenOnly = (v: boolean) => { setOpenOnlyS(v); lsSet('open', v ? '1' : '0') }
+  const setShowRange = (v: boolean) => { setShowRangeS(v); lsSet('range', v ? '1' : '0') }
+
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  useEffect(() => { const i = setInterval(() => setTick(x => x + 1), 60_000); return () => clearInterval(i) }, [])
+
+  const { page, go, goUp, turn, pageRef } = usePages<Page>('home', up)
+  const mobileLow = !desktop && snap !== FULL
+
   const arr = useMemo(
-    () => (rt ? rank(rt.cfg, rt.items, { ref: loc.pos, openOnly, cat }) : []),
+    () => rank(layer, layer.items, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
+    // tick re-evaluates open/closed as the minutes pass
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rt, version, loc.pos, openOnly, cat],
-  )
+    [layer, pos, openOnly, cat, tick])
+  const chosen = selected ? arr.find(i => i.id === selected) ?? null : null
+  const focus = chosen ?? arr[0] ?? null
 
-  const doFly = useCallback((to: LatLon, zoom: number, fitUser?: LatLon) => setFly({ n: ++flyN.current, to, zoom, fitUser }), [])
+  const insetPx = useCallback(() => {
+    if (desktop) return 0
+    return snap === PEEK ? PEEK_PX : HALF_PX
+  }, [desktop, snap])
 
-  useEffect(() => { loadAll() }, [])
+  const flyTo = useCallback((to: LatLon, zoom: number, o: Partial<FlyRequest> = {}) => setFly({ n: ++flyN.current, to, zoom, ...o }), [])
+
+  // show the nearest place of the current layer whenever the layer or the filters change
+  const first = arr[0]?.id
   useEffect(() => {
-    // already granted: locate without asking
-    void loc.alreadyGranted().then(async ok => { if (!ok) return; const p = await loc.locate(); if (p && !pending.current) doFly(p, 16) })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // pick the nearest item once we know where the user is (or know we will not)
-  useEffect(() => {
-    if (!pending.current || !rt || loc.locating || !arr.length) return
-    const n = nearestOf(rt.cfg, arr, !!rt.parts.city?.live)
-    if (!n) return
-    pending.current = false
-    setSelected(n.id)
-    doFly([n.lat, n.lon], 17, loc.pos && n.d < 4000 ? loc.pos : undefined)
-  }, [arr, rt, loc.locating, loc.pos, doFly])
-
-  const openLayer = (id: LayerId) => {
-    setView(id); setSelected(null); setLimit(PAGE); setCat(null); pending.current = true
-    sheet.snapTo(1)
-    if (!loc.pos && !loc.denied && !loc.locating) void loc.locate()
-    sheet.listRef.current?.scrollTo({ top: 0 })
-  }
-  const back = () => { setView(null); setSelected(null); pending.current = false; sheet.snapTo(1) }
-
-  const select = (id: string, fromMap: boolean) => {
-    pending.current = false
-    setSelected(id)
-    const it = arr.find(x => x.id === id)
+    const it = arr[0]
     if (!it) return
-    if (fromMap) {
-      if (sheet.cur === 2) sheet.snapTo(1)
-      requestAnimationFrame(() => {
-        const c = sheet.listRef.current?.querySelector<HTMLElement>(`[data-id="${CSS.escape(id)}"]`)
-        if (c) sheet.listRef.current?.scrollTo({ top: Math.max(0, c.offsetTop - 4), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-      })
-    } else {
-      sheet.snapTo(1)
-      doFly([it.lat, it.lon], 17)
+    flyTo([it.lat, it.lon], 16, pos ? { fitUser: pos } : {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layerId, first, !!pos])
+
+  // locate silently when the browser already allows it
+  useEffect(() => { alreadyGranted().then(ok => { if (ok) locate() }) }, [alreadyGranted, locate])
+
+  const raise = (min: string | number = HALF) => setSnap(s => (s === PEEK && min !== PEEK ? min : s))
+  const pickLayer = (id: LayerId) => {
+    setLayerId(id); lsSet('layer', id); setSelected(null); setCat('all'); setLimit(30)
+    if (page !== 'home') go('home')
+    raise()
+    viewport.current?.scrollTo({ top: 0 })
+  }
+  const select = (id: string) => {
+    setSelected(id)
+    const it = arr.find(i => i.id === id)
+    if (it) flyTo([it.lat, it.lon], 18)
+    if (!desktop) setSnap(s => (s === FULL ? HALF : s))
+  }
+  const doLocate = async () => {
+    const p = await locate()
+    if (!p) toasts.add({ title: t.deniedTitle, description: t.deniedBody, data: { close: t.close } })
+    else raise()
+  }
+  const onWalk = () => {
+    if (!lsGet('hinted')) {
+      lsSet('hinted', '1')
+      setTimeout(() => toasts.add({ title: t.installHint, data: { close: t.installClose } }), 1200)
     }
   }
+  const turnTo = (p: Page) => { go(p); raise() }
+  const back = () => { goUp() }
+  const dismiss = () => goUp()
+  const cycle = () => setSnap(s => (s === PEEK ? HALF : s === HALF ? FULL : PEEK))
 
-  const onWalk = () => {
-    if (lsGet('walked')) return
-    lsSet('walked', '1')
-    const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone
-    if (!standalone && !lsGet('hint-closed')) setHint(true)
-  }
-  const closeHint = () => { setHint(false); lsSet('hint-closed', '1') }
-
-  const locateBtn = () => void loc.locate().then(p => { if (p && !view) doFly(p, 16) })
-  const dzTitle = sheet.dragProps(false)
-  const dzMeta = sheet.dragProps(false)
-  const s = rt ? { rt, arr, selected, openOnly, cat, locating: loc.locating, hasPos: !!loc.pos, note: loc.denied && !loc.pos ? t('denied') : '' } : null
+  const pageEl = (() => {
+    switch (page) {
+      case 'more': return <MorePage layer={layerId} lang={lang} onBack={back} locked={mobileLow} go={turnTo}
+        onLayer={id => { if ((MORE as string[]).includes(id)) pickLayer(id) }} />
+      case 'language': return <LanguagePage lang={lang} setLang={setLang} onBack={back} locked={mobileLow} />
+      case 'about': return <AboutPage onBack={back} locked={mobileLow} />
+      case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
+      default: return (
+        <HomePage
+          layer={layer} arr={arr} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
+          openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
+          limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
+          onPick={pickLayer} onMore={() => turnTo('more')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
+          title={desktop ? <div className="px-4 pb-1 pt-4"><div className="font-title text-[1.15em] font-bold text-brand-text">{t.title} · {t.subtitle}</div></div> : undefined}
+        />
+      )
+    }
+  })()
 
   return (
-    <div className="relative h-dvh overflow-hidden min-[900px]:flex">
-      <MapView
-        layer={rt?.cfg ?? null} items={arr} selected={selected} userPos={loc.pos} fly={fly} inset={sheet.inset}
-        onSelect={id => select(id, true)} onBackgroundClick={() => { if (sheet.cur === 0) sheet.snapTo(1) }} label={t('map')}
-      />
-      <section
-        ref={sheet.sheetRef}
-        className={`absolute inset-x-0 bottom-0 z-[2] flex h-[88dvh] translate-y-[var(--ty,0px)] flex-col rounded-t-2xl bg-bg pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_14px_rgba(0,0,0,.25)] transition-transform duration-[280ms] ease-sheet will-change-transform motion-reduce:transition-none min-[900px]:relative min-[900px]:order-0 min-[900px]:h-full min-[900px]:w-[400px] min-[900px]:translate-y-0! min-[900px]:rounded-none min-[900px]:shadow-[2px_0_12px_rgba(0,0,0,.15)] ${sheet.cur === 0 ? 'is-full' : ''}`}
-      >
-        <button {...sheet.dragProps(true)} onKeyDown={sheet.onHandleKey} aria-label={t('handle')} aria-expanded={sheet.cur === 0} className="w-full cursor-grab touch-none border-0 bg-transparent pb-2.5 pt-3 min-[900px]:hidden">
-          <span className="mx-auto block h-[5px] w-11 rounded-[3px] bg-line" />
-        </button>
-        <div className="flex-none px-3.5 pb-2 min-[900px]:pt-3">
-          <div className="flex touch-none items-center gap-2" {...dzTitle}>
-            <h1 className="m-0 flex-1 text-[17px]">{rt ? <><span aria-hidden>{rt.cfg.icon} </span>{rt.cfg.label[lang]}</> : t('title')}</h1>
-            <Button onClick={() => setLang(lang === 'en' ? 'es' : 'en')} aria-label={t('langSwitch')} className={`${press} min-h-11 min-w-11 rounded-lg border border-line bg-chip font-semibold`}>{lang === 'en' ? 'ES' : 'EN'}</Button>
-          </div>
-          {s ? (
-            <LayerHead
-              s={s} dz={dzMeta} onBack={back} onOpenOnly={setOpenOnly} onCat={c => { setCat(c); setLimit(PAGE) }}
-              onRetry={() => { pending.current = true; retryLayer(s.rt.cfg.id) }} onWalk={onWalk}
+    <LangCtx.Provider value={lang}>
+      <ToastHost>
+        <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
+          <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
+            <MapView
+              layer={layer} items={arr} selected={chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={() => setSelected(null)} label={t.map}
             />
-          ) : <Home onPick={openLayer} locating={loc.locating} located={!!loc.pos} onLocate={locateBtn} />}
-          {hint && <Hint onClose={closeHint} />}
+          </div>
+          {desktop ? (
+            <aside aria-label={t.panel} data-testid="panel" className="absolute inset-y-0 left-0 z-10 flex w-[400px] flex-col border-r border-line bg-paper shadow-[2px_0_14px_rgb(0_0_0/0.12)]">
+              <PageFrame turn={turn} pageRef={pageRef}>{pageEl}</PageFrame>
+            </aside>
+          ) : (
+            <PagedDrawer snapPoints={SNAPS} snap={snap} onSnap={setSnap} onDismissRequest={dismiss} turn={turn} pageRef={pageRef} handleLabel={t.handle} onHandle={cycle}>
+              {pageEl}
+            </PagedDrawer>
+          )}
         </div>
-        <ul ref={sheet.listRef} className={`m-0 min-h-0 flex-1 list-none overscroll-contain border-t border-line p-0 [-webkit-overflow-scrolling:touch] ${sheet.cur === 0 ? 'overflow-y-auto' : 'overflow-y-hidden'} min-[900px]:overflow-y-auto`}>
-          {s && <LayerList s={s} limit={limit} onMore={() => setLimit(l => l + PAGE)} onSelect={id => select(id, false)} onWalk={onWalk} />}
-          <Foot />
-        </ul>
-      </section>
-    </div>
+      </ToastHost>
+    </LangCtx.Provider>
   )
 }

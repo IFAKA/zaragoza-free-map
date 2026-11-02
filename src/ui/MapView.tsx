@@ -3,75 +3,105 @@ import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
 import { CENTER } from '../lib/geo'
 import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
-import { isDesktop } from './useSheet'
+import { iconHtml } from './icons'
 
-export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon }
+export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon; instant?: boolean }
 interface Props {
-  layer: LayerConfig | null
+  layer: LayerConfig
   items: RankedItem[]
   selected: string | null
   userPos: LatLon | null
   fly: FlyRequest | null
+  /** Pixels at the bottom of the map that the drawer covers. */
   inset: () => number
+  showRange: boolean
+  desktop: boolean
   onSelect: (id: string) => void
   onBackgroundClick: () => void
   label: string
 }
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+const dark = () => matchMedia('(prefers-color-scheme: dark)').matches
+/** WiFi range estimate in metres: ~40 m around a city building, ~25 m around an OpenStreetMap venue. */
+export const rangeMetres = (it: { building?: boolean }) => (it.building ? 40 : 25)
+const TILES = (d: boolean) => `https://{s}.basemaps.cartocdn.com/${d ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
-export function MapView({ layer, items, selected, userPos, fly, inset, onSelect, onBackgroundClick, label }: Props) {
+export function MapView({ layer, items, selected, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
+  const rings = useRef<L.LayerGroup | null>(null)
   const markers = useRef(new Map<string, L.Marker>())
   const sig = useRef('')
   const me = useRef<L.Marker | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset })
   cb.current = { onSelect, onBackgroundClick, inset }
+  const live = useRef({ layer, items, selected, showRange })
+  live.current = { layer, items, selected, showRange }
+
+  const drawRings = () => {
+    const m = map.current, g = rings.current
+    if (!m || !g) return
+    g.clearLayers()
+    const { layer, items, selected, showRange } = live.current
+    if (layer.id !== 'wifi' || !showRange) return
+    const col = getComputedStyle(document.documentElement).getPropertyValue('--color-wifi').trim() // canvas needs a real colour, not var()
+    const style = (r: number, c: L.LatLng) => L.circle(c, { radius: r, color: col, weight: 1.5, dashArray: '5 4', fillColor: col, fillOpacity: 0.08, interactive: false })
+    const view = m.getBounds().pad(0.3), z = m.getZoom()
+    for (const it of items) {
+      const isSel = it.id === selected
+      if (!isSel && (z < 16 || !view.contains([it.lat, it.lon]))) continue
+      style(rangeMetres(it), L.latLng(it.lat, it.lon)).addTo(g)
+    }
+  }
 
   useEffect(() => {
-    const m = L.map(el.current!, { zoomControl: false, attributionControl: true }).setView(CENTER, 14)
-    if (isDesktop()) L.control.zoom({ position: 'topright' }).addTo(m)
-    m.attributionControl.setPosition('topleft')
+    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: L.canvas({ padding: 0.5 }) }).setView(CENTER, 15)
+    if (desktop) L.control.zoom({ position: 'topright' }).addTo(m)
+    m.attributionControl.setPosition(desktop ? 'bottomright' : 'topleft')
     m.on('click', () => cb.current.onBackgroundClick())
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri · © OpenStreetMap contributors' }).addTo(m)
+    const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, subdomains: 'abcd', attribution: '© OpenStreetMap contributors © CARTO' }).addTo(m)
+    const mq = matchMedia('(prefers-color-scheme: dark)')
+    const onScheme = () => tiles.setUrl(TILES(dark()))
+    mq.addEventListener('change', onScheme)
+    rings.current = L.layerGroup().addTo(m)
     group.current = L.layerGroup().addTo(m)
     map.current = m
+    m.on('moveend zoomend', drawRings)
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
-    return () => { ro.disconnect(); m.remove(); map.current = null }
+    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // markers: rebuilt only when the set of visible items changes; selection just toggles a class
   useEffect(() => {
     const g = group.current
     if (!g) return
-    const s = layer ? layer.id + '|' + items.map(i => i.id).join(',') : ''
+    const s = layer.id + '|' + items.map(i => i.id).join(',')
     if (s !== sig.current) {
       sig.current = s
       g.clearLayers(); markers.current.clear()
-      if (layer) {
-        const icon = L.divIcon({ className: 'mkw', html: `<div class="mk" style="--c:${layer.color}">${layer.icon}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] })
-        for (const it of items) {
-          const mk = L.marker([it.lat, it.lon], { icon, keyboard: false, riseOnHover: false })
-          mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
-          markers.current.set(it.id, mk); g.addLayer(mk)
-        }
-        requestAnimationFrame(() => requestAnimationFrame(() => markers.current.forEach(mk => mk.getElement()?.firstElementChild?.classList.add('in'))))
+      const icon = L.divIcon({ className: 'mkw', html: `<div class="mk" style="--c:${layer.color}">${iconHtml(layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
+      for (const it of items) {
+        const mk = L.marker([it.lat, it.lon], { icon, keyboard: false, riseOnHover: false, title: it.name || undefined })
+        mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
+        markers.current.set(it.id, mk); g.addLayer(mk)
       }
     }
     markers.current.forEach((mk, id) => {
       mk.getElement()?.firstElementChild?.classList.toggle('sel', id === selected)
       mk.setZIndexOffset(id === selected ? 1000 : 0)
     })
-  }, [layer, items, selected])
+    drawRings()
+  }, [layer, items, selected, showRange])
 
   useEffect(() => {
     const m = map.current
     if (!m) return
     me.current?.remove(); me.current = null
-    if (userPos) me.current = L.marker(userPos, { icon: L.divIcon({ className: 'mkw', html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false }).addTo(m)
+    if (userPos) me.current = L.marker(userPos, { icon: L.divIcon({ className: 'mkw', html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 500 }).addTo(m)
   }, [userPos])
 
   // fly requests: interruptible (a new request retargets), no movement when reduced motion is on
@@ -79,17 +109,17 @@ export function MapView({ layer, items, selected, userPos, fly, inset, onSelect,
     const m = map.current
     if (!m || !fly) return
     const bottom = cb.current.inset()
-    const anim = !reduced()
+    const anim = !reduced() && !fly.instant
     if (fly.fitUser) {
       const b = L.latLngBounds([fly.fitUser, fly.to])
-      const o = { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, bottom + 30), maxZoom: fly.zoom, animate: anim, duration: 0.4 }
+      const o = { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, bottom + 30), maxZoom: fly.zoom, animate: anim, duration: 0.45 }
       if (anim) m.flyToBounds(b, o); else m.fitBounds(b, o)
       return
     }
     const p = m.project(fly.to, fly.zoom).add([0, bottom / 2])
     const c = m.unproject(p, fly.zoom)
-    if (anim) m.flyTo(c, fly.zoom, { duration: 0.4 }); else m.setView(c, fly.zoom, { animate: false })
+    if (anim) m.flyTo(c, fly.zoom, { duration: 0.45 }); else m.setView(c, fly.zoom, { animate: false })
   }, [fly])
 
-  return <div ref={el} className="absolute inset-0 z-0 min-[900px]:relative min-[900px]:inset-auto min-[900px]:order-1 min-[900px]:flex-1" role="application" aria-label={label} />
+  return <div ref={el} className="absolute inset-0 z-0" role="application" aria-label={label} data-testid="map" />
 }
