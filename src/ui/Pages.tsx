@@ -3,7 +3,7 @@ import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { Tabs } from '@base-ui/react/tabs'
 import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { revealDelta } from '../lib/reveal'
 import { track } from '../lib/analytics'
@@ -121,14 +121,28 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
 const DIST_MIN = 'min'
 
 // ---------- tabs ----------
-/** One fixed row of 6 equal category cells. No scrolling; nothing moves when a tab is selected. Settings is a button in the header, not a tab. */
+/**
+ * One row of category tabs that scrolls sideways (10 do not fit at 390 px). Every tab is one tap away: each is 1/5.5 of the width, so the next one
+ * peeks in and shows there is more. Scroll-snap, no scrollbar, and the active tab is scrolled to the middle (also after a reload).
+ * Settings is a button in the header, not a tab.
+ */
 export function NeedTabs({ layer, onPick }: { layer: LayerId; onPick: (id: LayerId) => void }) {
   const { lang, t } = useT()
-  const tab = 'group flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0 text-ink [transition:color_120ms_var(--ease-out),transform_120ms_var(--ease-out)] active:scale-[.97] data-[active]:text-brand-text'
+  const list = useRef<HTMLDivElement>(null)
+  const first = useRef(true)
+  useEffect(() => {
+    const el = list.current, tab = el?.querySelector<HTMLElement>(`[data-testid="tab-${layer}"]`)
+    if (!el || !tab) return
+    const left = tab.offsetLeft - (el.clientWidth - tab.offsetWidth) / 2
+    const calm = first.current || matchMedia('(prefers-reduced-motion: reduce)').matches
+    first.current = false
+    el.scrollTo({ left: Math.max(0, left), behavior: calm ? 'auto' : 'smooth' })
+  }, [layer])
+  const tab = 'group flex min-h-14 shrink-0 basis-[18.18%] snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0 text-ink [transition:color_120ms_var(--ease-out),transform_120ms_var(--ease-out)] active:scale-[.97] data-[active]:text-brand-text'
   const label = 'max-w-full border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
   return (
     <Tabs.Root value={layer} className="flex shrink-0 border-b border-line">
-      <Tabs.List className="grid min-w-0 flex-1" style={{ gridTemplateColumns: `repeat(${ORDER.length}, minmax(0, 1fr))` }} aria-label={t('tabsLabel')}>
+      <Tabs.List ref={list} className="flex min-w-0 flex-1 snap-x snap-proximity overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
         {ORDER.map(id => {
           const I = ICONS[LAYERS[id].icon]
           return (
@@ -187,6 +201,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
 // ---------- list ----------
 function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; onSelect: () => void }) {
   const { t, type } = useT()
+  const closed = layer.hours && item.open === false
   return (
     <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
       <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink after:absolute after:inset-0 hov:bg-surface">
@@ -201,7 +216,6 @@ function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: Lay
   )
 }
 
-  const closed = layer.hours && item.open === false
 export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange, cat, setCat }: {
   layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {
