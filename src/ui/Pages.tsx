@@ -2,9 +2,8 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
-import { revealDelta } from '../lib/reveal'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
@@ -17,7 +16,7 @@ import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from './MapView'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
-import { BUZ_URL, biziLine, busUrl, clockMadrid, dotBetween, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -141,19 +140,6 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
   )
 }
 
-/** A quiet stand-in for a list row while a live list loads: same structure and height as a real row, so nothing jumps when the real rows arrive. */
-function PlaceholderRow() {
-  return (
-    <li className="border-b border-line" aria-hidden>
-      <div className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-x-3 px-4 py-2">
-        <span className="min-w-0"><span className="block font-bold"><span className="inline-block h-[0.85em] w-44 max-w-full rounded-sm bg-surface align-middle" /></span><span className={cn(sub, 'block')}><span className="inline-block h-[0.8em] w-28 rounded-sm bg-surface align-middle" /></span></span>
-        <span className="whitespace-nowrap text-right font-bold"><span className="inline-block h-[0.85em] w-9 rounded-sm bg-surface align-middle" /><span className={cn(sub, 'block font-normal')}><span className="inline-block h-[0.8em] w-7 rounded-sm bg-surface align-middle" /></span></span>
-      </div>
-    </li>
-  )
-}
-const Placeholders = ({ n = 4 }: { n?: number }) => <ul className="m-0 list-none p-0" data-testid="placeholders">{Array.from({ length: n }, (_, i) => <PlaceholderRow key={i} />)}</ul>
-
 /** Bizi: the two real jobs as chips (take a bike, return a bike, my own bike), and one line about the live counts. Always in view, above the nearest place. */
 function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => void; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'> }) {
   const { t } = useT()
@@ -177,8 +163,6 @@ function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => vo
   )
 }
 
-const DIST_MIN = 'min'
-
 // ---------- the block with the nearest (or selected) place ----------
 export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
@@ -193,6 +177,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
       <h2 className={cn(h2, 'mt-1')} data-testid="nearest-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
+      {item.type === 'lib' && <div className="mt-0.5"><Occupancy item={item} /></div>}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <div className="mt-0.5 font-semibold" data-testid="bus-lines">{t('lines')}: {item.lines.replace(/,/g, ', ')}</div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
@@ -206,22 +191,25 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
   )
 }
 
-// ---------- list ----------
-function Row({ item, layer, selected, counting, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; counting: boolean; onSelect: () => void }) {
+// ---------- the next two nearest, under the card ----------
+/** The two nearest places after the one on the card, as compact chips: one tap shows that place (card and map). */
+export function Nearby({ items, onSelect }: { items: RankedItem[]; onSelect: (id: string) => void }) {
   const { t, type } = useT()
-  const closed = layer.hours && item.open === false
-  const rowLine = item.type === 'bizi' ? (biziLine(t, item) ? <Tick>{biziLine(t, item)}</Tick> : (counting ? <span aria-hidden className="inline-block h-[0.8em] w-32 rounded-sm bg-surface align-middle" /> : type(item.type))) : item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note
+  if (!items.length) return null
   return (
-    <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
-      <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] after:absolute after:inset-0 hov:bg-surface active:scale-[.97] motion-reduce:active:scale-100">
-        <span className={cn('min-w-0', closed && 'opacity-60')}>
-          <span className="block truncate font-bold">{item.name || type(item.type)}</span>
-          <span className={cn(sub, 'block truncate')}>{rowLine}{dotBetween(rowLine, layer.hours)}{layer.hours && <Status item={item} layer={layer} />}</span>
-        </span>
-        <span className={cn('whitespace-nowrap text-right font-bold', closed && 'opacity-60')}>{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
-      </BaseButton>
-      {item.type === 'lib' && <div className="pointer-events-none relative px-4 pb-1 [&_a]:pointer-events-auto [&_button]:pointer-events-auto"><Occupancy item={item} /></div>}
-    </li>
+    <div className="px-4 pb-3" data-testid="nearby">
+      <div className={overline}>{t('alsoNearby')}</div>
+      <ul className="m-0 mt-1 grid list-none grid-cols-2 gap-2 p-0">
+        {items.map(it => (
+          <li key={it.id} className="min-w-0">
+            <BaseButton onClick={() => onSelect(it.id)} render={<m.button {...tap} />} data-testid="nearby-item" className={cn('flex min-h-11 w-full items-center justify-between gap-2 rounded-btn border-0 bg-surface px-3 text-left text-ink', it.open === false && 'opacity-60')}>
+              <span className="min-w-0 truncate text-[0.93em] font-semibold">{it.name || type(it.type)}</span>
+              <span className="shrink-0 text-[0.87em] font-bold text-ink-soft">{fmtDist(it.d)}</span>
+            </BaseButton>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -241,20 +229,16 @@ export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange
   )
 }
 
-/** Above the list: how many places, and whose distances they are. Without a position: the plain truth and one big button; blocked: one calm line. */
-function ListHeader({ count, hasPos, locating, denied, onLocate }: { count: number; hasPos: boolean; locating: boolean; denied: boolean; onLocate: () => void }) {
+/** Whose distances these are. Without a position: the plain truth and one big button; blocked: one calm line. With a position: nothing (the card says "from you"). */
+function Locate({ hasPos, locating, denied, onLocate }: { hasPos: boolean; locating: boolean; denied: boolean; onLocate: () => void }) {
   const { t } = useT()
+  if (hasPos) return null
   return (
-    <div className="border-y border-line bg-surface" data-testid="list-header">
-      <div className={cn(overline, 'px-4 py-2')}>{count} {t('places')}{hasPos ? ` · ${t('distYou')}` : ''}</div>
-      {!hasPos && (
-        <div className="px-4 pb-3" data-testid="from-centre">
-          <p className={cn(sub, 'm-0 font-semibold')}>{t('distCentre')}</p>
-          {denied
-            ? <p className={cn(sub, 'm-0 mt-1')} data-testid="loc-denied">{t('locDenied')}</p>
-            : <Button onClick={onLocate} disabled={locating} className="mt-2 min-h-12 w-full" data-testid="locate"><Crosshair size="1.3em" aria-hidden />{locating ? t('locating') : t('useLocation')}</Button>}
-        </div>
-      )}
+    <div className="px-4 pb-3" data-testid="from-centre">
+      <p className={cn(sub, 'm-0 font-semibold')}>{t('distCentre')}</p>
+      {denied
+        ? <p className={cn(sub, 'm-0 mt-1')} data-testid="loc-denied">{t('locDenied')}</p>
+        : <Button onClick={onLocate} disabled={locating} className="mt-2 min-h-12 w-full" data-testid="locate"><Crosshair size="1.3em" aria-hidden />{locating ? t('locating') : t('useLocation')}</Button>}
     </div>
   )
 }
@@ -273,60 +257,29 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 
 export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
+  nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
-  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onGoal: (id: GoalId) => void; goalOrder: GoalId[]
+  locked: boolean; onPick: (id: LayerId) => void; onGoal: (id: GoalId) => void; goalOrder: GoalId[]
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
-  const listRef = useRef<HTMLUListElement>(null)
-  const rowOf = (id: string) => listRef.current ? Array.from(listRef.current.children).find(c => (c as HTMLElement).dataset.id === id) as HTMLElement | undefined : undefined
-  const viewportOf = () => listRef.current?.closest<HTMLElement>('[data-testid="scroll"]') ?? null
-  const pending = useRef<string | null>(null)
-  /** Scroll the list the minimum so the pending row is fully visible (nothing if it already is). */
-  const reveal = () => {
-    const id = pending.current; const v = viewportOf(); const row = id ? rowOf(id) : undefined
-    if (!v || !row) return
-    const vr = v.getBoundingClientRect(); const rr = row.getBoundingClientRect()
-    const d = revealDelta(rr.top, rr.bottom, vr.top, vr.bottom)
-    if (Math.abs(d) < 1) return
-    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    v.scrollBy({ top: d, behavior: calm ? 'auto' : 'smooth' })
-  }
-  // a new selection (row tap or map marker): reveal its row now, and again whenever the list viewport resizes
-  // (the sheet grows from peek to half over 450 ms), until the sheet has settled or the user scrolls
-  useLayoutEffect(() => {
-    if (!p.selected) { pending.current = null; return }
-    pending.current = p.selected
-    reveal()
-    const v = viewportOf()
-    if (!v) return
-    const ro = new ResizeObserver(reveal)
-    ro.observe(v)
-    const stop = () => { pending.current = null }
-    v.addEventListener('wheel', stop, { passive: true }); v.addEventListener('touchstart', stop, { passive: true })
-    const timer = setTimeout(() => { reveal(); stop(); ro.disconnect() }, 700)
-    return () => { clearTimeout(timer); ro.disconnect(); v.removeEventListener('wheel', stop); v.removeEventListener('touchstart', stop) }
-  }, [p.selected]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <GoalTabs layer={p.layer.id} order={p.goalOrder} onGoal={p.onGoal} />
       <ServiceChips layer={p.layer.id} order={p.goalOrder} onService={p.onPick} />
-      <div className="shrink-0">
+      {/* everything down to the end of this block is what the sheet shows at peek: the card and the two places after it */}
+      <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} onDetails={p.onDetails} onWalk={p.onWalk} />}
+        {p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
+        {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
+        {!p.liveState && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
-        {p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
-        {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
-        {!p.liveState && <ListHeader count={p.arr.length} hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
-        {p.liveState === 'loading' && <Placeholders />}
-        <ul ref={listRef} className="m-0 list-none p-0" data-testid="list">
-          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} counting={p.bizi.state === 'loading'} onSelect={() => p.onSelect(it.id)} />)}
-        </ul>
-        {p.arr.length > p.limit && <div className="flex justify-center p-3"><Button variant="secondary" onClick={p.onMoreRows}>{t('showMore')}</Button></div>}
+        {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
         <Footer onAbout={p.onAbout} />
       </Scroll>
     </>

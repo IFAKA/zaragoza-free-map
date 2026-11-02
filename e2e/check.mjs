@@ -88,15 +88,13 @@ todo.push(async () => {
     ok(await p.getByTestId('nearest-name').count() === 1, `layer ${id} shows nearest`)
   }
   // tapping another tab at peek keeps the sheet at peek (the nearest-place card is already in view)
-  ok(Math.abs(await snapTop(p) - 539) < 6, `tab tap at peek keeps peek (top ${await snapTop(p)})`)
-  // handle cycles peek -> half -> full -> peek
-  await p.getByTestId('handle').click(); await settle(p)
-  ok(Math.abs(await snapTop(p) - 344) < 6, 'handle goes to half')
+  ok(await snapTop(p) > 380 && await snapTop(p) < 660, `tab tap at peek keeps peek (top ${await snapTop(p)})`)
+  // handle cycles peek -> full -> peek
   await p.getByTestId('handle').click(); await settle(p)
   ok(await snapTop(p) < 120, 'handle goes to full')
   await p.getByTestId('handle').click(); await settle(p)
-  ok(await snapTop(p) > 500, 'handle goes to peek')
-  await p.getByTestId('handle').click(); await settle(p) // half again: the controls below need room
+  ok(await snapTop(p) > 380, 'handle goes to peek')
+  await p.getByTestId('handle').click(); await settle(p) // full again: the controls below need room
   // Open now switch persisted
   const sw = p.getByTestId('switch-open')
   ok(await sw.getAttribute('aria-checked') === 'true' || (await sw.getAttribute('data-checked')) !== null, 'Open now ON by default')
@@ -151,10 +149,10 @@ todo.push(async () => {
 
 // ---- drawer behaviour: real touch drags (CDP) at 390x844 ----
 {
-  const LEVEL = { closed: [700, 844], peek: [520, 600], half: [320, 370], full: [70, 110] }
+  const LEVEL = { closed: [700, 844], peek: [380, 660], full: [70, 110] }
   const lvl = async p => { const t = await snapTop(p); return Object.entries(LEVEL).find(([, [a, z]]) => t >= a && t <= z)?.[0] ?? 'top=' + t }
-  const sess = async () => {
-    const o = await open({ width: 390, height: 844 }, true)
+  const sess = async (h = 844) => {
+    const o = await open({ width: 390, height: h }, true)
     await o.p.waitForTimeout(600)
     const cdp = await o.ctx.newCDPSession(o.p)
     const drag = async (x, y0, y1, ms = 300) => {
@@ -170,28 +168,24 @@ todo.push(async () => {
   // a spot on the bare map (no marker, no control) above the peek sheet
   const bare = p => p.evaluate(() => { for (let y = 120; y < 330; y += 30) for (let x = 40; x < 360; x += 40) { const e = document.elementFromPoint(x, y); if (e && e.closest('.leaflet-container') && !e.closest('.mkw,.leaflet-control')) return { x, y } } return null })
   const scrollTop = p => p.evaluate(() => document.querySelector('[data-testid=scroll]').scrollTop)
-  // peek -> half -> full by dragging the handle, content or tab bar
+  // peek -> full by dragging the handle
   todo.push(async () => {
-    const { ctx, p, drag } = await sess()
-    ok(await lvl(p) === 'peek', 'starts at peek')
-    await drag(195, 570, 300); ok(await lvl(p) === 'half', 'handle drag up: peek -> half')
-    await p.screenshot({ path: out + '/g-half.png' })
-    await drag(195, 600, 250); ok(await lvl(p) === 'full', 'content drag up at half -> full')
+    const { ctx, p, drag } = await sess(560) // a short screen, so the page below the card is taller than the sheet
+    await drag(195, 400, 100); ok(await lvl(p) === 'full', 'handle drag up: peek -> full')
     await p.screenshot({ path: out + '/g-full.png' })
     // full: content scrolls; a drag down while scrolled scrolls back; at the top the same drag lowers the sheet
-    await drag(195, 700, 300); ok(await scrollTop(p) > 100 && await lvl(p) === 'full', 'full: content drag scrolls the list, sheet stays')
-    await drag(195, 300, 450, 200); ok(await lvl(p) === 'full', 'full: drag down while scrolled does not move the sheet')
+    await drag(195, 520, 350); ok(await scrollTop(p) > 40 && await lvl(p) === 'full', 'full: content drag scrolls the list, sheet stays')
+    await drag(195, 470, 540, 200); ok(await lvl(p) === 'full', `full: drag down while scrolled does not move the sheet (${await lvl(p)}, scroll ${await scrollTop(p)})`)
     await p.evaluate(() => { document.querySelector('[data-testid=scroll]').scrollTop = 0 })
-    await drag(195, 300, 600); ok(await lvl(p) === 'half', 'full: drag down at list top hands the gesture to the sheet (-> half)')
-    await drag(195, 500, 700, 300); ok(['peek', 'closed'].includes(await lvl(p)), 'half: drag down on content lowers the sheet')
+    await drag(195, 300, 480); { const t = await snapTop(p); ok(t > 130 && t < 520, `full: drag down at the top hands the gesture to the sheet (-> top ${t}, peek on this short screen)`) }
     await ctx.close()
   })
   // down to closed and back
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 570, 300); ok(await lvl(p) === 'half', 'to half')
-    await drag(195, 380, 520, 300); ok(await lvl(p) === 'peek', 'half -> peek by dragging down')
-    await drag(195, 580, 760, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
+    await drag(195, 500, 150); ok(await lvl(p) === 'full', 'to full')
+    await drag(195, 150, 600, 300); ok(await lvl(p) === 'peek', 'full -> peek by dragging down')
+    await drag(195, 520, 780, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
     await p.screenshot({ path: out + '/g-closed.png' })
     const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('goal-now').bottom, more: r('goal-connect').bottom, h: innerHeight, handle: r('handle') } })
     ok(vis.tab <= vis.h && vis.more <= vis.h, `closed: all goal tabs on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
@@ -199,66 +193,66 @@ todo.push(async () => {
     ok(await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), 'closed: page body is inert (no focus off-screen)')
     ok(await p.locator('.mk').count() > 0 && (await p.getByTestId('map').boundingBox()).height === 844, 'closed: map fully visible')
     await p.getByTestId('goal-now').tap(); await settle(p)
-    ok(await lvl(p) === 'half', 'closed: tapping the goal tab opens to half')
+    ok(await lvl(p) === 'peek', 'closed: tapping the goal tab opens to peek')
     ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'and selects that layer')
-    await p.getByTestId('goal-now').tap(); await settle(p); ok(await lvl(p) === 'peek', 'tapping the active goal tab at half folds to peek')
     await p.getByTestId('goal-now').tap(); await settle(p); ok(await lvl(p) === 'closed', 'tapping the active goal tab at peek folds to closed')
-    await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'half', 'closed: handle tap opens the sheet')
+    await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'peek', 'closed: handle tap opens the sheet')
     await ctx.close()
   })
   // flicks (velocity)
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 580, 450, 70); ok(['half', 'full'].includes(await lvl(p)), `fast flick up from peek opens (${await lvl(p)})`)
-    await drag(195, 580, 300, 300) // settle on a known level, then flick down
-    await p.reload(); await ready(p); await drag(195, 570, 300, 300); ok(await lvl(p) === 'half', 'half')
-    await drag(195, 400, 560, 70); ok(['peek', 'closed'].includes(await lvl(p)), `fast flick down from half lowers (${await lvl(p)})`)
+    await drag(195, 520, 380, 70); ok(await lvl(p) === 'full', `fast flick up from peek opens (${await lvl(p)})`)
+    await drag(195, 200, 420, 70); ok(['peek', 'closed'].includes(await lvl(p)), `fast flick down from full lowers (${await lvl(p)})`)
     await ctx.close()
   })
   // map tap lowers the sheet
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 570, 300); await drag(195, 600, 250)
+    await drag(195, 500, 150)
     ok(await lvl(p) === 'full', 'at full')
     await p.mouse.click(195, 40); await settle(p); ok(await lvl(p) === 'peek', 'map tap at full -> peek')
-    await drag(195, 570, 300)
+    await p.waitForTimeout(500)
     const pt = await bare(p); ok(!!pt, 'found a bare map spot')
-    await p.touchscreen.tap(pt.x, pt.y); await settle(p); ok(await lvl(p) === 'peek', 'map tap at half -> peek')
-    await p.touchscreen.tap(pt.x, pt.y); await settle(p); ok(await lvl(p) === 'closed', 'map tap at peek -> closed')
+    await p.touchscreen.tap(pt.x, pt.y); await p.waitForTimeout(300); await settle(p) // the first touch on the map after load is not a click in Leaflet (same before this change); warm it up
+    if (await lvl(p) === 'closed') await p.getByTestId('handle').tap(), await settle(p)
+    await p.touchscreen.tap(pt.x, pt.y); await settle(p); ok(await lvl(p) === 'closed', `map tap at peek -> closed (${await lvl(p)}, spot ${pt.x},${pt.y})`)
     await p.touchscreen.tap(pt.x, pt.y); await settle(p); ok(await lvl(p) === 'closed', 'map tap at closed stays closed')
     await ctx.close()
   })
-  // marker and row selection reveal the card above the sheet
+  // marker selection shows the card above the sheet, at peek, on every layer
   todo.push(async () => {
-    const { ctx, p, drag } = await sess()
-    await go(p, 'water', 'tap'); await settle(p)
-    const before = await p.getByTestId('nearest-name').innerText()
-    const mk = await p.evaluate(() => [...document.querySelectorAll('.mk:not(.sel)')].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }).find(c => c.y > 80 && c.y < 520 && c.x > 20 && c.x < 370))
-    ok(!!mk, 'a marker is visible above the peek sheet')
-    await p.touchscreen.tap(mk.x, mk.y); await settle(p)
-    ok(await lvl(p) === 'half', 'marker tap opens the sheet at half')
-    ok(await p.getByTestId('nearest').getAttribute('aria-label') === 'Selected', 'card says Selected')
-    const sel = await p.evaluate(() => { const r = document.querySelector('.mk.sel').getBoundingClientRect(); return { bottom: r.bottom, top: r.top, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top } })
-    ok(sel.bottom < sel.sheet - 10 && sel.top > 0, `selected marker sits above the sheet (marker bottom ${Math.round(sel.bottom)}, sheet top ${Math.round(sel.sheet)})`)
+    const { ctx, p } = await sess()
+    for (const id of ['water', 'bus', 'wifi']) {
+      await go(p, id, 'tap'); await settle(p)
+      const before = await p.getByTestId('nearest-name').innerText()
+      const mk = await p.evaluate(() => [...document.querySelectorAll('.mk:not(.sel)')].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }).find(c => c.y > 80 && c.y < 400 && c.x > 20 && c.x < 370))
+      ok(!!mk, `${id}: a marker is visible above the peek sheet`)
+      if (!mk) continue
+      await p.touchscreen.tap(mk.x, mk.y); await settle(p)
+      ok(await lvl(p) === 'peek', `${id}: marker tap shows the card at peek`)
+      ok(await p.getByTestId('nearest').getAttribute('aria-label') === 'Selected' && await p.getByTestId('nearest-name').innerText() !== before, `${id}: card shows the tapped place`)
+      const sel = await p.evaluate(() => { const r = document.querySelector('.mk.sel').getBoundingClientRect(); return { bottom: r.bottom, top: r.top, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top } })
+      ok(sel.bottom < sel.sheet - 4 && sel.top > 0, `${id}: selected marker sits above the sheet (marker bottom ${Math.round(sel.bottom)}, sheet top ${Math.round(sel.sheet)})`)
+    }
     await p.screenshot({ path: out + '/g-marker.png' })
-    // row at full
-    await drag(195, 600, 250); ok(await lvl(p) === 'full', 'to full')
-    const row = p.locator('[data-testid=list] li button').nth(4)
-    const rowName = await row.locator('span.truncate').first().innerText()
-    await row.tap(); await settle(p)
-    ok(await lvl(p) === 'half', 'row tap at full -> half')
-    ok(await p.getByTestId('nearest-name').innerText() === rowName, `card shows the tapped row (${rowName})`)
-    // the card sits above the list (not inside it); the list scrolls the minimum so the tapped row is fully visible
-    const vis = await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]').getBoundingClientRect(); const r = document.querySelector('[data-testid=list] li.bg-brand-tint')?.getBoundingClientRect(); return r ? { top: Math.round(r.top - v.top), bottom: Math.round(v.bottom - r.bottom) } : null })
-    ok(!!vis && vis.top >= -1 && vis.bottom >= -1, `tapped row is fully visible in the list (${JSON.stringify(vis)})`)
-    const sel2 = await p.evaluate(() => { const r = document.querySelector('.mk.sel').getBoundingClientRect(); return { bottom: r.bottom, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top } })
-    ok(sel2.bottom < sel2.sheet - 10, 'row: its marker sits above the sheet')
+    await ctx.close()
+  })
+  // the next two nearest places are chips under the card; a tap selects
+  todo.push(async () => {
+    const { ctx, p } = await sess()
+    ok(await p.getByTestId('nearby-item').count() === 2, 'two nearby chips under the card')
+    ok(await p.getByTestId('list').count() === 0, 'no places list')
+    const name = await p.getByTestId('nearby-item').first().innerText()
+    await p.getByTestId('nearby-item').first().tap(); await settle(p)
+    ok(await p.getByTestId('nearest').getAttribute('aria-label') === 'Selected' && name.includes(await p.getByTestId('nearest-name').innerText()), 'tap on a chip selects that place')
+    ok(await lvl(p) === 'peek', 'and stays at peek')
     await ctx.close()
   })
   // page stack: About from the footer goes Back to the home page; Escape: page, then lower
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 570, 300); await drag(195, 600, 250)
+    await drag(195, 500, 150)
     await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]'); v.scrollTop = v.scrollHeight })
     await p.getByRole('button', { name: 'About' }).tap(); await settle(p)
     ok(await p.getByTestId('close').count() === 1 && await p.getByTestId('back').count() === 0, 'About opens from the footer (a cross, no chevron: it is the first page)')
@@ -271,7 +265,7 @@ todo.push(async () => {
     ok(await p.getByTestId('tab-water').count() === 1, 'Escape on Settings goes back to home')
     const l0 = await lvl(p)
     await p.keyboard.press('Escape'); await settle(p)
-    ok(l0 === 'full' && await lvl(p) === 'half', `Escape on home lowers one step (${l0} -> ${await lvl(p)})`)
+    ok(l0 === 'full' && await lvl(p) === 'peek', `Escape on home lowers one step (${l0} -> ${await lvl(p)})`)
     await ctx.close()
   })
 }
@@ -457,7 +451,7 @@ todo.push(async () => {
   await go(p, 'bizi', 'tap'); await settle(p)
   ok(await p.getByTestId('tab-bizi').getAttribute('aria-selected') === 'true' && await p.locator('.mk').count() > 0, 'Bizi: goal tab then chip draws its markers')
   await go(p, 'libraries', 'tap'); await settle(p)
-  ok(await p.getByTestId('tab-libraries').getAttribute('aria-selected') === 'true' && await p.getByTestId('list').count() === 1, 'Libraries is a normal tab with its own list')
+  ok(await p.getByTestId('tab-libraries').getAttribute('aria-selected') === 'true' && await p.getByTestId('nearby-item').count() === 2, 'Libraries is a normal tab with its nearest card and two nearby chips')
   await go(p, 'water', 'tap'); await settle(p)
   // Settings page in Spanish
   await p.getByTestId('open-settings').tap(); await settle(p)
@@ -493,7 +487,7 @@ todo.push(async () => {
   await p.mouse.move(300, t0 + 12); await p.mouse.down(); await p.mouse.move(300, t0 + 200, { steps: 12 }); await p.mouse.up(); await settle(p)
   ok(await snapTop(p) > t0 + 100, `600x800 mouse drag down from the handle lowers the sheet (${t0} -> ${await snapTop(p)})`)
   await p.getByTestId('handle').click(); await settle(p)
-  ok(await snapTop(p) < t0, 'handle click opens it again')
+  ok(await snapTop(p) < await p.evaluate(() => innerHeight) - 60, 'handle click opens it again')
   await p.screenshot({ path: out + '/n-600.png' })
   await ctx.close()
 })
@@ -520,7 +514,7 @@ late.push(async () => {
     pop.addEventListener('transitionend', e => { if (e.propertyName === 'transform') res({ transformMs: Math.round(performance.now() - tr0), startLag: Math.round(tr0 - t0) }) })
     document.querySelector('[data-testid=handle]').click()
   }))
-  console.log('measured snap peek->half:', JSON.stringify(m))
+  console.log('measured snap peek->full:', JSON.stringify(m))
   ok(Math.abs(m.transformMs - 450) < 60, `measured transform ${m.transformMs}ms ~ 450ms`)
   await settle(p)
   await ctx.close()
@@ -566,12 +560,8 @@ todo.push(async () => {
     return out
   })
   ok(bad.length === 0, 'red text only on interactive elements and titles ' + JSON.stringify(bad))
-  await p.screenshot({ path: out + '/m-half.png' })
-  // scroll handoff: at full, scrolling the list scrolls; drag down at top returns the drawer
-  await p.getByTestId('handle').click(); await settle(p)
+  // scroll handoff: at full, scrolling the page scrolls; drag down at top returns the drawer
   await p.screenshot({ path: out + '/m-full.png' })
-  const sc = await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]'); v.scrollTop = 300; return v.scrollTop })
-  ok(sc > 0, 'list scrolls at full')
   await ctx.close()
 })
 // ---- desktop ----
@@ -587,7 +577,7 @@ todo.push(async () => {
   await ctx.close()
 })
 // ---- Bizi live counts (CityBikes mocked) ----
-const listText = p => p.getByTestId('list').innerText()
+const listText = p => p.getByTestId('peek-block').innerText()
 const biziTab = async p => { await go(p, 'bizi', 'tap'); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]') ; await settle(p) }
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
@@ -601,10 +591,10 @@ todo.push(async () => {
   ok(JSON.stringify(chips.slice(0, 3)) === JSON.stringify(['Take a bike', 'Return a bike', 'My bike']), 'Bizi: three chips ' + chips.join(' | '))
   ok(await p.getByTestId('bizi-bar').getByRole('button', { name: 'Take a bike' }).getAttribute('aria-pressed') === 'true', 'Take a bike is the default chip')
   const take = await listText(p)
-  ok(/\d+ bikes? · \d+ free docks?/.test(take) && !/\b0 bikes\b/.test(take), 'Take: rows show counts and hide stations with 0 bikes')
+  ok(/\d+ bikes?/.test(take) && !/\b0 bikes\b/.test(take), 'Take: the nearest card shows bikes, never a station with 0 bikes')
   await p.getByRole('button', { name: 'Return a bike' }).tap(); await settle(p)
   const ret = await listText(p)
-  ok(/free docks?/.test(ret) && !/\b0 free docks\b/.test(ret) && /\b0 bikes\b/.test(ret), 'Return: stations with free docks (0 bikes allowed, 0 docks hidden)')
+  ok(/free docks?/.test(ret) && !/\b0 free docks\b/.test(ret), 'Return: the nearest card shows free docks, never 0')
   await p.getByRole('button', { name: 'My bike' }).tap(); await settle(p)
   ok(await markers(p) > 0 && !/ free docks?/.test(await listText(p)) && await p.getByTestId('bizi-status').count() === 0, 'My bike: the racks, no counts, no live status')
   await p.screenshot({ path: out + '/bizi-mine-en.png' })
@@ -628,12 +618,12 @@ todo.push(async () => { // nothing in the list is wiped when the feed is down
   await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=failed]')
   ok(/Live counts unavailable/.test(await p.getByTestId('bizi-status').innerText()) && await p.getByTestId('bizi-retry').count() === 1, 'failed feed: "Live counts unavailable" and Try again')
-  ok(await markers(p) > 0 && (await p.getByTestId('list').locator('li').count()) > 5, 'failed feed: the places still show')
+  ok(await markers(p) > 0 && await p.getByTestId('nearby-item').count() === 2, 'failed feed: the places still show')
   ok(!/bikes? · /.test(await listText(p)), 'failed feed: no counts shown')
   await p.screenshot({ path: out + '/bizi-failed-en.png' })
   mock.mode = 'ok'; await p.getByTestId('bizi-retry').tap()
   await p.waitForSelector('[data-testid=bizi-status][data-state=live]')
-  ok(/bikes? · /.test(await listText(p)), 'Try again loads the counts')
+  ok(/bikes?/.test(await listText(p)), 'Try again loads the counts')
   await ctx.close()
 })
 todo.push(async () => { // stale feed (stamps 10 minutes old) is never shown as live
@@ -649,7 +639,7 @@ todo.push(async () => { // no station has a bike: show them all and say so
   mock.mode = 'empty'
   await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=live]'); await settle(p)
-  ok(await p.getByTestId('all-out').count() === 1 && (await p.getByTestId('list').locator('li').count()) > 5, 'no bikes anywhere: the message plus all stations')
+  ok(await p.getByTestId('all-out').count() === 1 && await p.getByTestId('nearby-item').count() === 2, 'no bikes anywhere: the message plus all stations')
   await ctx.close()
 })
 todo.push(async () => { // cached counts older than 5 minutes are not live; the page makes no call while on another tab
@@ -667,13 +657,14 @@ todo.push(async () => { // cached counts older than 5 minutes are not live; the 
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { permissions: [] }, 'en', { geo: 'grant', layer: null })
   ok(await p.evaluate(() => window.__geoCalls) === 0, 'location is not asked on load')
-  ok(await p.getByTestId('from-centre').innerText().then(t => /Distances from the city centre/.test(t)), 'before location: the list says distances are from the city centre')
+  await p.getByTestId('handle').click(); await settle(p)
+  ok(await p.getByTestId('from-centre').innerText().then(t => /Distances from the city centre/.test(t)), 'before location: the page says distances are from the city centre')
   ok(await p.getByTestId('locate').count() === 1, 'before location: a Use my location button')
   await p.screenshot({ path: out + '/loc-before-en.png' })
   await go(p, 'water', 'tap'); await settle(p)
   ok(await p.evaluate(() => window.__geoCalls) === 1, 'the first tab tap asks for location once')
-  await p.waitForFunction(() => /distances from you/i.test(document.body.innerText)); await settle(p)
-  ok(await p.getByTestId('from-centre').count() === 0 && await p.getByTestId('locate').count() === 0, 'after location: header says from you, no button')
+  await p.getByTestId('from-centre').waitFor({ state: 'detached' }); await settle(p)
+  ok(await p.getByTestId('from-centre').count() === 0 && await p.getByTestId('locate').count() === 0, 'after location: the from-centre line and button are gone')
   await p.screenshot({ path: out + '/loc-after-en.png' })
   await go(p, 'toilets', 'tap'); await settle(p)
   ok(await p.evaluate(() => window.__geoCalls) === 1, 'later tab taps do not ask again')
@@ -683,7 +674,7 @@ todo.push(async () => {
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'deny', layer: null })
   await go(p, 'water', 'tap'); await settle(p)
-  await p.waitForSelector('[data-testid=loc-denied]'); await settle(p)
+  await p.waitForSelector('[data-testid=loc-denied]', { state: 'attached' }); await p.getByTestId('handle').click(); await settle(p)
   ok(/desde el centro/.test(await p.getByTestId('from-centre').innerText()), 'denied: still ranked from the centre')
   ok(await p.getByTestId('locate').count() === 0 && await p.getByTestId('toast').count() === 0, 'denied: one calm line, no button, no toast')
   await go(p, 'toilets', 'tap'); await settle(p); await go(p, 'wifi', 'tap'); await settle(p)
@@ -725,7 +716,7 @@ todo.push(async () => {
   await p.goto(URL); await ready(p)
   ok(/Android/.test(await p.evaluate(() => navigator.userAgent)), 'Android Chrome UA emulation active')
   await go(p, 'bizi', 'tap'); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]')
-  ok(/bikes? · /.test(await p.getByTestId('list').innerText()), 'Android: Bizi counts show')
+  ok(/bikes?/.test(await p.getByTestId('peek-block').innerText()), 'Android: Bizi counts show')
   await go(p, 'pharmacy', 'tap'); await settle(p)
   ok(await p.getByTestId('tab-pharmacy').getAttribute('aria-selected') === 'true', 'Android: tab switch works by touch')
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Android: no sideways page scroll')

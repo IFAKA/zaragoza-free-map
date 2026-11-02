@@ -66,8 +66,6 @@ export interface LayerConfig {
   hint: Bilingual
   /** Items have opening hours, so the "Open now" switch applies. */
   hours: boolean
-  /** Height in px of the peek sheet when the nearest-place card needs more room than the default (extra lines, a hint). */
-  peek?: number
   /** Items come from a live request (not the bundled data): the app loads them when the tab is opened and may have none. */
   live?: boolean
   cats?: string[]

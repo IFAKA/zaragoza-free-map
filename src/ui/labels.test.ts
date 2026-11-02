@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { biziLine, dotBetween, fmtHours } from './labels'
+import { biziLine, fmtHours } from './labels'
 import { DICT } from '../lib/i18n'
 
 describe('fmtHours', () => {
@@ -23,14 +23,4 @@ describe('biziLine', () => {
     expect(biziLine(en, { bikes: 5, docks: 12, ebikes: 0 }, true)).toBe('5 bikes · 12 free docks')
   })
   it('is empty without live counts', () => expect(biziLine(en, {})).toBe(''))
-})
-
-describe('dotBetween', () => {
-  it('puts the dot only between two parts that both have something', () => {
-    expect(dotBetween('Public toilet', 'Open now')).toBe(' · ')
-    expect(dotBetween(undefined, 'Hours unknown')).toBe('')
-    expect(dotBetween('', 'Hours unknown')).toBe('')
-    expect(dotBetween('Public toilet', null)).toBe('')
-    expect(dotBetween('Public toilet', false)).toBe('')
-  })
 })
