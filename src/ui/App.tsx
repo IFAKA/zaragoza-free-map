@@ -127,7 +127,7 @@ export function App() {
     const it = arr.find(i => i.id === id)
     if (!desktop) setLevel(HALF)
     if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
-    // no scroll to top: the list keeps the tapped row in place (see HomePage)
+    // the list scrolls the row into view by itself (see HomePage)
   }
   // a tap on the bare map lowers the sheet one step: full/half to peek, peek to closed
   const mapTap = () => {

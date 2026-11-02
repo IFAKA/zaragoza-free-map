@@ -5,7 +5,7 @@ import { Tabs } from '@base-ui/react/tabs'
 import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon } from '@phosphor-icons/react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { dataRefreshed } from '../data'
-import { anchoredScrollTop } from '../lib/anchor'
+import { revealDelta } from '../lib/reveal'
 import { lsGet, lsSet } from '../lib/cache'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
@@ -207,49 +207,47 @@ export function HomePage(p: {
 }) {
   const { t } = useT()
   const listRef = useRef<HTMLUListElement>(null)
-  const anchor = useRef<{ id: string; top: number } | null>(null)
-  const clicked = useRef(false)
-  const viewportOf = () => listRef.current?.closest<HTMLElement>('[data-testid="scroll"]') ?? null
   const rowOf = (id: string) => listRef.current ? Array.from(listRef.current.children).find(c => (c as HTMLElement).dataset.id === id) as HTMLElement | undefined : undefined
-  /** Remember where a row is (relative to the scroll viewport) so we can put it back after the card above changes height. */
-  const remember = (id?: string) => {
-    const v = viewportOf(); const ul = listRef.current
-    if (!v || !ul) return
-    const vt = v.getBoundingClientRect().top
-    const row = id ? rowOf(id) : Array.from(ul.children).find(c => c.getBoundingClientRect().bottom > vt + 1) as HTMLElement | undefined
-    if (row) anchor.current = { id: row.dataset.id!, top: row.getBoundingClientRect().top - vt }
+  const viewportOf = () => listRef.current?.closest<HTMLElement>('[data-testid="scroll"]') ?? null
+  const pending = useRef<string | null>(null)
+  /** Scroll the list the minimum so the pending row is fully visible (nothing if it already is). */
+  const reveal = () => {
+    const id = pending.current; const v = viewportOf(); const row = id ? rowOf(id) : undefined
+    if (!v || !row) return
+    const vr = v.getBoundingClientRect(); const rr = row.getBoundingClientRect()
+    const d = revealDelta(rr.top, rr.bottom, vr.top, vr.bottom)
+    if (Math.abs(d) < 1) return
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    v.scrollBy({ top: d, behavior: calm ? 'auto' : 'smooth' })
   }
+  // a new selection (row tap or map marker): reveal its row now, and again whenever the list viewport resizes
+  // (the sheet grows from peek to half over 450 ms), until the sheet has settled or the user scrolls
   useLayoutEffect(() => {
-    const v = viewportOf(); const a = anchor.current
-    const row = a ? rowOf(a.id) : undefined
-    if (v && a && row) {
-      const now = row.getBoundingClientRect().top - v.getBoundingClientRect().top
-      if (Math.abs(now - a.top) > 0.5) v.scrollTop = anchoredScrollTop(v.scrollTop, a.top, now)
-    }
-    // a pick from the map: make sure the row is visible, no movement if it already is
-    if (!clicked.current && p.selected) rowOf(p.selected)?.scrollIntoView({ block: 'nearest' })
-    clicked.current = false
-    remember()
-  }, [p.selected, p.focus?.id, p.hasPos]) // eslint-disable-line react-hooks/exhaustive-deps
-  // keep the anchor current while the user scrolls
-  useEffect(() => {
+    if (!p.selected) { pending.current = null; return }
+    pending.current = p.selected
+    reveal()
     const v = viewportOf()
     if (!v) return
-    const on = () => remember()
-    v.addEventListener('scroll', on, { passive: true })
-    return () => v.removeEventListener('scroll', on)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const ro = new ResizeObserver(reveal)
+    ro.observe(v)
+    const stop = () => { pending.current = null }
+    v.addEventListener('wheel', stop, { passive: true }); v.addEventListener('touchstart', stop, { passive: true })
+    const timer = setTimeout(() => { reveal(); stop(); ro.disconnect() }, 700)
+    return () => { clearTimeout(timer); ro.disconnect(); v.removeEventListener('wheel', stop); v.removeEventListener('touchstart', stop) }
+  }, [p.selected]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       {p.title}
       <NeedTabs layer={p.layer.id} onPick={p.onPick} onSettings={p.onSettings} />
-      <Scroll locked={p.locked} viewportRef={p.viewportRef}>
+      <div className="shrink-0">
         <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} locating={p.locating} onLocate={p.onLocate} onDetails={p.onDetails} onWalk={p.onWalk} />
         <Separator />
+      </div>
+      <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />
         <div className={cn(overline, 'border-y border-line bg-surface px-4 py-2')}>{p.arr.length} {t('places')}</div>
         <ul ref={listRef} className="m-0 list-none p-0" data-testid="list">
-          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => { if (it.id !== (p.selected ?? p.focus?.id)) clicked.current = true; remember(it.id); p.onSelect(it.id) }} />)}
+          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => p.onSelect(it.id)} />)}
         </ul>
         {p.arr.length > p.limit && <div className="flex justify-center p-3"><Button variant="secondary" onClick={p.onMoreRows}>{t('showMore')}</Button></div>}
         <Footer onAbout={p.onAbout} />

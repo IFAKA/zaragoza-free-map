@@ -53,7 +53,7 @@ Button radius 0.46em, tiles 0.467em, cards 0.26em, modal sheet 0.73em. Touch tar
 - The tab row is one horizontal scroll row: Water, Toilets, Charge, WiFi, Libraries, Bizi, Settings (gear, last). It snaps, scrolls the active tab into view, and says it scrolls: a white-to-transparent fade plus a 44px chevron button (scrolls one step) on each side that has more tabs, and one short 40px nudge on the first visit (skipped with reduced motion). There is no More tab.
 - Settings holds only Language and About. Language defaults to Spanish whatever the browser says; the user's choice is saved.
 - Selecting a place (marker or row) frames the place AND the user with `fitBounds` (padding for the open sheet, max zoom 17, Leaflet's own short easing). With no user position it pans the place above the sheet.
-- Selecting never moves the tapped row: the list keeps it at the same screen position (scroll anchoring); a pick from the map scrolls the row into view only if it is hidden.
+- The selected card is pinned under the tabs; only the list scrolls. Selecting (row or map marker) scrolls the list the minimum so the row is fully visible, and not at all if it already is.
 - The selected-place card shows only name, distance and walk time, one-word open status if known, and the two buttons (walk, Details). Type, source and date, hours, notes, WiFi range, report link and the rest live on the Details page.
 - Pages (Settings, Language, About, Details) are pages inside the same drawer. Back, Escape and swipe go up a page.
 
