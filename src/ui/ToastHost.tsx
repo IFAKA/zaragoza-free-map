@@ -1,5 +1,7 @@
 import { Toast } from '@base-ui/react/toast'
+import { m } from 'motion/react'
 import type { ReactNode } from 'react'
+import { tap } from './motion'
 
 /** Use outside React too: toasts.add({ title, description }) */
 export const toasts = Toast.createToastManager()
@@ -16,7 +18,7 @@ function List() {
           <Toast.Title className="m-0 font-extrabold leading-tight" />
           <Toast.Description className="m-0 text-[0.93em] leading-snug" />
         </div>
-        <Toast.Close className="min-h-[44px] shrink-0 rounded-btn border border-on-brand/60 bg-transparent px-3 font-semibold text-on-brand [transition:scale_var(--dur-press)_var(--ease-out)] active:scale-[.97]">{String(t.data?.close ?? 'OK')}</Toast.Close>
+        <Toast.Close render={<m.button {...tap} />} className="min-h-[44px] shrink-0 rounded-btn border border-on-brand/60 bg-transparent px-3 font-semibold text-on-brand">{String(t.data?.close ?? 'OK')}</Toast.Close>
       </Toast.Content>
     </Toast.Root>
   ))

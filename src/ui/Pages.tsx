@@ -411,7 +411,7 @@ export function HomePage(p: {
 // ---------- More, Language, About, Place ----------
 function PageRow({ icon, title, description, status, onClick, testId, active }: { icon: ReactNode; title: string; description?: string; status?: string; onClick: () => void; testId: string; active?: boolean }) {
   return (
-    <BaseButton onClick={onClick} data-testid={testId} className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface', active && 'bg-brand-tint')}>
+    <BaseButton onClick={onClick} data-testid={testId} render={<m.button {...tap} />} className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink [transition:background-color_var(--dur-press)] hov:bg-surface', active && 'bg-brand-tint')}>
       <span className="flex size-10 shrink-0 items-center justify-center rounded-tile bg-surface text-ink">{icon}</span>
       <span className="min-w-0 flex-1"><span className="block font-bold">{title}</span>{description && <span className={cn(sub, 'block')}>{description}</span>}</span>
       {status && <span className={sub}>{status}</span>}
@@ -441,7 +441,7 @@ export function LanguagePage({ lang, setLang, onBack, onClose, locked }: { lang:
       <Scroll locked={locked}>
         <RadioGroup value={lang} onValueChange={v => setLang(v as Lang)} aria-label={t('langTitle')}>
           {(['en', 'es'] as Lang[]).map(l => (
-            <Radio.Root key={l} value={l} data-testid={`lang-${l}`} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface">
+            <Radio.Root key={l} value={l} data-testid={`lang-${l}`} render={<m.button {...tap} />} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:background-color_var(--dur-press)] hov:bg-surface">
               <span className="flex-1">{l === 'en' ? t('langEn') : t('langEs')}</span>
               <Radio.Indicator className="text-brand-text"><Check size="1.3em" weight="bold" aria-hidden /></Radio.Indicator>
             </Radio.Root>

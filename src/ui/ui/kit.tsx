@@ -7,8 +7,10 @@ import { Switch as BaseSwitch } from '@base-ui/react/switch'
 import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
 import { Info } from '@phosphor-icons/react'
+import { m } from 'motion/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '../cn'
+import { tap } from '../motion'
 import { useSheetClosed } from '../sheet'
 
 type Variant = 'primary' | 'secondary' | 'link'
@@ -17,14 +19,14 @@ const VARIANT: Record<Variant, string> = {
   secondary: 'border border-line-strong bg-transparent text-brand-text hov:bg-surface active:bg-surface',
   link: 'bg-transparent px-1 text-brand-text underline-offset-2 hov:underline',
 }
-const BTN = 'inline-flex min-h-[44px] select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] disabled:opacity-50 motion-reduce:active:scale-100'
+const BTN = 'inline-flex min-h-[44px] select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:background-color_var(--dur-press)] disabled:opacity-50'
 /** Primary = solid red. Secondary = grey border, red text (always next to a primary). Link = text only. */
 export function Button({ variant = 'primary', className, ...p }: ComponentProps<typeof BaseButton> & { variant?: Variant }) {
   const link = 'render' in p && !!p.render
-  return <BaseButton className={cn(BTN, VARIANT[variant], className as string)} {...p} {...(link ? { role: 'link' } : {})} />
+  return <BaseButton render={<m.button {...tap} />} className={cn(BTN, VARIANT[variant], className as string)} {...p} {...(link ? { role: 'link' } : {})} />
 }
 /** A Button that is really a link (opens a page): use `render` with an <a>. */
-export const linkProps = (href: string) => ({ render: <a href={href} target="_blank" rel="noopener" />, nativeButton: false as const })
+export const linkProps = (href: string) => ({ render: <m.a {...tap} href={href} target="_blank" rel="noopener" />, nativeButton: false as const })
 
 /** Labelled switch: red when on, light grey when off. */
 export function Switch({ checked, onCheckedChange, label, hint, testId }: { checked: boolean; onCheckedChange: (v: boolean) => void; label: string; hint?: string; testId?: string }) {
@@ -34,9 +36,9 @@ export function Switch({ checked, onCheckedChange, label, hint, testId }: { chec
         <span className="block font-bold leading-tight">{label}</span>
         {hint && <span className="block text-[0.87em] leading-tight text-ink-soft">{hint}</span>}
       </span>
-      <BaseSwitch.Root
+      <BaseSwitch.Root render={<m.button {...tap} />}
         checked={checked} onCheckedChange={onCheckedChange} data-testid={testId}
-        className="relative inline-flex h-[1.6em] w-[2.8em] shrink-0 items-center rounded-full border border-line-strong bg-surface p-[0.15em] [transition:background-color_var(--dur-small),border-color_var(--dur-small),scale_var(--dur-press)_var(--ease-out)] active:scale-[.97] data-[checked]:border-brand data-[checked]:bg-brand"
+        className="relative inline-flex h-[1.6em] w-[2.8em] shrink-0 items-center rounded-full border border-line-strong bg-surface p-[0.15em] [transition:background-color_var(--dur-small),border-color_var(--dur-small)] data-[checked]:border-brand data-[checked]:bg-brand"
       >
         <BaseSwitch.Thumb className="block size-[1.1em] rounded-full bg-line-strong [transition:translate_var(--dur-small)_var(--ease-out),background-color_var(--dur-small)] data-[checked]:translate-x-[1.2em] data-[checked]:bg-on-brand" />
       </BaseSwitch.Root>
@@ -50,8 +52,8 @@ export function Chips({ value, onChange, options, label, allValue = 'all' }: { v
     <ToggleGroup value={[value]} onValueChange={v => onChange(v[0] ?? allValue)} aria-label={label} className="flex flex-wrap gap-2">
       {options.map(o => (
         <Toggle
-          key={o.value} value={o.value}
-          className="min-h-[44px] select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] data-[pressed]:bg-brand data-[pressed]:text-on-brand motion-reduce:active:scale-100"
+          key={o.value} value={o.value} render={<m.button {...tap} />}
+          className="min-h-[44px] select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:background-color_var(--dur-press)] data-[pressed]:bg-brand data-[pressed]:text-on-brand"
         >{o.label}</Toggle>
       ))}
     </ToggleGroup>
@@ -81,7 +83,7 @@ export function Scroll({ children, locked, className, viewportRef }: { children:
 export function InfoPop({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
   return (
     <Popover.Root>
-      <Popover.Trigger aria-label={label} className="inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info [transition:scale_var(--dur-press)_var(--ease-out)] active:scale-[.97]">
+      <Popover.Trigger render={<m.button {...tap} />} aria-label={label} className="inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info">
         <Info size="1.25em" weight="bold" aria-hidden />
       </Popover.Trigger>
       <Popover.Portal>
