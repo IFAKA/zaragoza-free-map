@@ -33,6 +33,8 @@ Dark mode is automatic (`prefers-color-scheme`). Tokens are overridden so brand 
 | Bizi | `--color-bike` | `#485D6D` | equipment |
 | Bike racks | `--color-rack` | `#6B6B00` | olive, own-bike racks (lock icon), shown under Bizi |
 | Bus stops | `--color-bus` | `#3B4BA6` | indigo, bus stops (bus icon), 7.7:1 with white |
+| Tram stops | `--color-tram` | `#B04A00` | burnt orange, tram stops and track (tram icon), 5.5:1 with white |
+| Cercanías stations | `--color-train` | `#0F6B5A` | teal green, Renfe stations and track (train icon), 6.4:1 with white |
 | Pharmacies on duty | `--color-pharmacy` | `#B3261E` | deep red, duty pharmacies (pill icon), 6.5:1 with white |
 | Warm or cool indoors | `--color-shelter` | `#A3315F` | raspberry, climate shelters (thermometer icon), 6.6:1 with white |
 
@@ -45,6 +47,7 @@ Montserrat (titles) and Nunito Sans (everything else), both self-hosted from `@f
 Button radius 0.46em, tiles 0.467em, cards 0.26em, modal sheet 0.73em. Touch targets are at least 44px.
 
 ## Motion
+- Press feedback is `tap` from `src/ui/motion.ts` (`m.button`) on every React control. The only CSS press scale left is on Leaflet's own DOM (map markers `.mk` and the zoom buttons), which the motion library cannot wrap.
 The tokens and variants live in `src/ui/motion.ts` (see `docs/motion.md` for the plain-words version). Library: `motion` with `LazyMotion` (`domAnimation`, `strict`), `m.*` components, `MotionConfig reducedMotion="user"`. Only transform and opacity move. Press feedback is `whileTap` scale .97 (`tap`), not CSS `active:scale`. The Settings view slides in from the right in 260 ms; the chip row shifts 8 px toward the new goal with a fade (150 ms); the goal underline uses one critically damped spring. Durations in CSS come from `--dur-*` variables that mirror `motion.ts`.
 - Drawer transform and height: 450ms, `cubic-bezier(0.22, 1, 0.36, 1)`. Overlay: `cubic-bezier(0.32, 0.72, 0, 1)`. Swipe close duration scales with swipe strength.
 - Page turn inside the drawer: 200ms opacity transition (`@starting-style`), not a keyframe. List rows, tab labels and distances never animate.
@@ -57,10 +60,12 @@ The tokens and variants live in `src/ui/motion.ts` (see `docs/motion.md` for the
 ## Layout
 - Mobile: bottom drawer with four snap points (closed, peek, half, full), non-modal at peek and half so the map stays usable; scroll only at full.
 - Desktop (900px and up): persistent 400px left panel with the same pages.
-- Goal tabs: three equal columns, no scrolling: Now (toilets, water, pharmacy, shelter), Getting around (bus, Bizi), Connect (WiFi, charge, libraries). Under them, a second row of equal chips for the active goal (at most 4, hidden when a goal has one service). Each goal remembers its last service (this device only). A new visitor opens on Now > Toilets. The goal order follows tap counts, read once when the app opens and never changing during a session. Warm (shelter) is 3rd in Now from 1 Nov to 31 Mar, last otherwise. Every service is at most 2 taps away.
+- Goal tabs: three equal columns, no scrolling: Now (toilets, water, pharmacy, shelter), Getting around (bus, tram, Cercanías, Bizi), Connect (WiFi, charge, libraries). Under them, a second row of equal chips for the active goal (at most 4, hidden when a goal has one service). Each goal remembers its last service (this device only). A new visitor opens on Now > Toilets. The goal order follows tap counts, read once when the app opens and never changing during a session. Warm (shelter) is 3rd in Now from 1 Nov to 31 Mar, last otherwise. Every service is at most 2 taps away.
 - Settings holds only Language and About. Language defaults to Spanish whatever the browser says; the user's choice is saved.
 - Selecting a place (marker or row) frames the place AND the user with `fitBounds` (padding for the open sheet, max zoom 17, Leaflet's own short easing). With no user position it pans the place above the sheet.
-- The selected card is pinned under the tabs; only the list scrolls. Selecting (row or map marker) scrolls the list the minimum so the row is fully visible, and not at all if it already is.
+- There is no places list. The nearest place has a full card; the next two nearest are two chips ("Also nearby") under it, and one tap on a chip or a map marker shows that place (card and map) on every layer. The marker is panned above the sheet.
+- Tram and Cercanías cards say plainly what they are: the tram card has no times (a link to the tram company page), the Cercanías card shows the next 3 trains as "Horario programado (no es tiempo real)" with the date of the timetable and a Renfe link. Planned times are never shown as live.
+- Bus: the line chips on the stop card (at most 2 rows, then "+N") draw that line: a brand-colour route with arrows, stop dots and the current stop highlighted, framed above the sheet (fractional zoom so a long route fills the visible map). The sheet shows "Línea N · hacia X", the next stops, "Próximos buses" and a direction toggle; the cross or Escape goes back to the nearest stop. Live arrivals cannot be read by a browser, so the app links out.
 - The selected-place card shows only name, distance and walk time, one-word open status if known, and the two buttons (walk, Details). Type, source and date, hours, notes, WiFi range, report link and the rest live on the Details page.
 - Details is a page inside the same drawer; Back, Escape and swipe go up a page.
 - Settings, Language and About are NOT in the drawer. They are a full-screen view that slides in from the right (a 420 px panel on desktop). A close cross sits top right, where the floating Settings button was; the title is on the left. Language and About push inside the view with a small left chevron; the cross closes everything, the phone back gesture and Escape go up one level. Focus moves in and returns to the button; the app behind is inert and body scroll is locked.
@@ -71,12 +76,12 @@ The tokens and variants live in `src/ui/motion.ts` (see `docs/motion.md` for the
 - Tab bar: no chevrons, fades, nudges or scroll-snap. Each cell is at least 44px tall and fully clickable.
 
 ## Drawer behaviour
-- Four levels: closed (only the tab bar, safe-area aware, map fully visible), peek, half, full.
+- Three levels: closed (only the tab bar, safe-area aware, map fully visible), peek, full. Peek height is measured from the content (the whole nearest card, chips and notices, plus the safe-area inset, at most 72% of the screen), not a fixed number, so Spanish text and long cards never get cut. An e2e test checks the whole card is on screen at peek for every service, in English and Spanish, at 360x740.
 - Drag the handle or the header to move between levels. A fast flick moves one level. A drag ends on the nearest level.
-- The list scrolls only at full. When the list is at its top, a new downward touch drag lowers the sheet.
+- The settings and footer area under the card scrolls only at full. When it is at its top, a new downward touch drag lowers the sheet.
 - Tap the map: the sheet lowers one level (full goes to peek). Tap a tab while closed: opens to half. Tap the active tab while open: lowers one level.
-- Tap the handle: closed or peek goes to half, half to full, full to peek. The handle is 96 by 28px (not 44px tall, so it does not cover the tabs).
-- Choosing a marker or a row opens half and pans the marker above the sheet.
+- Tap the handle: closed goes to peek, peek to full, full to peek. The handle is 96 by 28px (not 44px tall, so it does not cover the tabs).
+- Choosing a marker or a chip opens the peek and pans the marker above the sheet.
 - Back goes up one page. Escape goes up a page, then lowers one level. Closing returns to the home page.
 - When closed, the page body is inert (not focusable, not read), so only the tabs work.
 - Motion: 450ms cubic-bezier(.22,1,.36,1) on transform only; page fade 200ms. With reduced motion, opacity only.

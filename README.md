@@ -25,6 +25,9 @@ All data is static JSON in `src/data/*.json`, bundled into the build and precach
 | `src/data/civic.json` | city open data `equipamiento` (Centro Cívico*) | 25 |
 | `src/data/bizi.json` | city open data `estacion-bicicleta` (locations; bike and dock counts come live from CityBikes, see above) | 276 |
 | `src/data/bus.json` | city open data `poste-autobus` (bus stops: number, name, lines, position; 983 city stops link to the bus company live times page, 288 rural stops have no live page) | 1271 |
+| `src/data/busroutes.json` | city WFS `MU3_lineas_bus` and `MU3_paradas_BUS` (45 lines, both directions, 944 stops, route as encoded polylines), lazy chunk loaded when the Bus tab opens | 45 |
+| `src/data/tram.json` | city WFS `MU3_paradas_tranvia` and `MU3_lineas_tranvia` (line T1: 32 stops, track) | 32 |
+| `src/data/cercanias.json`, `cercanias-times.json` | Renfe Open Data GTFS (`fomento_transit.zip`), Zaragoza C1: 6 stations, planned departures per day type, valid 2026-11-02 to 2026-12-01 (times are a lazy chunk). Licence CC BY 4.0, credited in About. Public holidays are not modelled. Rebuilt by `npm run data:transit` | 6 |
 | `src/data/racks.json` | city open data `aparcamiento-bicicleta` (AparcaBicis: street racks for your own bike; shown under the Bizi tab, chip "My bike") | 2158 |
 | `src/data/shelters.json` | city open data `refugios_climaticos` (climate shelters: civic centres, senior centres, 2 offices; dataset page 6740) | 57 |
 | `src/data/toiletsgo.json` | City equipment catalogue places (ids checked), listed as toilets by toiletsgo | 49 |
@@ -58,18 +61,25 @@ GoatCounter, cookieless, no personal data, no coordinates. Page views are counte
 | `settings-close-x`, `-back`, `-escape` | how it closed | which close works |
 | `lang-<code>` | language changed (en, es) | language need |
 
-Planned, not built yet: `bus-line-<line>` and `route-open`.
+| `bus-line-<line>` | a line chip tapped on a bus stop card | which lines people look at |
+| `times-tram`, `times-cercanias` | the tram or Renfe times link opened | link-outs |
+
+Planned, not built yet: `route-open`.
 
 ## Design system
 Colours, type, shape and motion are tokens in `src/styles.css`; see `docs/design-system.md`. Style follows the Ayuntamiento de Zaragoza public design system. This is an independent project, not affiliated with the Ayuntamiento, and it uses no municipal logo or mark.
 
 Marker colour mapping: water `--color-water` (#006B87), toilets `--color-toilet` (#8B5400), charge `--color-charge` (#8958A9), WiFi `--color-wifi` (#4B83B4), libraries `--color-library` (#006A00), Bizi `--color-bike` (#485D6D), bike racks `--color-rack` (#6B6B00), bus stops `--color-bus` (#3B4BA6), pharmacies on duty `--color-pharmacy` (#B3261E), warm or cool indoors `--color-shelter` (#A3315F).
 
+## Transit data: what works and what does not (checked 2026-11-02)
+- Works, baked: the city WFS (`idezar-sig.zaragoza.es/servicios/geoserver/movilidad/wfs`, layers `MU3_*`, CORS `*`) for bus and tram geometry; the Renfe GTFS zip for Cercanías times.
+- Not usable in a browser: bus arrivals (`poste-autobus/tuzsa-688.json` answers HTTP 400; the avanzagrupo page has no CORS), so the app links to the bus company page. Renfe GTFS-RT (`gtfsrt.renfe.com/trip_updates.json`, `vehicle_positions.json`) answers 200 but with no CORS header. `tranviawgs84.json` is geometry only, last changed in 2014, no CORS. So the app shows no live bus, tram or train times and never fakes them.
+
 ## Credits for live data
 Live Bizi bike and dock counts: [CityBikes](https://citybik.es) (`api.citybik.es`). The About page credits it in English and Spanish and says the counts are live. Pharmacies on duty: Ayuntamiento de Zaragoza.
 
 ## Goals and first moment
-Three goal tabs (Now, Getting around, Connect) with a row of service chips under them; see `src/layers/goals.ts`. Now: toilets, water, pharmacy, shelter. Getting around: bus, Bizi. Connect: WiFi, charge, libraries (tram and trains are planned, not built). Each goal remembers its last service. The goal order follows how often each goal was tapped on this device (`zgz:v2:taps`), read once at app open. A first visit opens on Now > Toilets. The first tab tap asks for the location once (if the browser has not blocked it), inside the tap so browsers allow the prompt. Until then the list says "Distances from the city centre" with a big Use my location button; if blocked it shows one calm line on how to allow it. The anonymous events `locate-granted` and `locate-denied` are counted (no coordinates). The "add to home screen" hint is hidden when installed and in in-app browsers (Reddit, Instagram, Facebook, TikTok, Android WebView, iOS without Safari), see `src/lib/install.ts`.
+Three goal tabs (Now, Getting around, Connect) with a row of service chips under them; see `src/layers/goals.ts`. Now: toilets, water, pharmacy, shelter. Getting around: bus, tram, Cercanías, Bizi. Connect: WiFi, charge, libraries. Each goal remembers its last service. The goal order follows how often each goal was tapped on this device (`zgz:v2:taps`), read once at app open. A first visit opens on Now > Toilets. The first tab tap asks for the location once (if the browser has not blocked it), inside the tap so browsers allow the prompt. Until then the list says "Distances from the city centre" with a big Use my location button; if blocked it shows one calm line on how to allow it. The anonymous events `locate-granted` and `locate-denied` are counted (no coordinates). The "add to home screen" hint is hidden when installed and in in-app browsers (Reddit, Instagram, Facebook, TikTok, Android WebView, iOS without Safari), see `src/lib/install.ts`.
 
 ## Browser check
 `e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network (the CityBikes feed is mocked), taps every control, checks the Bizi counts, stale and failed states, the goal tabs and chips (fit at 360 and 390 px, memory, order, 2-tap reach), the Settings view (slide, close cross, back, Escape, focus), the analytics events, the first-tap location prompt (granted, denied, blocked), the install hint under in-app browser UAs, one Pixel 7 emulation run, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.
