@@ -93,12 +93,14 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
   useEffect(() => {
     const g = group.current
     if (!g) return
-    const s = layer.id + '|' + items.map(i => i.id).join(',')
+    const s = layer.id + '|' + items.map(i => i.id + (i.open === false ? 'x' : '')).join(',')
     if (s !== sig.current) {
       sig.current = s
       g.clearLayers(); markers.current.clear()
-      const icon = L.divIcon({ className: 'mkw', html: `<div class="mk" style="--c:${layer.color}">${iconHtml(layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
+      const mkIcon = (closed: boolean) => L.divIcon({ className: 'mkw', html: `<div class="mk${closed ? ' off' : ''}" style="--c:${layer.color}">${iconHtml(layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
+      const icons = [mkIcon(false), mkIcon(true)]
       for (const it of items) {
+        const icon = icons[layer.hours && it.open === false ? 1 : 0]
         const mk = L.marker([it.lat, it.lon], { icon, keyboard: false, riseOnHover: false, title: it.name || undefined })
         mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
         markers.current.set(it.id, mk); g.addLayer(mk)

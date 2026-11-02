@@ -190,17 +190,18 @@ function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: Lay
   return (
     <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
       <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink after:absolute after:inset-0 hov:bg-surface">
-        <span className="min-w-0">
+        <span className={cn('min-w-0', closed && 'opacity-60')}>
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
           <span className={cn(sub, 'block truncate')}>{item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
         </span>
-        <span className="whitespace-nowrap text-right font-bold">{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
+        <span className={cn('whitespace-nowrap text-right font-bold', closed && 'opacity-60')}>{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
       </BaseButton>
       {item.type === 'lib' && <div className="pointer-events-none relative px-4 pb-1 [&_a]:pointer-events-auto [&_button]:pointer-events-auto"><Occupancy item={item} /></div>}
     </li>
   )
 }
 
+  const closed = layer.hours && item.open === false
 export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange, cat, setCat }: {
   layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {

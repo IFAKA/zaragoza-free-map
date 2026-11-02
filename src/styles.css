@@ -111,6 +111,7 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .mkw{background:none;border:0}
 .mk{width:2.27em;height:2.27em;border-radius:50%;background:var(--c);color:var(--color-on-brand);border:0 solid var(--color-on-brand);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgb(0 0 0 / .35);transition:transform 140ms var(--ease-out);will-change:transform}
 .mk svg{width:1.2em;height:1.2em;display:block}
+.mk.off{background:var(--color-surface);color:var(--color-ink-soft);border:1.5px dashed var(--color-ink-soft);box-shadow:none;opacity:.8}
 .mk.sel{transform:scale(1.67);border-width:1.5px;box-shadow:0 2px 8px rgb(0 0 0 / .45)}
 .me{width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
 @media (prefers-reduced-motion:reduce){.mk{transition:none}.mk.sel{transform:none;width:3.8em;height:3.8em;margin:-0.765em 0 0 -0.765em}}
