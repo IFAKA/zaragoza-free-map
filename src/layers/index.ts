@@ -4,9 +4,10 @@ import { seasonOf } from '../lib/season'
 import { buildLayers } from './build'
 
 export const LAYERS: Record<LayerId, LayerConfig> = buildLayers(DATA)
-const BASE: LayerId[] = ['bus', 'pharmacy', 'toilets', 'libraries', 'bizi', 'wifi', 'charge', 'water', 'racks']
-/** Layers shown as tabs, in order (Settings is a button in the header). Warm indoor places come first from 1 Nov to 31 Mar (device date), last otherwise. */
-export const layerOrder = (date: Date = new Date()): LayerId[] => (seasonOf(date) === 'warm' ? ['shelter', ...BASE] : [...BASE, 'shelter'])
+/** Tab order by how often each need is used: toilets, water, Bizi, bus, pharmacy, WiFi, charge, libraries. */
+const BASE: LayerId[] = ['toilets', 'water', 'bizi', 'bus', 'pharmacy', 'wifi', 'charge', 'libraries']
+/** Layers shown as tabs, in order (Settings is a button in the header). Warm indoor places come 3rd from 1 Nov to 31 Mar (device date), last otherwise. */
+export const layerOrder = (date: Date = new Date()): LayerId[] => (seasonOf(date) === 'warm' ? [...BASE.slice(0, 2), 'shelter', ...BASE.slice(2)] : [...BASE, 'shelter'])
 export const ORDER: LayerId[] = layerOrder()
-/** Layer shown when the person has not chosen one yet. */
-export const defaultLayer = (date: Date = new Date()): LayerId => layerOrder(date)[0] === 'shelter' ? 'shelter' : 'toilets'
+/** Layer shown to a first-time visitor: always toilets (a choice saved on the device wins; see App). */
+export const defaultLayer = (): LayerId => 'toilets'
