@@ -29,9 +29,9 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
 {
   const { ctx, p, blocked } = await open({ width: 390, height: 844 }, true)
   ok(blocked.length === 0, `no non-tile network requests (${blocked.length})`)
-  ok(await markers(p) > 0, 'water markers drawn')
-  ok(await p.getByTestId('nearest-name').innerText() !== '', 'nearest water shown at once')
-  for (const id of ['toilets', 'charge', 'wifi', 'water']) {
+  ok(await markers(p) > 0, 'toilets markers drawn')
+  ok(await p.getByTestId('nearest-name').innerText() !== '', 'nearest toilet shown at once')
+  for (const id of ['charge', 'wifi', 'water', 'toilets']) {
     await p.getByTestId('tab-' + id).click(); await p.waitForTimeout(500)
     ok(await markers(p) > 0, `layer ${id} renders markers`)
     ok(await p.getByTestId('nearest-name').count() === 1, `layer ${id} shows nearest`)
@@ -47,11 +47,9 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   ok(await snapTop(p) > 500, 'handle goes to peek')
   await p.getByTestId('handle').click(); await p.waitForTimeout(700) // half again: the controls below need room
   // Open now switch persisted
-  await p.getByTestId('tab-toilets').click(); await p.waitForTimeout(400)
   const sw = p.getByTestId('switch-open')
   ok(await sw.getAttribute('aria-checked') === 'true' || (await sw.getAttribute('data-checked')) !== null, 'Open now ON by default')
   await sw.click(); await p.reload(); await p.waitForTimeout(800)
-  await p.getByTestId('tab-toilets').click(); await p.waitForTimeout(400)
   await p.getByTestId('handle').click(); await p.waitForTimeout(700) // reload starts at peek
   ok(await p.getByTestId('switch-open').getAttribute('aria-checked') === 'false', 'Open now OFF persisted after reload')
   await p.getByTestId('switch-open').click()
@@ -180,7 +178,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   // marker and row selection reveal the card above the sheet
   {
     const { ctx, p, drag } = await sess()
-    await p.getByTestId('tab-toilets').tap(); await p.waitForTimeout(600)
+    await p.getByTestId('tab-water').tap(); await p.waitForTimeout(600)
     const before = await p.getByTestId('nearest-name').innerText()
     const mk = await p.evaluate(() => [...document.querySelectorAll('.mk:not(.sel)')].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }).find(c => c.y > 80 && c.y < 520 && c.x > 20 && c.x < 370))
     ok(!!mk, 'a marker is visible above the peek sheet')
@@ -234,7 +232,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && /gratis/.test(man.name), `manifest lang es (${man.lang}, ${man.name})`)
   const labels = await p.locator('[role=tab]').allInnerTexts()
-  ok(JSON.stringify(labels) === JSON.stringify(['Agua', 'Aseos', 'Cargar', 'WiFi', 'Biblio.', 'Bizi']), 'tab row: ' + labels.join(' | '))
+  ok(JSON.stringify(labels) === JSON.stringify(['Aseos', 'Biblio.', 'Bizi', 'WiFi', 'Cargar', 'Agua']), 'tab row: ' + labels.join(' | '))
   // all 6 tabs visible in one row: no scrolling, equal width, each at least 44px tall, inside the screen
   const cells = await p.locator('[role=tab]').evaluateAll(es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, w: r.width, h: r.height, clipped: e.scrollWidth > e.clientWidth + 1 } }))
   const list = await p.evaluate(() => { const e = document.querySelector('[role=tablist]'); return { sw: e.scrollWidth, cw: e.clientWidth } })

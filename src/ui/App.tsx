@@ -56,7 +56,7 @@ export function App() {
   const desktop = useDesktop()
   const [lang, setLangState] = useState<Lang>(initialLang)
   const t = DICT[lang]
-  const [layerId, setLayerId] = useState<LayerId>(() => saved<LayerId>('layer', 'water', s => (isLayer(s) ? s : undefined)))
+  const [layerId, setLayerId] = useState<LayerId>(() => saved<LayerId>('layer', 'toilets', s => (isLayer(s) ? s : undefined)))
   const [openOnly, setOpenOnlyS] = useState(() => saved('open', true, s => s !== '0'))
   const [showRange, setShowRangeS] = useState(() => saved('range', true, s => s !== '0'))
   const [cat, setCat] = useState('all')
