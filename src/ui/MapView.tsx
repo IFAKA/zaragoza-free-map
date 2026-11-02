@@ -52,8 +52,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const sig = useRef('')
   const me = useRef<L.Marker | null>(null)
   const routeGroup = useRef<L.LayerGroup | null>(null)
-  const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop })
-  cb.current = { onSelect, onBackgroundClick, inset, onRouteStop }
+  const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
+  cb.current = { onSelect, onBackgroundClick, inset, onRouteStop, desktop }
   const live = useRef({ layer, items, selected, showRange })
   live.current = { layer, items, selected, showRange }
 
@@ -180,7 +180,11 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const pts = route.paths.flat()
     if (pts.length < 2) return
     const anim = !reduced()
-    m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, cb.current.inset() + 30), maxZoom: 17, animate: anim, duration: MS.fly / 1000 })
+    // fractional zoom for this one fit (whole zooms would leave a long route small): the zoom is worked out at once, so snapping can come back right after
+    const snap = m.options.zoomSnap
+    m.options.zoomSnap = 0
+    m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: L.point(cb.current.desktop ? 440 : 40, 70), paddingBottomRight: L.point(40, cb.current.inset() + 30), maxZoom: 17, animate: anim, duration: MS.fly / 1000 })
+    m.options.zoomSnap = snap
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route?.key, fitN])
 

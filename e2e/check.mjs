@@ -324,12 +324,12 @@ for (const [w, h, lang] of [[360, 740, 'es'], [360, 740, 'en'], [390, 844, 'es']
   await ctx.close()
 })
 const reload = async p => { await p.reload(); await ready(p) }
-todo.push(async () => { // at peek the whole nearest-place card is on screen, for every service (the chips row takes space, peeks are measured with it)
-  const { ctx, p } = await open({ width: 360, height: 740 }, true)
+for (const lang of ['en', 'es']) todo.push(async () => { // at peek the whole nearest-place card is on screen, for every service, in both languages (Spanish is longer)
+  const { ctx, p } = await open({ width: 360, height: 740 }, true, {}, lang)
   for (const id of Object.keys(GOAL_OF)) {
     await p.evaluate(i => localStorage.setItem('zgz:v2:layer', i), id); await p.reload(); await p.waitForSelector('[data-testid=nearest],[data-testid=duty-loading],[data-testid=duty-failed]'); await settle(p)
     const gap = await p.evaluate(() => { const n = document.querySelector('[data-testid=nearest],[data-testid=duty-loading],[data-testid=duty-failed]'); return n ? Math.round(n.getBoundingClientRect().bottom - innerHeight) : 'none' })
-    ok(gap !== 'none' && gap <= 0, `peek shows the whole nearest card on ${id} (${gap} px past the screen)`)
+    ok(gap !== 'none' && gap <= 0, `peek shows the whole nearest card on ${id} (${lang}, ${gap} px past the screen)`)
   }
   await ctx.close()
 })
