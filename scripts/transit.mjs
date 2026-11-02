@@ -1,4 +1,4 @@
-// Builds the transit data files: src/data/busroutes.json, tram.json, cercanias.json. Called by build-data.mjs (`npm run data`), or alone: `npm run data:transit`.
+// Builds the transit data files: src/data/busroutes.json, tram.json, cercanias.json (stations and line, small) and cercanias-times.json (the timetable, loaded when the Cercanías tab opens). Called by build-data.mjs (`npm run data`), or alone: `npm run data:transit`.
 // Sources (checked 2026-11-02): the city's WFS layers MU3_* (CORS open) and the Renfe Cercanías GTFS zip. Needs the `unzip` command (it streams the 288 MB stop_times file, nothing is unpacked to disk).
 import { spawn } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
@@ -155,12 +155,12 @@ export async function buildCercanias(zipPath) {
   }
 }
 
-/** Write the three files. `only` = 'bus' | 'tram' | 'cercanias' | undefined (all). */
+/** Write the four files. `only` = 'bus' | 'tram' | 'cercanias' | undefined (all). */
 export async function writeTransit(outDir, only, zip) {
   const w = (name, data) => { writeFileSync(join(outDir, name), JSON.stringify(data)); console.log('wrote', name, JSON.stringify(data).length, 'bytes') }
   if (!only || only === 'bus') w('busroutes.json', await buildBusRoutes())
   if (!only || only === 'tram') w('tram.json', await buildTram())
-  if (!only || only === 'cercanias') w('cercanias.json', await buildCercanias(zip))
+  if (!only || only === 'cercanias') { const { t, ...stations } = await buildCercanias(zip); w('cercanias.json', stations); w('cercanias-times.json', { updated: stations.updated, t }) }
 }
 if (import.meta.url === new URL(process.argv[1], 'file://').href) {
   const { dirname, resolve } = await import('node:path'), { fileURLToPath } = await import('node:url')

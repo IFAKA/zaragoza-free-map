@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import busroutes from '../data/busroutes.json'
 import cercanias from '../data/cercanias.json'
+import times from '../data/cercanias-times.json'
 import tram from '../data/tram.json'
 import { alongPath, chipSplit, dayType, decodePolyline, encodePolyline, nextDepartures, orderAlong, pointAt, simplify, stopIndex, type BusRoutes, type Timetable } from './transit'
 import type { LatLon } from './types'
@@ -108,7 +109,7 @@ describe('baked transit files', () => {
   it('cercanias: every station has a timetable with sorted times', () => {
     expect(cercanias.rows.length).toBeGreaterThanOrEqual(4)
     for (const r of cercanias.rows) {
-      const t = (cercanias.t as unknown as Record<string, Timetable>)[r[0]]
+      const t = (times.t as unknown as Record<string, Timetable>)[r[0]]
       expect(t.wd.length).toBeGreaterThan(0)
       for (const list of Object.values(t)) for (let i = 2; i < list.length; i += 2) expect(list[i]).toBeGreaterThanOrEqual(list[i - 2])
     }
