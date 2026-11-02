@@ -30,25 +30,28 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   ok(blocked.length === 0, `no non-tile network requests (${blocked.length})`)
   ok(await markers(p) > 0, 'water markers drawn')
   ok(await p.getByTestId('nearest-name').innerText() !== '', 'nearest water shown at once')
-  for (const id of ['water', 'toilets', 'charge', 'wifi']) {
+  for (const id of ['toilets', 'charge', 'wifi', 'water']) {
     await p.getByTestId('tab-' + id).click(); await p.waitForTimeout(500)
     ok(await markers(p) > 0, `layer ${id} renders markers`)
     ok(await p.getByTestId('nearest-name').count() === 1, `layer ${id} shows nearest`)
   }
-  // tab tap raised the drawer from peek
-  const topHalf = await snapTop(p)
-  ok(topHalf < 844 - 300, `tab tap raised drawer (top ${topHalf})`)
-  // handle cycles half -> full -> peek
+  // tapping another tab at peek keeps the sheet at peek (the nearest-place card is already in view)
+  ok(Math.abs(await snapTop(p) - 560) < 6, `tab tap at peek keeps peek (top ${await snapTop(p)})`)
+  // handle cycles peek -> half -> full -> peek
+  await p.getByTestId('handle').click(); await p.waitForTimeout(700)
+  ok(Math.abs(await snapTop(p) - 344) < 6, 'handle goes to half')
   await p.getByTestId('handle').click(); await p.waitForTimeout(700)
   ok(await snapTop(p) < 120, 'handle goes to full')
   await p.getByTestId('handle').click(); await p.waitForTimeout(700)
   ok(await snapTop(p) > 500, 'handle goes to peek')
+  await p.getByTestId('handle').click(); await p.waitForTimeout(700) // half again: the controls below need room
   // Open now switch persisted
   await p.getByTestId('tab-toilets').click(); await p.waitForTimeout(400)
   const sw = p.getByTestId('switch-open')
   ok(await sw.getAttribute('aria-checked') === 'true' || (await sw.getAttribute('data-checked')) !== null, 'Open now ON by default')
   await sw.click(); await p.reload(); await p.waitForTimeout(800)
   await p.getByTestId('tab-toilets').click(); await p.waitForTimeout(400)
+  await p.getByTestId('handle').click(); await p.waitForTimeout(700) // reload starts at peek
   ok(await p.getByTestId('switch-open').getAttribute('aria-checked') === 'false', 'Open now OFF persisted after reload')
   await p.getByTestId('switch-open').click()
   // water has no switch
@@ -90,8 +93,148 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   ok(await p.getByText(/Datos actualizados/).count() > 0, 'about shows data refreshed date')
   ok(await p.getByText(/sin relación con el Ayuntamiento/).count() > 0, 'disclaimer')
   await p.screenshot({ path: out + '/m-about.png' })
-  await p.getByTestId('back').click(); await p.getByTestId('back').click(); await p.waitForTimeout(500)
+  await p.getByTestId('back').click(); await p.waitForTimeout(500)
+  ok(await p.getByTestId('more-about').count() === 1, 'About opened from More: Back returns to More')
+  await p.getByTestId('back').click(); await p.waitForTimeout(500)
+  ok(await p.getByTestId('tab-water').count() === 1, 'then Back returns to the first page')
   await p.getByTestId('tab-more').click(); await p.getByTestId('more-language').click(); await p.getByTestId('lang-en').click(); await p.getByTestId('back').click(); await p.getByTestId('back').click()
+  await ctx.close()
+}
+
+// ---- drawer behaviour: real touch drags (CDP) at 390x844 ----
+{
+  const LEVEL = { closed: [700, 844], peek: [520, 600], half: [320, 370], full: [70, 110] }
+  const lvl = async p => { const t = await snapTop(p); return Object.entries(LEVEL).find(([, [a, z]]) => t >= a && t <= z)?.[0] ?? 'top=' + t }
+  const sess = async () => {
+    const o = await open({ width: 390, height: 844 }, true)
+    const cdp = await o.ctx.newCDPSession(o.p)
+    const drag = async (x, y0, y1, ms = 300) => {
+      const n = Math.max(4, Math.round(ms / 16))
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] })
+      for (let i = 1; i <= n; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + (y1 - y0) * i / n }] }); await o.p.waitForTimeout(ms / n) }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await o.p.waitForTimeout(800)
+    }
+    return { ...o, drag }
+  }
+  // a spot on the bare map (no marker, no control) above the peek sheet
+  const bare = p => p.evaluate(() => { for (let y = 120; y < 330; y += 30) for (let x = 40; x < 360; x += 40) { const e = document.elementFromPoint(x, y); if (e && e.closest('.leaflet-container') && !e.closest('.mkw,.leaflet-control')) return { x, y } } return null })
+  const scrollTop = p => p.evaluate(() => document.querySelector('[data-testid=scroll]').scrollTop)
+  // peek -> half -> full by dragging the handle, content or tab bar
+  {
+    const { ctx, p, drag } = await sess()
+    ok(await lvl(p) === 'peek', 'starts at peek')
+    await drag(195, 570, 300); ok(await lvl(p) === 'half', 'handle drag up: peek -> half')
+    await p.screenshot({ path: out + '/g-half.png' })
+    await drag(195, 600, 250); ok(await lvl(p) === 'full', 'content drag up at half -> full')
+    await p.screenshot({ path: out + '/g-full.png' })
+    // full: content scrolls; a drag down while scrolled scrolls back; at the top the same drag lowers the sheet
+    await drag(195, 700, 300); ok(await scrollTop(p) > 100 && await lvl(p) === 'full', 'full: content drag scrolls the list, sheet stays')
+    await drag(195, 300, 450, 200); ok(await lvl(p) === 'full', 'full: drag down while scrolled does not move the sheet')
+    await p.evaluate(() => { document.querySelector('[data-testid=scroll]').scrollTop = 0 })
+    await drag(195, 300, 600); ok(await lvl(p) === 'half', 'full: drag down at list top hands the gesture to the sheet (-> half)')
+    await drag(195, 500, 700, 300); ok(['peek', 'closed'].includes(await lvl(p)), 'half: drag down on content lowers the sheet')
+    await ctx.close()
+  }
+  // down to closed and back
+  {
+    const { ctx, p, drag } = await sess()
+    await drag(195, 570, 300); ok(await lvl(p) === 'half', 'to half')
+    await drag(195, 380, 520, 300); ok(await lvl(p) === 'peek', 'half -> peek by dragging down')
+    await drag(195, 580, 760, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
+    await p.screenshot({ path: out + '/g-closed.png' })
+    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('tab-water').bottom, more: r('tab-more').bottom, h: innerHeight, handle: r('handle') } })
+    ok(vis.tab <= vis.h && vis.more <= vis.h, `closed: whole tab bar on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
+    ok(vis.handle.bottom <= vis.h && vis.handle.height >= 24 && vis.handle.width >= 44, 'closed: handle visible, at least 44 wide and 24 tall')
+    ok(await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), 'closed: page body is inert (no focus off-screen)')
+    ok(await p.locator('.mk').count() > 0 && (await p.getByTestId('map').boundingBox()).height === 844, 'closed: map fully visible')
+    await p.getByTestId('tab-toilets').tap(); await p.waitForTimeout(800)
+    ok(await lvl(p) === 'half', 'closed: tapping a tab opens to half')
+    ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'and selects that layer')
+    await p.getByTestId('tab-toilets').tap(); await p.waitForTimeout(800); ok(await lvl(p) === 'peek', 'tapping the active tab at half folds to peek')
+    await p.getByTestId('tab-toilets').tap(); await p.waitForTimeout(800); ok(await lvl(p) === 'closed', 'tapping the active tab at peek folds to closed')
+    await p.getByTestId('handle').tap(); await p.waitForTimeout(800); ok(await lvl(p) === 'half', 'closed: handle tap opens the sheet')
+    await ctx.close()
+  }
+  // flicks (velocity)
+  {
+    const { ctx, p, drag } = await sess()
+    await drag(195, 580, 450, 70); ok(['half', 'full'].includes(await lvl(p)), `fast flick up from peek opens (${await lvl(p)})`)
+    await drag(195, 580, 300, 300) // settle on a known level, then flick down
+    await p.reload(); await p.waitForTimeout(1000); await drag(195, 570, 300, 300); ok(await lvl(p) === 'half', 'half')
+    await drag(195, 400, 560, 70); ok(['peek', 'closed'].includes(await lvl(p)), `fast flick down from half lowers (${await lvl(p)})`)
+    await ctx.close()
+  }
+  // map tap lowers the sheet
+  {
+    const { ctx, p, drag } = await sess()
+    await drag(195, 570, 300); await drag(195, 600, 250)
+    ok(await lvl(p) === 'full', 'at full')
+    await p.mouse.click(195, 40); await p.waitForTimeout(800); ok(await lvl(p) === 'peek', 'map tap at full -> peek')
+    await drag(195, 570, 300)
+    const pt = await bare(p); ok(!!pt, 'found a bare map spot')
+    await p.touchscreen.tap(pt.x, pt.y); await p.waitForTimeout(800); ok(await lvl(p) === 'peek', 'map tap at half -> peek')
+    await p.touchscreen.tap(pt.x, pt.y); await p.waitForTimeout(800); ok(await lvl(p) === 'closed', 'map tap at peek -> closed')
+    await p.touchscreen.tap(pt.x, pt.y); await p.waitForTimeout(800); ok(await lvl(p) === 'closed', 'map tap at closed stays closed')
+    await ctx.close()
+  }
+  // marker and row selection reveal the card above the sheet
+  {
+    const { ctx, p, drag } = await sess()
+    await p.getByTestId('tab-toilets').tap(); await p.waitForTimeout(600)
+    const before = await p.getByTestId('nearest-name').innerText()
+    const mk = await p.evaluate(() => [...document.querySelectorAll('.mk:not(.sel)')].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }).find(c => c.y > 80 && c.y < 520 && c.x > 20 && c.x < 370))
+    ok(!!mk, 'a marker is visible above the peek sheet')
+    await p.touchscreen.tap(mk.x, mk.y); await p.waitForTimeout(1200)
+    ok(await lvl(p) === 'half', 'marker tap opens the sheet at half')
+    ok(await p.getByTestId('nearest').getAttribute('aria-label') === 'Selected', 'card says Selected')
+    const sel = await p.evaluate(() => { const r = document.querySelector('.mk.sel').getBoundingClientRect(); return { bottom: r.bottom, top: r.top, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top } })
+    ok(sel.bottom < sel.sheet - 10 && sel.top > 0, `selected marker sits above the sheet (marker bottom ${Math.round(sel.bottom)}, sheet top ${Math.round(sel.sheet)})`)
+    await p.screenshot({ path: out + '/g-marker.png' })
+    // row at full
+    await drag(195, 600, 250); ok(await lvl(p) === 'full', 'to full')
+    const row = p.locator('[data-testid=list] li button').nth(4)
+    const rowName = await row.locator('span.truncate').first().innerText()
+    await row.tap(); await p.waitForTimeout(1200)
+    ok(await lvl(p) === 'half', 'row tap at full -> half')
+    ok(await p.getByTestId('nearest-name').innerText() === rowName, `card shows the tapped row (${rowName})`)
+    ok(await scrollTop(p) === 0, 'card is scrolled into view')
+    const sel2 = await p.evaluate(() => { const r = document.querySelector('.mk.sel').getBoundingClientRect(); return { bottom: r.bottom, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top } })
+    ok(sel2.bottom < sel2.sheet - 10, 'row: its marker sits above the sheet')
+    await ctx.close()
+  }
+  // page stack: About from the footer goes Back to the home page; Escape: page, then lower
+  {
+    const { ctx, p, drag } = await sess()
+    await drag(195, 570, 300); await drag(195, 600, 250)
+    await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]'); v.scrollTop = v.scrollHeight })
+    await p.getByRole('button', { name: 'About' }).tap(); await p.waitForTimeout(800)
+    ok(await p.getByTestId('back').count() === 1, 'About opens from the footer')
+    await p.getByTestId('back').tap(); await p.waitForTimeout(800)
+    ok(await p.getByTestId('tab-water').count() === 1 && await p.getByTestId('more-about').count() === 0, 'About from footer: Back returns to home, not More')
+    await p.getByTestId('tab-more').tap(); await p.getByTestId('more-about').tap(); await p.waitForTimeout(600)
+    await p.keyboard.press('Escape'); await p.waitForTimeout(700)
+    ok(await p.getByTestId('more-about').count() === 1, 'Escape on About goes back to More')
+    await p.keyboard.press('Escape'); await p.waitForTimeout(700)
+    ok(await p.getByTestId('tab-water').count() === 1, 'Escape on More goes back to home')
+    const l0 = await lvl(p)
+    await p.keyboard.press('Escape'); await p.waitForTimeout(800)
+    ok(l0 === 'full' && await lvl(p) === 'half', `Escape on home lowers one step (${l0} -> ${await lvl(p)})`)
+    // closing from a sub page lands on home
+    await p.getByTestId('tab-more').tap(); await p.waitForTimeout(600)
+    await p.getByTestId('handle').tap(); await p.waitForTimeout(500)
+    await ctx.close()
+  }
+}
+// ---- narrow desktop window with a mouse ----
+{
+  const { ctx, p } = await open({ width: 600, height: 800 }, false)
+  const t0 = await snapTop(p)
+  await p.mouse.move(300, t0 + 12); await p.mouse.down(); await p.mouse.move(300, t0 + 200, { steps: 12 }); await p.mouse.up(); await p.waitForTimeout(800)
+  ok(await snapTop(p) > t0 + 100, `600x800 mouse drag down from the handle lowers the sheet (${t0} -> ${await snapTop(p)})`)
+  await p.getByTestId('handle').click(); await p.waitForTimeout(800)
+  ok(await snapTop(p) < t0, 'handle click opens it again')
+  await p.screenshot({ path: out + '/n-600.png' })
   await ctx.close()
 }
 // ---- drawer timings ----

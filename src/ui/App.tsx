@@ -6,6 +6,7 @@ import { rank } from '../lib/rank'
 import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, MORE } from '../layers'
 import { LangCtx } from './lang'
+import { SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { AboutPage, HomePage, LanguagePage, MorePage, PlacePage } from './Pages'
@@ -13,13 +14,33 @@ import { ToastHost, toasts } from './ToastHost'
 import { useLocation } from './useLocation'
 
 type Page = 'home' | 'more' | 'language' | 'about' | 'place'
-const UP: Record<Page, Page | null> = { home: null, more: 'home', language: 'more', about: 'more', place: 'home' }
-const up = (p: Page) => UP[p]
 
-// Drawer heights. Peek shows the tabs and the nearest place; half shows the controls too; full is the whole list.
-const PEEK = '284px', HALF = '500px', FULL = 1
+// Drawer levels. Closed shows only the tab bar; peek adds the nearest place; half shows the controls too; full is the whole list.
+const CLOSED = 0, PEEK = 1, HALF = 2, FULL = 3
 const PEEK_PX = 284, HALF_PX = 500
-const SNAPS: (string | number)[] = [PEEK, HALF, FULL]
+const DEFAULT_CLOSED_PX = 78
+/** Height of the closed sheet: the handle and the tab bar, plus the phone's bottom safe area. Measured, so it follows the real layout. */
+function useClosedPx(dep: unknown) {
+  const [px, setPx] = useState(DEFAULT_CLOSED_PX)
+  useEffect(() => {
+    const measure = () => {
+      const pop = document.querySelector('[data-slot=drawer-popup]'), tabs = pop?.querySelector('[role=tablist]')
+      if (!pop || !tabs) return
+      const probe = document.createElement('div')
+      probe.style.cssText = 'position:fixed;visibility:hidden;padding-bottom:env(safe-area-inset-bottom)'
+      document.body.appendChild(probe)
+      const inset = parseFloat(getComputedStyle(probe).paddingBottom) || 0
+      probe.remove()
+      const next = Math.ceil(tabs.parentElement!.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + inset)
+      if (next > 40) setPx(old => (old === next ? old : next))
+    }
+    measure()
+    const id = requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measure) }
+  }, [dep])
+  return px
+}
 
 const isLayer = (v: string | null): v is LayerId => !!v && v in LAYERS
 function useDesktop() {
@@ -40,7 +61,7 @@ export function App() {
   const [cat, setCat] = useState('all')
   const [selected, setSelected] = useState<string | null>(null)
   const [limit, setLimit] = useState(30)
-  const [snap, setSnap] = useState<string | number>(PEEK)
+  const [level, setLevel] = useState(PEEK)
   const [fly, setFly] = useState<FlyRequest | null>(null)
   const [tick, setTick] = useState(0)
   const { pos, locating, locate, alreadyGranted } = useLocation()
@@ -55,8 +76,13 @@ export function App() {
   useEffect(() => { document.documentElement.lang = lang }, [lang])
   useEffect(() => { const i = setInterval(() => setTick(x => x + 1), 60_000); return () => clearInterval(i) }, [])
 
-  const { page, go, goUp, turn, pageRef } = usePages<Page>('home', up)
-  const mobileLow = !desktop && snap !== FULL
+  const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
+  const mobileLow = !desktop && level !== FULL
+  const closedPx = useClosedPx(desktop || lang)
+  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, PEEK_PX + 'px', HALF_PX + 'px', 1], [closedPx])
+  const mobileClosed = !desktop && level === CLOSED
+  // a closed sheet shows only the tab bar, so it always closes onto the first page
+  useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
 
   const arr = useMemo(
     () => rank(layer, layer.items, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
@@ -68,8 +94,8 @@ export function App() {
 
   const insetPx = useCallback(() => {
     if (desktop) return 0
-    return snap === PEEK ? PEEK_PX : HALF_PX
-  }, [desktop, snap])
+    return level === CLOSED ? closedPx : level === PEEK ? PEEK_PX : HALF_PX
+  }, [desktop, level, closedPx])
 
   const flyTo = useCallback((to: LatLon, zoom: number, o: Partial<FlyRequest> = {}) => setFly({ n: ++flyN.current, to, zoom, ...o }), [])
 
@@ -85,23 +111,31 @@ export function App() {
   // locate silently when the browser already allows it
   useEffect(() => { alreadyGranted().then(ok => { if (ok) locate() }) }, [alreadyGranted, locate])
 
-  const raise = (min: string | number = HALF) => setSnap(s => (s === PEEK && min !== PEEK ? min : s))
+  const raise = (min: number = HALF) => setLevel(l => Math.max(l, min))
   const pickLayer = (id: LayerId) => {
+    // the tab of the layer you are already on: opens a closed sheet, folds an open one one step down
+    if (id === layerId && page === 'home' && !desktop) { setLevel(l => (l === CLOSED ? HALF : l - 1)); return }
     setLayerId(id); lsSet('layer', id); setSelected(null); setCat('all'); setLimit(30)
-    if (page !== 'home') go('home')
-    raise()
+    reset()
+    if (level === CLOSED) setLevel(HALF)
     viewport.current?.scrollTo({ top: 0 })
   }
+  // a list row or a map marker: show its card at half, with the marker panned above the sheet
   const select = (id: string) => {
     setSelected(id)
     const it = arr.find(i => i.id === id)
+    if (!desktop) setLevel(HALF)
     if (it) flyTo([it.lat, it.lon], 18)
-    if (!desktop) setSnap(s => (s === FULL ? HALF : s))
+    viewport.current?.scrollTo({ top: 0 })
+  }
+  // a tap on the bare map lowers the sheet one step: full/half to peek, peek to closed
+  const mapTap = () => {
+    setSelected(null)
+    if (!desktop) setLevel(l => (l === FULL ? PEEK : Math.max(CLOSED, l - 1)))
   }
   const doLocate = async () => {
     const p = await locate()
     if (!p) toasts.add({ title: t.deniedTitle, description: t.deniedBody, data: { close: t.close } })
-    else raise()
   }
   const onWalk = () => {
     if (!lsGet('hinted')) {
@@ -111,8 +145,10 @@ export function App() {
   }
   const turnTo = (p: Page) => { go(p); raise() }
   const back = () => { goUp() }
-  const dismiss = () => goUp()
-  const cycle = () => setSnap(s => (s === PEEK ? HALF : s === HALF ? FULL : PEEK))
+  // Escape and the back gesture: up one page, then lower the sheet one step
+  const escape = () => { if (!goUp()) setLevel(l => Math.max(CLOSED, l - 1)) }
+  const cycle = () => setLevel(l => (l === CLOSED || l === PEEK ? HALF : l === HALF ? FULL : PEEK))
+  const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
   const pageEl = (() => {
     switch (page) {
@@ -140,7 +176,7 @@ export function App() {
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
               layer={layer} items={arr} selected={chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
-              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={() => setSelected(null)} label={t.map}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} label={t.map}
             />
           </div>
           {desktop ? (
@@ -148,9 +184,11 @@ export function App() {
               <PageFrame turn={turn} pageRef={pageRef}>{pageEl}</PageFrame>
             </aside>
           ) : (
-            <PagedDrawer snapPoints={SNAPS} snap={snap} onSnap={setSnap} onDismissRequest={dismiss} turn={turn} pageRef={pageRef} handleLabel={t.handle} onHandle={cycle}>
-              {pageEl}
-            </PagedDrawer>
+            <SheetClosedCtx.Provider value={mobileClosed}>
+              <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
+                {pageEl}
+              </PagedDrawer>
+            </SheetClosedCtx.Provider>
           )}
         </div>
       </ToastHost>

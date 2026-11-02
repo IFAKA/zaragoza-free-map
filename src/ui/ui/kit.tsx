@@ -9,6 +9,7 @@ import { ToggleGroup } from '@base-ui/react/toggle-group'
 import { Info } from '@phosphor-icons/react'
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '../cn'
+import { useSheetClosed } from '../sheet'
 
 type Variant = 'primary' | 'secondary' | 'link'
 const VARIANT: Record<Variant, string> = {
@@ -63,8 +64,9 @@ export function Separator({ className }: { className?: string }) {
 
 /** Vertical scroll area. `locked` = no scrolling (the drawer is not fully open, so a drag moves the drawer instead). */
 export function Scroll({ children, locked, className, viewportRef }: { children: ReactNode; locked?: boolean; className?: string; viewportRef?: React.Ref<HTMLDivElement> }) {
+  const closed = useSheetClosed()
   return (
-    <ScrollArea.Root className={cn('relative min-h-0 flex-1', className)}>
+    <ScrollArea.Root className={cn('relative min-h-0 flex-1', className)} inert={closed}>
       <ScrollArea.Viewport ref={viewportRef} className={cn('h-full overscroll-contain', locked && 'overflow-y-hidden!')} data-testid="scroll">
         <ScrollArea.Content>{children}</ScrollArea.Content>
       </ScrollArea.Viewport>

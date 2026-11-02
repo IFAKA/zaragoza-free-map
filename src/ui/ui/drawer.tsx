@@ -98,9 +98,12 @@ function DrawerContent({
   className,
   children,
   viewport,
+  handleSlot,
   ...props
 }: DrawerPrimitive.Popup.Props & {
   viewport?: { className?: string; style?: React.CSSProperties }
+  /** Rendered in the popup but outside Drawer.Content, so a mouse can still drag the sheet from it (Base UI ignores mouse drags that start inside the content). */
+  handleSlot?: React.ReactNode
 }) {
   const { hasSnapPoints, modal, showSwipeHandle, swipeDirection } = useDrawer()
   const swipeAxis =
@@ -156,6 +159,7 @@ function DrawerContent({
           {...props}
         >
           {showSwipeHandle && <DrawerSwipeHandle />}
+          {handleSlot}
           <DrawerPrimitive.Content
             data-slot="drawer-content"
             className={cn(
