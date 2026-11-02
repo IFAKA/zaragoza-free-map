@@ -29,11 +29,12 @@ type GoatCounter = { count: (o: { path: string; title?: string; event?: boolean 
  * or a closing way, never places, positions or text.
  *  tab: a service shown, on a real switch (layer id)        goal: a goal tab, on a real switch (goal id)
  *  select: a list row or marker picked (layer id)           directions: walking directions opened (layer id)
+ *  bus-line: a bus line tapped on a stop card, to draw its route (the line number, e.g. bus-line-38)
  *  times: next buses opened (bus)                           report: the OpenStreetMap report link
  *  locate-granted / locate-denied: the answer to the location question
  *  settings-open / settings-close (x, back or escape)       lang: language changed (en or es)
  */
-export const EVENTS = ['tab', 'goal', 'select', 'directions', 'times', 'report', 'locate-granted', 'locate-denied', 'settings-open', 'settings-close', 'lang'] as const
+export const EVENTS = ['tab', 'goal', 'select', 'bus-line', 'directions', 'times', 'report', 'locate-granted', 'locate-denied', 'settings-open', 'settings-close', 'lang'] as const
 export type EventName = (typeof EVENTS)[number]
 export function track(name: EventName, detail?: string): void {
   try { (window as unknown as { goatcounter?: GoatCounter }).goatcounter?.count({ path: detail ? `${name}-${detail}` : name, title: name, event: true }) } catch { /* analytics must never break the app */ }

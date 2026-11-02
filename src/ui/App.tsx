@@ -8,14 +8,16 @@ import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
 import { canShowInstallHint, installEnv } from '../lib/install'
 import { rankOrAll } from '../lib/rank'
+import { loadBusRoutes } from '../data/lazy'
+import { decodePolyline, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
 import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
 import { dutyItems } from '../layers/build'
 import { LangCtx } from './lang'
 import { SheetClosedCtx } from './sheet'
-import { MapView, type FlyRequest } from './MapView'
+import { MapView, type FlyRequest, type RouteView } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
-import { HomePage, PlacePage } from './Pages'
+import { HomePage, PlacePage, type LineView } from './Pages'
 import { SettingsView, useSettingsView } from './SettingsView'
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
 import { GOAL_IDS, goalById, goalOf, serviceFor, type GoalId } from '../layers/goals'
@@ -108,6 +110,10 @@ export function App() {
   const [fly, setFly] = useState<FlyRequest | null>(null)
   const [peekEl, setPeekEl] = useState<HTMLElement | null>(null)
   const [tick, setTick] = useState(0)
+  // a bus line chosen on a stop card: its route replaces the markers until the person goes back
+  const [lineSel, setLineSel] = useState<{ line: string; dir: number; anchor: string } | null>(null)
+  const [routes, setRoutes] = useState<BusRoutes | null>(null)
+  const [fitN, setFitN] = useState(0)
   const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
   const askedLocation = useRef(false)
   const flyN = useRef(0)
@@ -131,6 +137,7 @@ export function App() {
   // Bizi: live bike and dock counts while that tab is open (see lib/bizi.ts); the places always show
   const bizi = useBizi(layerId === 'bizi', BIZI_STATIONS)
   const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layerId === 'bizi' ? withCounts(layer.items, bizi.counts) : layer.items), [layer, layerId, dutyRows, bizi.counts])
+  useEffect(() => { if (layerId === 'bus' && !routes) void loadBusRoutes().then(setRoutes) }, [layerId, routes])
   const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
   const setLang = (l: Lang) => { if (l !== lang) track('lang', l); setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
   const setOpenOnly = (v: boolean) => { setOpenOnlyS(v); lsSet('open', v ? '1' : '0') }
@@ -161,6 +168,19 @@ export function App() {
   // the two nearest places after the one on the card
   const nearby = useMemo(() => (focus ? arr.filter(i => i.id !== focus.id).slice(0, 2) : []), [arr, focus])
 
+  // the chosen line as the map and the sheet need it (null when none, or while the line file is loading)
+  const lineData = useMemo(() => {
+    if (!lineSel || !routes || layerId !== 'bus') return null
+    const ln = routes.lines[lineSel.line], a = layer.items.find(i => i.id === lineSel.anchor)
+    if (!ln || !a) return null
+    const dir = Math.min(lineSel.dir, ln.d.length - 1), d = ln.d[dir]
+    const idx = stopIndex(d.s, routes.stops, a.stop, [a.lat, a.lon], 150)
+    const stops = d.s.map(c => ({ post: String(c), name: routes.stops[c]?.[0] ?? '', lat: routes.stops[c]?.[1] ?? 0, lon: routes.stops[c]?.[2] ?? 0 }))
+    const view: LineView = { line: lineSel.line, dir, dirs: ln.d.length, to: d.to, stops, idx, stop: a.stop }
+    const route: RouteView = { key: lineSel.line + '|' + dir, paths: d.p.map(decodePolyline), stops, cur: idx }
+    return { view, route }
+  }, [lineSel, routes, layerId, layer])
+
   const insetPx = useCallback(() => {
     if (desktop) return 0
     return level === CLOSED ? closedPx : peekPx
@@ -171,7 +191,8 @@ export function App() {
   // the card got taller or shorter (another place, another language): frame the same place again above the new edge of the sheet, without animation
   useEffect(() => {
     const r = lastFly.current
-    if (r && !desktop && level === PEEK) setFly({ ...r, n: ++flyN.current, instant: true })
+    if (lineData) setFitN(n => n + 1)
+    else if (r && !desktop && level === PEEK) setFly({ ...r, n: ++flyN.current, instant: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peekPx])
 
@@ -179,7 +200,7 @@ export function App() {
   const first = arr[0]?.id
   useEffect(() => {
     const it = arr[0]
-    if (!it) return
+    if (!it || lineSel) return
     flyTo([it.lat, it.lon], 16, pos ? { fitUser: pos } : {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layerId, first, !!pos])
@@ -199,7 +220,7 @@ export function App() {
     track('tab', id)
     lsSet('taps', JSON.stringify(bumpTap(parseTaps(lsGet('taps')), g)))
     lsSet('last', JSON.stringify({ ...parseLast(lsGet('last')), [g]: id }))
-    setLayerId(id); lsSet('layer', id); setSelected(null); setCat(catStart(id))
+    setLayerId(id); lsSet('layer', id); setSelected(null); setCat(catStart(id)); setLineSel(null)
     reset()
     if (level === CLOSED) setLevel(PEEK)
     viewport.current?.scrollTo({ top: 0 })
@@ -229,6 +250,23 @@ export function App() {
     if (!desktop) setLevel(PEEK)
     if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
   }
+  // a line chip on the stop card: draw that line's route, in the direction this stop is on
+  const pickLine = (line: string) => {
+    if (!routes || !focus) return
+    const ln = routes.lines[line]
+    if (!ln) return
+    track('bus-line', line)
+    setLineSel({ line, dir: pickDirection(ln, routes.stops, focus.stop, [focus.lat, focus.lon]).dir, anchor: focus.id })
+    if (!desktop) setLevel(PEEK)
+  }
+  const lineDir = () => setLineSel(l => (l && routes ? { ...l, dir: (l.dir + 1) % routes.lines[l.line].d.length } : l))
+  // back to the nearest-stop mode: the markers return and the map shows the stop again
+  const lineBack = () => {
+    setLineSel(null)
+    if (focus) flyTo([focus.lat, focus.lon], 16, pos ? { fitUser: pos } : {})
+  }
+  // a stop dot on the line: make it the current stop
+  const lineStop = (post: string) => { if (layer.items.some(i => i.id === 'u' + post)) setLineSel(l => (l ? { ...l, anchor: 'u' + post } : l)) }
   // a tap on the bare map lowers the sheet one step: full to peek, peek to closed
   const mapTap = () => {
     setSelected(null)
@@ -246,7 +284,7 @@ export function App() {
   const turnTo = (p: Page) => { go(p); raise() }
   const back = () => { goUp() }
   // Escape and the back gesture: up one page, then lower the sheet one step
-  const escape = () => { if (view.isOpen) return; if (!goUp()) setLevel(l => Math.max(CLOSED, l - 1)) }
+  const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (!goUp()) setLevel(l => Math.max(CLOSED, l - 1)) }
   const cycle = () => setLevel(l => (l === CLOSED ? PEEK : l === PEEK ? FULL : PEEK))
   const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
@@ -256,6 +294,7 @@ export function App() {
       default: return (
         <HomePage
           layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating} nearby={nearby} peekRef={setPeekEl}
+          routes={routes} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
           onPick={pickLayer} onGoal={pickGoal} goalOrder={goalOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
@@ -272,8 +311,8 @@ export function App() {
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
-              layer={layer} items={arr} pick={pick} selected={chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
-              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} label={t.map} zoomTitles={zoomTitles}
+              layer={layer} items={lineData ? [] : arr} pick={pick} selected={lineData ? null : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} fitN={fitN} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
           {desktop ? (

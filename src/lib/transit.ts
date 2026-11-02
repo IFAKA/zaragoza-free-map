@@ -105,13 +105,28 @@ export interface BusDirection {
 export interface BusLine { n: string; d: BusDirection[] }
 export interface BusRoutes { src: string; updated: string | null; stops: Record<string, [string, number, number]>; lines: Record<string, BusLine> }
 
-/** Index of the stop in an ordered list of post numbers: the exact post, else the nearest stop within 80 m, else -1. */
-export function stopIndex(order: number[], stops: BusRoutes['stops'], post: string | undefined, at: LatLon): number {
+/** Index of the stop in an ordered list of post numbers: the exact post, else the nearest stop within `tol` metres (80), else -1. */
+export function stopIndex(order: number[], stops: BusRoutes['stops'], post: string | undefined, at: LatLon, tol = 80): number {
   const i = post ? order.indexOf(+post) : -1
   if (i >= 0) return i
   const [kn, ke] = mpd(at[0])
-  let best = -1, bd = 80
+  let best = -1, bd = tol
   order.forEach((c, k) => { const s = stops[c]; if (!s) return; const d = Math.hypot((s[2] - at[1]) * ke, (s[1] - at[0]) * kn); if (d < bd) { bd = d; best = k } })
+  return best
+}
+
+/**
+ * The direction of a line to show first for a stop, and the stop's place in it. A stop is usually on one side of the street, so only one direction has it;
+ * when both do (a terminus, a loop), the one with more stops still to come wins, as the more useful ride. The stop's own post beats a merely near stop.
+ */
+export function pickDirection(line: BusLine, stops: BusRoutes['stops'], post: string | undefined, at: LatLon): { dir: number; idx: number } {
+  let best = { dir: 0, idx: -1 }, bestScore = -1
+  line.d.forEach((d, dir) => {
+    const idx = stopIndex(d.s, stops, post, at)
+    // the stop's own post counts above a merely near stop; then more stops to come
+    const score = idx < 0 ? -1 : (post && d.s[idx] === +post ? 1000 : 0) + d.s.length - 1 - idx
+    if (score > bestScore) { bestScore = score; best = { dir, idx } }
+  })
   return best
 }
 

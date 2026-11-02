@@ -17,7 +17,7 @@ const VARIANT: Record<Variant, string> = {
   secondary: 'border border-line-strong bg-transparent text-brand-text hov:bg-surface active:bg-surface',
   link: 'bg-transparent px-1 text-brand-text underline-offset-2 hov:underline',
 }
-const BTN = 'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] disabled:opacity-50 motion-reduce:active:scale-100'
+const BTN = 'inline-flex min-h-[44px] select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] disabled:opacity-50 motion-reduce:active:scale-100'
 /** Primary = solid red. Secondary = grey border, red text (always next to a primary). Link = text only. */
 export function Button({ variant = 'primary', className, ...p }: ComponentProps<typeof BaseButton> & { variant?: Variant }) {
   const link = 'render' in p && !!p.render
@@ -29,7 +29,7 @@ export const linkProps = (href: string) => ({ render: <a href={href} target="_bl
 /** Labelled switch: red when on, light grey when off. */
 export function Switch({ checked, onCheckedChange, label, hint, testId }: { checked: boolean; onCheckedChange: (v: boolean) => void; label: string; hint?: string; testId?: string }) {
   return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-3 py-1">
+    <label className="flex min-h-[44px] cursor-pointer items-center gap-3 py-1">
       <span className="min-w-0 flex-1">
         <span className="block font-bold leading-tight">{label}</span>
         {hint && <span className="block text-[0.87em] leading-tight text-ink-soft">{hint}</span>}
@@ -51,7 +51,7 @@ export function Chips({ value, onChange, options, label, allValue = 'all' }: { v
       {options.map(o => (
         <Toggle
           key={o.value} value={o.value}
-          className="min-h-11 select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] data-[pressed]:bg-brand data-[pressed]:text-on-brand motion-reduce:active:scale-100"
+          className="min-h-[44px] select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] data-[pressed]:bg-brand data-[pressed]:text-on-brand motion-reduce:active:scale-100"
         >{o.label}</Toggle>
       ))}
     </ToggleGroup>
@@ -81,7 +81,7 @@ export function Scroll({ children, locked, className, viewportRef }: { children:
 export function InfoPop({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
   return (
     <Popover.Root>
-      <Popover.Trigger aria-label={label} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info [transition:scale_var(--dur-press)_var(--ease-out)] active:scale-[.97]">
+      <Popover.Trigger aria-label={label} className="inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info [transition:scale_var(--dur-press)_var(--ease-out)] active:scale-[.97]">
         <Info size="1.25em" weight="bold" aria-hidden />
       </Popover.Trigger>
       <Popover.Portal>

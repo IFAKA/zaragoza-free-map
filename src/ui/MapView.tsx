@@ -3,10 +3,13 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
 import { CENTER } from '../lib/geo'
+import { pointAt } from '../lib/transit'
 import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
 import { iconHtml } from './icons'
 
 export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon; instant?: boolean }
+/** A bus line to draw in place of the markers: its route pieces, its stops in order, and which stop is the current one (-1 = none). */
+export interface RouteView { key: string; paths: LatLon[][]; stops: { post: string; name: string; lat: number; lon: number }[]; cur: number }
 interface Props {
   layer: LayerConfig
   items: RankedItem[]
@@ -21,6 +24,10 @@ interface Props {
   desktop: boolean
   onSelect: (id: string) => void
   onBackgroundClick: () => void
+  /** A bus line to show instead of the markers (the map frames it above the sheet), and a stop of it tapped. `fitN` counts up to frame it again (the sheet changed height). */
+  route?: RouteView | null
+  fitN?: number
+  onRouteStop?: (post: string) => void
   label: string
   zoomTitles: { in: string; out: string }
 }
@@ -34,7 +41,7 @@ const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Ligh
 const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, fitN = 0, onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
@@ -42,8 +49,9 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const markers = useRef(new Map<string, L.Marker>())
   const sig = useRef('')
   const me = useRef<L.Marker | null>(null)
-  const cb = useRef({ onSelect, onBackgroundClick, inset })
-  cb.current = { onSelect, onBackgroundClick, inset }
+  const routeGroup = useRef<L.LayerGroup | null>(null)
+  const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop })
+  cb.current = { onSelect, onBackgroundClick, inset, onRouteStop }
   const live = useRef({ layer, items, selected, showRange })
   live.current = { layer, items, selected, showRange }
 
@@ -73,7 +81,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   }
 
   useEffect(() => {
-    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: L.canvas({ padding: 0.5 }) }).setView(CENTER, 15)
+    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: L.canvas({ padding: 0.5, tolerance: 8 }) }).setView(CENTER, 15)
     if (desktop) L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
     m.attributionControl.setPosition('topleft') // top left: the Settings button floats at the top right
     m.on('click', () => cb.current.onBackgroundClick())
@@ -83,12 +91,13 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const onScheme = () => { tiles.setUrl(TILES(dark())); labels.setUrl(LABELS(dark())) }
     mq.addEventListener('change', onScheme)
     rings.current = L.layerGroup().addTo(m)
+    routeGroup.current = L.layerGroup().addTo(m)
     group.current = L.layerGroup().addTo(m)
     map.current = m
     m.on('moveend zoomend', drawRings)
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
-    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null; group.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
+    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -125,6 +134,43 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const done = () => el.classList.remove('pulse')
     el.addEventListener('animationend', done, { once: true })
   }, [pick])
+
+  // a bus line: a white casing under a brand line, arrows along it, a dot at every stop and a big one at the current stop
+  useEffect(() => {
+    const g = routeGroup.current
+    if (!g) return
+    g.clearLayers()
+    if (!route) return
+    const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
+    const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
+    for (const path of route.paths) {
+      L.polyline(path, { color: white, weight: 8, opacity: 0.9, interactive: false }).addTo(g)
+      L.polyline(path, { color: brand, weight: 4.5, interactive: false }).addTo(g)
+    }
+    for (const path of route.paths) {
+      for (const f of [0.2, 0.4, 0.6, 0.8]) {
+        const a = pointAt(path, f)
+        if (!a) continue
+        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="rarrow" style="transform:rotate(${Math.round(a.bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="${white}" stroke="${brand}" stroke-width="1.4" stroke-linejoin="round"/></svg></div>`, iconSize: [14, 14], iconAnchor: [7, 7] }), interactive: false, keyboard: false }).addTo(g)
+      }
+    }
+    route.stops.forEach((s, i) => {
+      if (i === route.cur) return
+      const dot = L.circleMarker([s.lat, s.lon], { radius: 3.5, color: brand, weight: 1.5, fillColor: white, fillOpacity: 1 }).addTo(g)
+      dot.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onRouteStop?.(s.post) })
+    })
+    const cur = route.stops[route.cur]
+    if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
+  }, [route])
+  useEffect(() => {
+    const m = map.current
+    if (!m || !route) return
+    const pts = route.paths.flat()
+    if (pts.length < 2) return
+    const anim = !reduced()
+    m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, cb.current.inset() + 30), maxZoom: 17, animate: anim, duration: MS.fly / 1000 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.key, fitN])
 
   useEffect(() => {
     const m = map.current

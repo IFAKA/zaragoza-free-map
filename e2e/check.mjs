@@ -149,7 +149,7 @@ todo.push(async () => {
 
 // ---- drawer behaviour: real touch drags (CDP) at 390x844 ----
 {
-  const LEVEL = { closed: [700, 844], peek: [380, 660], full: [70, 110] }
+  const LEVEL = { closed: [700, 844], peek: [300, 660], full: [70, 110] }
   const lvl = async p => { const t = await snapTop(p); return Object.entries(LEVEL).find(([, [a, z]]) => t >= a && t <= z)?.[0] ?? 'top=' + t }
   const sess = async (h = 844) => {
     const o = await open({ width: 390, height: h }, true)
@@ -174,8 +174,9 @@ todo.push(async () => {
     await drag(195, 400, 100); ok(await lvl(p) === 'full', 'handle drag up: peek -> full')
     await p.screenshot({ path: out + '/g-full.png' })
     // full: content scrolls; a drag down while scrolled scrolls back; at the top the same drag lowers the sheet
-    await drag(195, 520, 350); ok(await scrollTop(p) > 40 && await lvl(p) === 'full', 'full: content drag scrolls the list, sheet stays')
-    await drag(195, 470, 540, 200); ok(await lvl(p) === 'full', `full: drag down while scrolled does not move the sheet (${await lvl(p)}, scroll ${await scrollTop(p)})`)
+    const sb = await p.getByTestId('scroll').boundingBox(), y0 = Math.round(sb.y + sb.height - 20), y1 = Math.round(sb.y + 20) // inside the scrolling part only
+    await drag(195, y0, y1); ok(await scrollTop(p) > 20 && await lvl(p) === 'full', 'full: content drag scrolls the list, sheet stays')
+    await drag(195, y1, y1 + 40, 200); ok(await lvl(p) === 'full', `full: drag down while scrolled does not move the sheet (${await lvl(p)}, scroll ${await scrollTop(p)})`)
     await p.evaluate(() => { document.querySelector('[data-testid=scroll]').scrollTop = 0 })
     await drag(195, 300, 480); { const t = await snapTop(p); ok(t > 130 && t < 520, `full: drag down at the top hands the gesture to the sheet (-> top ${t}, peek on this short screen)`) }
     await ctx.close()
@@ -404,6 +405,40 @@ todo.push(async () => {
   const next = p.getByTestId('next-buses')
   ok(await next.count() === 1 && /poste=\d+/.test(await next.getAttribute('href') || ''), 'Bus card: one Next buses link to the bus company page')
   ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() >= 1, 'Bus card: shows the lines and a Walk button')
+  await ctx.close()
+})
+// a bus line: tap a line chip on the stop card, the route replaces the markers, the sheet shows the stepper; back returns
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
+  await p.waitForSelector('[data-testid=bus-line-chip]'); await settle(p)
+  const rows = await p.getByTestId('bus-lines').evaluate(e => new Set([...e.querySelectorAll('li')].map(l => Math.round(l.getBoundingClientRect().top))).size)
+  ok(rows <= 2, `bus card: the line chips take at most 2 rows (${rows})`)
+  { const r = await p.getByTestId('bus-line-chip').first().boundingBox(); ok(r.height >= 43.5 && r.width >= 40, `bus line chips are touch sized (${r.width}x${r.height})`) }
+  const chip = p.getByTestId('bus-line-chip').first(), line = await chip.getAttribute('data-line')
+  await chip.tap(); await settle(p)
+  ok(await p.getByTestId('line-block').count() === 1 && await p.getByTestId('nearest').count() === 0, 'tapping a line shows the line sheet in place of the stop card')
+  const title = await p.getByTestId('line-title').innerText()
+  ok(new RegExp(`^Línea ${line}( · hacia .+)?$`).test(title), `title says the line and where it goes (${title})`)
+  ok(await p.evaluate(() => window.__ev.includes('bus-line-' + document.querySelector('[data-testid=line-title]').textContent.split(' ')[1])), 'event bus-line-<line> sent: ' + await p.evaluate(() => window.__ev.join(',')))
+  ok(await markers(p) === 0, 'line mode: the stop markers are replaced by the route')
+  ok(await p.getByTestId('line-steps').locator('li').count() >= 2 && await p.getByTestId('line-steps').locator('li[data-here]').count() === 1, 'the stepper lists the stops in order, this stop first')
+  ok((await p.getByTestId('next-buses').getAttribute('href') || '').includes('poste='), 'Próximos buses link is on the line sheet')
+  // the route is on the canvas and fully above the sheet
+  const px = await p.evaluate(() => {
+    const c = document.querySelector('.leaflet-overlay-pane canvas'), g = c.getContext('2d'), w = c.width, h = c.height, d = g.getImageData(0, 0, w, h).data
+    let top = h, bottom = -1
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (d[(y * w + x) * 4 + 3] > 0) { if (y < top) top = y; if (y > bottom) bottom = y }
+    const r = c.getBoundingClientRect(), k = r.height / h
+    return { top: r.top + top * k, bottom: r.top + bottom * k, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top }
+  })
+  ok(px.bottom > 0 && px.bottom < px.sheet && px.top >= 0, `the whole route is drawn above the sheet (route ${Math.round(px.top)}..${Math.round(px.bottom)}, sheet top ${Math.round(px.sheet)})`)
+  await p.screenshot({ path: out + '/bus-line-es.png' })
+  if (await p.getByTestId('line-dir').count()) {
+    await p.getByTestId('line-dir').tap(); await settle(p)
+    ok(await p.getByTestId('line-title').innerText() !== title, 'the direction button shows the other direction')
+  }
+  await p.getByTestId('line-back').tap(); await settle(p)
+  ok(await p.getByTestId('line-block').count() === 0 && await p.getByTestId('nearest').count() === 1 && await markers(p) > 100, 'back returns to the nearest stop and its markers')
   await ctx.close()
 })
 const farm = (date, hours = '09:00-22:00') => ({ result: [{ id: 'x1', title: 'Farmacia Test', geometry: { type: 'Point', coordinates: [-0.8773, 41.6488] }, calle: 'Calle Test 1', telefonos: '976000000', guardia: { fecha: date, horario: hours, sector: 'Centro' } }] })

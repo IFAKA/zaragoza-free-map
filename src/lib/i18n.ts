@@ -35,6 +35,7 @@ const en = {
   nearestpharmacy: 'Nearest pharmacy on duty', dutyToday: 'On duty today', dutyHours: 'Hours today', dutyNote: 'On duty today, loaded live from the city. Hours are the city’s text, in Spanish.', dutyLoading: 'Loading today’s duty pharmacies…', dutyFail: 'Could not load today’s duty pharmacies', dutyFailBody: 'We never show an old list as today’s. Check your connection and try again.', retry: 'Try again', cityPage: 'Open the city page',
   creditsPharmacy: 'Pharmacies on duty: Ayuntamiento de Zaragoza open data (Farmacias), loaded live when you open the tab',
   creditsBus: 'Bus stops: Ayuntamiento de Zaragoza open data (Postes de autobús). Live times: bus company page, opened in your browser',
+  busLine: 'Line {n}', toward: 'toward {to}', routeOf: 'Route', lineBack: 'Back to the nearest stop', otherDir: 'Other direction', stepHere: 'This stop', stepMore: '+{n} more stops', lineChip: 'Show the route of line {n}', lineMore: '+{n}', lineLess: 'Show fewer', stepsLabel: 'Next stops',
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
@@ -71,6 +72,7 @@ const es: Record<Key, string> = {
   nearestpharmacy: 'Farmacia de guardia más cercana', dutyToday: 'De guardia hoy', dutyHours: 'Horario de hoy', dutyNote: 'De guardia hoy, cargado en directo del Ayuntamiento.', dutyLoading: 'Cargando las farmacias de guardia de hoy…', dutyFail: 'No se pudieron cargar las farmacias de guardia de hoy', dutyFailBody: 'Nunca mostramos una lista vieja como si fuera de hoy. Mira tu conexión y prueba otra vez.', retry: 'Reintentar', cityPage: 'Abrir la página del Ayuntamiento',
   creditsPharmacy: 'Farmacias de guardia: datos abiertos del Ayuntamiento de Zaragoza (Farmacias), cargados en directo al abrir la pestaña',
   creditsBus: 'Paradas de bus: datos abiertos del Ayuntamiento de Zaragoza (Postes de autobús). Tiempos en vivo: página de la empresa de buses, se abre en tu navegador',
+  busLine: 'Línea {n}', toward: 'hacia {to}', routeOf: 'Recorrido', lineBack: 'Volver a la parada más cercana', otherDir: 'Sentido contrario', stepHere: 'Esta parada', stepMore: '+{n} paradas más', lineChip: 'Ver el recorrido de la línea {n}', lineMore: '+{n}', lineLess: 'Ver menos', stepsLabel: 'Próximas paradas',
 }
 export const DICT: Record<Lang, Record<Key, string>> = { en, es }
 

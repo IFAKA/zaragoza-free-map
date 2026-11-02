@@ -1,11 +1,12 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
+import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
+import { useState, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
+import { chipSplit, type BusRoutes } from '../lib/transit'
 import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS } from '../layers'
@@ -72,7 +73,7 @@ function Occupancy({ item }: { item: RankedItem }) {
   const { t } = useT()
   if (item.type !== 'lib') return null
   if (item.buz) {
-    return <a href={BUZ_URL} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center gap-1 font-bold text-brand-text underline-offset-2 hov:underline">{t('occLive')} <ArrowUpRight size="1em" weight="bold" aria-hidden /></a>
+    return <a href={BUZ_URL} target="_blank" rel="noopener" className="inline-flex min-h-[44px] items-center gap-1 font-bold text-brand-text underline-offset-2 hov:underline">{t('occLive')} <ArrowUpRight size="1em" weight="bold" aria-hidden /></a>
   }
   return <span className="inline-flex items-center"><span className={sub}>{t('occNone')}</span><InfoPop label={t('occInfoTitle')} title={t('occInfoTitle')}>{t('occInfo')}</InfoPop></span>
 }
@@ -163,9 +164,76 @@ function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => vo
   )
 }
 
+/** What the line mode needs to show: the line, the direction on show, the stops in order and the place of the current one in them (-1 = none). */
+export interface LineView { line: string; dir: number; dirs: number; to?: string; stops: { post: string; name: string }[]; idx: number; stop?: string }
+
+const LINE_ROWS = 2, LINE_COLS = 6 // the lines on a stop card: at most two rows of six, then a "+N" chip that opens the rest
+/** The lines a stop serves, as chips. A line with a known route is a button (draws it); the others are plain. */
+function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes | null; onLine: (line: string) => void }) {
+  const { t } = useT()
+  const [all, setAll] = useState(false)
+  const list = lines.split(',')
+  const { shown, more } = all ? { shown: list, more: 0 } : chipSplit(list, LINE_ROWS * LINE_COLS)
+  const chip = 'flex min-h-[44px] min-w-0 items-center justify-center rounded-btn px-1 text-[0.93em] font-bold'
+  return (
+    <div className="mt-1" data-testid="bus-lines">
+      <span className="font-semibold">{t('lines')}</span>
+      <ul className="m-0 mt-1 grid list-none grid-cols-6 gap-2 p-0">
+        {shown.map(l => (
+          <li key={l} className="min-w-0">
+            {routes?.lines[l]
+              ? <BaseButton onClick={() => onLine(l)} render={<m.button {...tap} />} aria-label={t('lineChip').replace('{n}', l)} data-testid="bus-line-chip" data-line={l} className={cn(chip, 'w-full border-0 bg-bus text-on-brand')}>{l}</BaseButton>
+              : <span className={cn(chip, 'bg-surface text-ink-soft')} data-testid="bus-line-plain">{l}</span>}
+          </li>
+        ))}
+        {more > 0 && <li className="min-w-0"><BaseButton onClick={() => setAll(true)} render={<m.button {...tap} />} data-testid="bus-line-more" className={cn(chip, 'w-full border border-line-strong bg-transparent text-brand-text')}>{t('lineMore').replace('{n}', String(more))}</BaseButton></li>}
+        {all && list.length > LINE_ROWS * LINE_COLS && <li className="col-span-2 min-w-0"><BaseButton onClick={() => setAll(false)} render={<m.button {...tap} />} className={cn(chip, 'w-full border-0 bg-transparent text-brand-text')}>{t('lineLess')}</BaseButton></li>}
+      </ul>
+    </div>
+  )
+}
+
+/** A bus line chosen: "Line 38 · toward X", a way to flip direction, the stops still to come in order, and the link to the next buses. */
+export function LineBlock({ view, onBack, onDir }: { view: LineView; onBack: () => void; onDir: () => void }) {
+  const { t } = useT()
+  const title = [t('busLine').replace('{n}', view.line), view.to && t('toward').replace('{to}', view.to)].filter(Boolean).join(' · ')
+  const from = Math.max(0, view.idx), upcoming = view.stops.slice(from, from + 4), left = view.stops.length - (from + upcoming.length)
+  return (
+    <m.section key={view.line + view.dir} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="line-block" aria-label={title}>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className={overline}>{t('routeOf')}</div>
+          <h2 className={cn(h2, 'mt-1')} data-testid="line-title">{title}</h2>
+        </div>
+        <BaseButton onClick={onBack} aria-label={t('lineBack')} title={t('lineBack')} data-testid="line-back" render={<m.button {...tap} />} className="-mr-2 -mt-2 inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
+          <CloseIcon size="1.4em" weight="bold" aria-hidden />
+        </BaseButton>
+      </div>
+      <ol className="m-0 mt-2 list-none p-0" aria-label={t('stepsLabel')} data-testid="line-steps">
+        {upcoming.map((s, i) => {
+          const here = view.idx >= 0 && i === 0
+          return (
+            <li key={s.post + i} className={cn('flex items-center gap-2 py-0.5 text-[0.93em]', here ? 'font-bold text-brand-text' : 'text-ink')} data-here={here ? '' : undefined}>
+              <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full border-2 border-brand', here ? 'bg-brand' : 'bg-paper')} />
+              <span className="min-w-0 truncate">{s.name}</span>
+              {here && <span className="shrink-0 text-[0.87em] font-semibold text-ink-soft">{t('stepHere')}</span>}
+            </li>
+          )
+        })}
+        {left > 0 && <li className={cn(sub, 'py-0.5 pl-[1.15rem]')}>{t('stepMore').replace('{n}', String(left))}</li>}
+      </ol>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {view.stop && <Button {...linkProps(busUrl(view.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
+        {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
+      </div>
+    </m.section>
+  )
+}
+
 // ---------- the block with the nearest (or selected) place ----------
-export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, onWalk }: {
+export function NearestBlock({ layer, item, isSelected, hasPos, cat, routes, onLine, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
+  routes: BusRoutes | null; onLine: (line: string) => void
   onDetails: () => void; onWalk: () => void
 }) {
   const { t, type } = useT()
@@ -179,7 +247,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
       {item.type === 'lib' && <div className="mt-0.5"><Occupancy item={item} /></div>}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
-      {item.lines && <div className="mt-0.5 font-semibold" data-testid="bus-lines">{t('lines')}: {item.lines.replace(/,/g, ', ')}</div>}
+      {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -202,7 +270,7 @@ export function Nearby({ items, onSelect }: { items: RankedItem[]; onSelect: (id
       <ul className="m-0 mt-1 grid list-none grid-cols-2 gap-2 p-0">
         {items.map(it => (
           <li key={it.id} className="min-w-0">
-            <BaseButton onClick={() => onSelect(it.id)} render={<m.button {...tap} />} data-testid="nearby-item" className={cn('flex min-h-11 w-full items-center justify-between gap-2 rounded-btn border-0 bg-surface px-3 text-left text-ink', it.open === false && 'opacity-60')}>
+            <BaseButton onClick={() => onSelect(it.id)} render={<m.button {...tap} />} data-testid="nearby-item" className={cn('flex min-h-[44px] w-full items-center justify-between gap-2 rounded-btn border-0 bg-surface px-3 text-left text-ink', it.open === false && 'opacity-60')}>
               <span className="min-w-0 truncate text-[0.93em] font-semibold">{it.name || type(it.type)}</span>
               <span className="shrink-0 text-[0.87em] font-bold text-ink-soft">{fmtDist(it.d)}</span>
             </BaseButton>
@@ -258,6 +326,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
+  routes: BusRoutes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onPick: (id: LayerId) => void; onGoal: (id: GoalId) => void; goalOrder: GoalId[]
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
@@ -271,10 +340,11 @@ export function HomePage(p: {
       {/* everything down to the end of this block is what the sheet shows at peek: the card and the two places after it */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
-        {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} onDetails={p.onDetails} onWalk={p.onWalk} />}
-        {p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
+        {p.lineView ? <LineBlock view={p.lineView} onBack={p.onLineBack} onDir={p.onLineDir} />
+          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} routes={p.routes} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
+        {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
-        {!p.liveState && <Nearby items={p.nearby} onSelect={p.onSelect} />}
+        {!p.liveState && !p.lineView && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>

@@ -3,7 +3,7 @@ import busroutes from '../data/busroutes.json'
 import cercanias from '../data/cercanias.json'
 import times from '../data/cercanias-times.json'
 import tram from '../data/tram.json'
-import { alongPath, chipSplit, dayType, decodePolyline, encodePolyline, nextDepartures, orderAlong, pointAt, simplify, stopIndex, type BusRoutes, type Timetable } from './transit'
+import { alongPath, chipSplit, dayType, decodePolyline, encodePolyline, nextDepartures, orderAlong, pickDirection, pointAt, simplify, stopIndex, type BusRoutes, type Timetable } from './transit'
 import type { LatLon } from './types'
 
 describe('polyline', () => {
@@ -38,6 +38,15 @@ describe('order along a route', () => {
     expect(r.pt[1]).toBeCloseTo(-0.89, 3)
     expect(Math.round(r.bearing)).toBe(90)
   })
+})
+
+describe('pickDirection', () => {
+  const stops: BusRoutes['stops'] = { 10: ['A', 41.65, -0.9], 11: ['B', 41.65, -0.89], 12: ['C', 41.65, -0.88], 20: ['C2', 41.6502, -0.88] }
+  const line = { n: '1', d: [{ to: 'East', p: [], s: [10, 11, 12] }, { to: 'West', p: [], s: [20, 11, 10] }] }
+  it('picks the only direction that has the stop', () => { expect(pickDirection(line, stops, '12', [41.65, -0.88])).toEqual({ dir: 0, idx: 2 }) })
+  it('picks the direction with more stops to come when both have it', () => { expect(pickDirection(line, stops, '11', [41.65, -0.89])).toEqual({ dir: 0, idx: 1 }) })
+  it('uses the nearest stop (within 80 m) when the post is not on the line', () => { expect(pickDirection(line, stops, '99', [41.6502, -0.8801])).toEqual({ dir: 1, idx: 0 }) })
+  it('is dir 0 and no stop when nothing is near', () => { expect(pickDirection(line, stops, undefined, [41.7, -0.8])).toEqual({ dir: 0, idx: -1 }) })
 })
 
 describe('chipSplit', () => {
