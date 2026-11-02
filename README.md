@@ -22,7 +22,7 @@ The app makes no data requests. All data is static JSON in `src/data/*.json`, bu
 | `src/data/libraries.json` | city open data `equipamiento` (Biblioteca*) | 77 |
 | `src/data/civic.json` | city open data `equipamiento` (Centro Cívico*) | 25 |
 | `src/data/bizi.json` | city open data `estacion-bicicleta` (locations only) | 276 |
-| `src/data/toiletsgo.json` | toiletsgo community list | 49 |
+| `src/data/toiletsgo.json` | City equipment catalogue places (ids checked), listed as toilets by toiletsgo | 49 |
 | `src/data/osm.json` | OpenStreetMap via Overpass | filled by `npm run data` |
 
 Each file is `{ "src", "updated", "rows" }`. Cards show the source and date. The footer shows "Data refreshed <date>".
