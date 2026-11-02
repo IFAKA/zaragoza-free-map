@@ -18,7 +18,8 @@ export function initAnalytics(): void {
 }
 
 type GoatCounter = { count: (o: { path: string; title?: string; event?: boolean }) => void }
-/** Event names: 'tab', 'select', 'directions' (with the layer id), 'times' (bus) and 'report'. Only layer ids, never places, positions or text. */
-export function track(name: 'tab' | 'select' | 'directions' | 'report' | 'times', layer?: string): void {
+/** Event names: 'tab', 'select', 'directions' (with the layer id), 'times' (bus), 'report', and 'locate-granted' / 'locate-denied' (the answer to the location question). Only layer ids, never places, positions or text. */
+export type EventName = 'tab' | 'select' | 'directions' | 'report' | 'times' | 'locate-granted' | 'locate-denied'
+export function track(name: EventName, layer?: string): void {
   try { (window as unknown as { goatcounter?: GoatCounter }).goatcounter?.count({ path: layer ? `${name}-${layer}` : name, title: name, event: true }) } catch { /* analytics must never break the app */ }
 }
