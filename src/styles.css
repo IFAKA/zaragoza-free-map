@@ -83,7 +83,7 @@
 
 html { font-size: 15px; }
 *{-webkit-tap-highlight-color:transparent}
-button,a,label,[role=tab]{touch-action:manipulation}
+button,a,label,summary,select,[role=tab],[role=button],[role=switch],[role=radio]{touch-action:manipulation}
 html,body,#root{height:100%;margin:0}
 body{font-family:var(--font-sans);font-weight:400;background:var(--color-paper);color:var(--color-ink);-webkit-text-size-adjust:100%;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:var(--font-title);font-weight:600;margin:0}
@@ -95,23 +95,29 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 }
 :focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
 
-/* Page turn inside the drawer: the new page fades in over 300ms (same as the card game's menu). */
-@keyframes page-in { from { opacity: 0 } to { opacity: 1 } }
-.page-in { animation: page-in 300ms var(--ease-out) both; }
-@keyframes toast-in { from { opacity: 0; transform: translateY(0.6em) } to { opacity: 1; transform: none } }
+/* Page turn inside the drawer (Settings, About, Details; never a tab switch): the new page fades in over 200ms.
+   A transition from @starting-style, not a keyframe animation, so a quick second turn retargets instead of restarting. */
+.page-in { transition: opacity 200ms var(--ease-out); @starting-style { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .page-in { animation-duration: 150ms; }
-  /* no slide: the drawer and toasts only fade */
-  [data-slot=drawer-popup] { transition-property: opacity !important; transition-duration: 150ms !important; }
+  /* only opacity and colour may change: no slide, no scale (press feedback included), the drawer and toasts fade */
+  *, *::before, *::after { transition-property: opacity, color, background-color, border-color !important; scale: none !important; }
+  .page-in { transition-duration: 150ms; }
+  [data-slot=drawer-popup] { transition-duration: 150ms !important; }
 }
 
 /* Map */
 .leaflet-container{font:inherit;background:var(--color-surface)}
 .leaflet-control-attribution{font-size:10px}
 .mkw{background:none;border:0}
-.mk{width:2.27em;height:2.27em;border-radius:50%;background:var(--c);color:var(--color-on-brand);border:0 solid var(--color-on-brand);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgb(0 0 0 / .35);transition:transform 140ms var(--ease-out);will-change:transform}
+.mk{width:2.27em;height:2.27em;border-radius:50%;background:var(--c);color:var(--color-on-brand);border:0 solid var(--color-on-brand);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgb(0 0 0 / .35);transition:transform 140ms var(--ease-out)}
 .mk svg{width:1.2em;height:1.2em;display:block}
 .mk.off{background:var(--color-surface);color:var(--color-ink-soft);border:1.5px dashed var(--color-ink-soft);box-shadow:none;opacity:.8}
+.mk:active{transform:scale(.97)}
 .mk.sel{transform:scale(1.67);border-width:1.5px;box-shadow:0 2px 8px rgb(0 0 0 / .45)}
+.mk.sel:active{transform:scale(1.62)}
+/* zoom buttons (desktop): press feedback like every other control; no sticky hover on touch screens */
+.leaflet-bar a{transition:transform 120ms var(--ease-out),background-color 120ms}
+.leaflet-bar a:active{transform:scale(.97)}
+@media (hover:none),(pointer:coarse){.leaflet-bar a:hover{background-color:var(--color-paper)}}
 .me{width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
-@media (prefers-reduced-motion:reduce){.mk{transition:none}.mk.sel{transform:none;width:3.8em;height:3.8em;margin:-0.765em 0 0 -0.765em}}
+@media (prefers-reduced-motion:reduce){.mk,.leaflet-bar a{transition:none}.mk:active,.leaflet-bar a:active{transform:none}.mk.sel{transform:none;width:3.8em;height:3.8em;margin:-0.765em 0 0 -0.765em}}
