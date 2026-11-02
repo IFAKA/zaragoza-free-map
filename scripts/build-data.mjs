@@ -1,16 +1,20 @@
 // Generates every data file the app ships: src/data/*.json. Run with `npm run data` (Node 22.18+; it imports the .ts helpers directly).
 //   node scripts/build-data.mjs            all sources
 //   node scripts/build-data.mjs --no-osm   skip Overpass (keeps the existing src/data/osm.json)
+//   node scripts/build-data.mjs --shelters-only   rebuild only src/data/shelters.json (add --shelters PATH to read a local GeoJSON)
 // The app itself makes NO runtime data requests: it only reads these files. Re-run (the refresh-data workflow does) to update.
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { biziRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
+import { biziRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data')
 const skipOsm = process.argv.includes('--no-osm')
 const fi = process.argv.indexOf('--fountains') // optional local copy of the Zenodo file (if Zenodo blocks the request)
 const fountainsFile = fi > 0 ? process.argv[fi + 1] : null
+const si = process.argv.indexOf('--shelters') // optional local copy of the climate shelters GeoJSON
+const sheltersFile = si > 0 ? process.argv[si + 1] : null
+const SHELTERS_URL = 'https://www.zaragoza.es/contenidos/datosabiertos/islas_calor/refugios_climaticos_wgs84v2.geojson'
 const today = new Date().toISOString().slice(0, 10)
 const ZGZ = 'https://www.zaragoza.es/sede/servicio/'
 const catalog = q => `${ZGZ}equipamiento/catalog.json?q=${encodeURIComponent(q)}&rows=500&srsname=wgs84`
@@ -38,7 +42,13 @@ function write(name, src, rows, extra = {}) {
 }
 const must = (name, rows) => { if (!rows.length) throw new Error(`${name}: 0 rows, refusing to overwrite the committed file`); return rows }
 
-const [wifi, libs, civic, bizi, racks, fount, tgo] = await Promise.all([
+const getShelters = () => (sheltersFile ? JSON.parse(readFileSync(sheltersFile, 'utf8')) : get(SHELTERS_URL))
+if (process.argv.includes('--shelters-only')) {
+  write('shelters', 'city', must('shelters', shelterRows(await getShelters())))
+  process.exit(0)
+}
+
+const [wifi, libs, civic, bizi, racks, fount, tgo, shelters] = await Promise.all([
   get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`),
   get(catalog('title==Biblioteca*')),
   get(catalog('title==Centro Cívico*')),
@@ -46,6 +56,7 @@ const [wifi, libs, civic, bizi, racks, fount, tgo] = await Promise.all([
   getAll(`${ZGZ}urbanismo-infraestructuras/equipamiento/aparcamiento-bicicleta.json?srsname=wgs84`),
   fountainsFile ? JSON.parse(readFileSync(fountainsFile, 'utf8')) : get('https://zenodo.org/records/8141704/files/fuentes.json?download=1', 'json', 60000, { headers: { 'user-agent': 'Mozilla/5.0 (zgz-free-services data build)' } }),
   get('https://raw.githubusercontent.com/IFAKA/toiletsgo/HEAD/src/data.ts', 'text'),
+  getShelters(),
 ])
 write('wifi', 'city', must('wifi', cityWifiRows(wifi)))
 write('libraries', 'city', must('libraries', cityEquipRows(libs)))
@@ -54,6 +65,7 @@ write('bizi', 'city', must('bizi', biziRows(bizi)))
 write('racks', 'city', must('racks', rackRows(racks)))
 const f = fountainRows(fount)
 write('fountains', 'city', must('fountains', f.rows), { dropped: f.dropped })
+write('shelters', 'city', must('shelters', shelterRows(shelters)))
 write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo)))
 
 if (skipOsm) console.log('osm: skipped (--no-osm), keeping', existsSync(`${OUT}/osm.json`) ? 'the existing file' : 'nothing (run without --no-osm somewhere Overpass works)')

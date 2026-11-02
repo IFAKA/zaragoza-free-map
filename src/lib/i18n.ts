@@ -26,6 +26,8 @@ const en = {
   creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations, bike racks)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'Toilet places: Ayuntamiento de Zaragoza equipment catalogue, list by toiletsgo', creditsTiles: 'Map tiles: Esri, HERE, Garmin and OpenStreetMap contributors',
   noGuarantee: 'Being listed does not mean a place works or is open right now.',
   fixOsm: 'Fix it on OpenStreetMap',
+  shelterTag: 'Climate-controlled', shelterNote: 'Public building with climate control. Check hours before you go.', nearestshelter: 'Nearest warm or cool place',
+  creditsShelters: 'Climate shelters: Ayuntamiento de Zaragoza open data (Refugios climáticos)',
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
@@ -53,14 +55,16 @@ const es: Record<Key, string> = {
   creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi, aparcabicis)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Aseos: catálogo de equipamientos del Ayuntamiento de Zaragoza, lista de toiletsgo', creditsTiles: 'Mapas: Esri, HERE, Garmin y colaboradores de OpenStreetMap',
   noGuarantee: 'Aparecer en la lista no garantiza que el sitio funcione o esté abierto ahora.',
   fixOsm: 'Corrígelo en OpenStreetMap',
+  shelterTag: 'Con climatización', shelterNote: 'Edificio público con climatización. Mira el horario antes de ir.', nearestshelter: 'Refugio climático más cercano',
+  creditsShelters: 'Refugios climáticos: datos abiertos del Ayuntamiento de Zaragoza',
 }
 export const DICT: Record<Lang, Record<Key, string>> = { en, es }
 
 const TYPES: Record<Lang, Record<string, string>> = {
   en: { muni: 'Public building', cafe: 'Café', restaurant: 'Restaurant', fast_food: 'Fast food', bar: 'Bar or café', pub: 'Pub', ice_cream: 'Ice cream', library: 'Library', hotel: 'Hotel', hostel: 'Hostel', coworking_space: 'Coworking', community_centre: 'Community centre', museum: 'Museum', university: 'University', college: 'College',
-    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack' },
+    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack', senior: 'Senior centre', office: 'City office' },
   es: { muni: 'Edificio público', cafe: 'Café', restaurant: 'Restaurante', fast_food: 'Comida rápida', bar: 'Bar o café', pub: 'Pub', ice_cream: 'Heladería', library: 'Biblioteca', hotel: 'Hotel', hostel: 'Hostal', coworking_space: 'Coworking', community_centre: 'Centro cívico', museum: 'Museo', university: 'Universidad', college: 'Centro educativo',
-    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado' },
+    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado', senior: 'Centro de convivencia para mayores', office: 'Oficina municipal' },
 }
 export const typeLabel = (lang: Lang, type: string) => TYPES[lang][type] || type.replace(/_/g, ' ')
 

@@ -3,6 +3,7 @@ import { cleanName, dist } from '../lib/geo'
 import type { EquipRow, OsmRow } from '../lib/sources.ts'
 import type { Item, LayerConfig, LayerId } from '../lib/types'
 import { isFood } from '../lib/sources.ts'
+import { seasonOf, type Season } from '../lib/season'
 
 const BUZ_NAME = /universidad de zaragoza|unizar|universitaria|univesitaria|facultad/i
 const NOT_BUZ = /colectivo/i
@@ -27,10 +28,23 @@ const equip = (rows: EquipRow[], type: 'lib' | 'civic', upd?: string): Item[] =>
     building: true, upd, ...(r[7] ? { sched: r[7] } : {}),
   }))
 
-export function buildLayers(d: Data): Record<LayerId, LayerConfig> {
+const SHELTER_NAME = {
+  warm: { label: { en: 'Warm indoors', es: 'Refugios climáticos' }, short: { en: 'Warm', es: 'Calor' } },
+  cool: { label: { en: 'Cool indoors', es: 'Refugios climáticos' }, short: { en: 'Cool', es: 'Fresco' } },
+  neutral: { label: { en: 'Warm or cool indoors', es: 'Refugios climáticos' }, short: { en: 'Indoors', es: 'Refugio' } },
+} as const
+/** Name of the shelter layer for a season (from the device date). */
+export const shelterName = (s: Season) => SHELTER_NAME[s]
+
+// shelters share buildings with other shelters (a civic centre and a senior centre can be next door): never merged
+export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, LayerConfig> {
   const o = d.osm, ou = o.updated ?? undefined
   const lib = equip(d.libraries.rows, 'lib', d.libraries.updated ?? undefined)
   const civic = equip(d.civic.rows, 'civic', d.civic.updated ?? undefined)
+  // Shelters that are already civic centres: one marker (the civic one), tagged. The shelter layer lists all of the city's shelters.
+  const shelterIds = new Set(d.shelters.rows.map(r => 'c' + r[0]))
+  for (const it of civic) if (shelterIds.has(it.id)) it.shelter = true
+  const shelters = equip(d.shelters.rows, 'civic', d.shelters.updated ?? undefined).map(it => ({ ...it, type: /^centro de convivencia/i.test(it.name) ? 'senior' : /^centro c/i.test(it.name) ? 'civic' : 'office', shelter: true }))
   const buzOsm = o.buz.map(r => ({ lat: r[2], lon: r[3] }))
   for (const it of lib) it.buz = !NOT_BUZ.test(it.name) && (BUZ_NAME.test(it.name) || buzOsm.some(b => near(b, it, 100)))
 
@@ -60,6 +74,7 @@ export function buildLayers(d: Data): Record<LayerId, LayerConfig> {
     libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Library', es: 'Biblio.' }, hint: { en: 'Quiet and free', es: 'Tranquilas y gratis' }, hours: true }, lib, 8),
     bizi: L('bizi', { icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Cheap bike share', es: 'Bici compartida barata' }, hours: false },
       d.bizi.rows.map(r => ({ id: 'b' + r[0], part: 'city' as const, type: 'bizi', name: r[1], lat: r[2], lon: r[3], upd: d.bizi.updated ?? undefined })), 8),
+    shelter: L('shelter', { icon: 'shelter', color: 'var(--color-shelter)', ...shelterName(seasonOf(now)), hint: { en: 'Public buildings with climate control', es: 'Edificios públicos con clima' }, hours: true }, shelters, 0),
     racks: L('racks', { icon: 'lock', color: 'var(--color-rack)', label: { en: 'Bike racks', es: 'Aparcabicis' }, short: { en: 'Racks', es: 'Aparcab.' }, hint: { en: 'Lock your own bike', es: 'Deja tu bici' }, hours: false },
       d.racks.rows.map(r => ({ id: 'r' + r[0], part: 'city' as const, type: r[4] === 'c' ? 'rack_closed' : r[4] === 'g' ? 'rack_guarded' : 'rack', name: cleanName(r[1]), lat: r[2], lon: r[3], upd: d.racks.updated ?? undefined })), 10),
   }

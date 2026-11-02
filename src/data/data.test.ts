@@ -6,10 +6,11 @@ import { rank } from '../lib/rank'
 import type { LayerId } from '../lib/types'
 
 const ALL = ORDER as LayerId[]
+const ids = (rows: unknown[][]) => rows.map(r => r[0])
 
 describe('bundled data', () => {
   it('every city file has rows and a snapshot date', () => {
-    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'racks', 'toiletsgo'] as const) {
+    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'racks', 'toiletsgo', 'shelters'] as const) {
       expect(DATA[k].rows.length, k).toBeGreaterThan(0)
       expect(DATA[k].updated, k).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }
@@ -21,6 +22,33 @@ describe('bundled data', () => {
     expect(DATA.libraries.rows.length).toBeGreaterThan(50)
     expect(DATA.bizi.rows.length).toBeGreaterThan(200)
     expect(DATA.racks.rows.length).toBeGreaterThan(1500)
+  })
+})
+
+describe('climate shelters', () => {
+  const rows = DATA.shelters.rows
+  it('has the 57 places of the city list, all inside Zaragoza, with unique ids and a name', () => {
+    expect(rows.length).toBe(57)
+    expect(new Set(ids(rows)).size).toBe(57)
+    for (const r of rows) {
+      expect(r[1].trim().length, String(r[0])).toBeGreaterThan(0)
+      expect(r[4]).toBeGreaterThan(41.5); expect(r[4]).toBeLessThan(41.8)
+      expect(r[5]).toBeGreaterThan(-1.1); expect(r[5]).toBeLessThan(-0.7)
+    }
+  })
+  it('civic centres that are shelters are tagged, not duplicated', () => {
+    const civicIds = new Set(DATA.civic.rows.map(r => 'c' + r[0]))
+    const shared = rows.filter(r => civicIds.has('c' + r[0]))
+    expect(shared.length).toBeGreaterThan(0)
+    const tagged = LAYERS.charge.items.filter(i => i.shelter)
+    expect(tagged.length).toBeGreaterThan(0)
+    expect(tagged.every(i => i.type === 'civic')).toBe(true)
+    expect(LAYERS.charge.items.filter(i => i.id === tagged[0].id).length).toBe(1)
+  })
+  it('the shelter layer lists every place and most have readable hours', () => {
+    expect(LAYERS.shelter.items.length).toBe(57)
+    expect(LAYERS.shelter.hours).toBe(true)
+    expect(LAYERS.shelter.items.filter(i => i.sched).length).toBeGreaterThan(50)
   })
 })
 
@@ -36,7 +64,7 @@ describe('layers built from the data', () => {
       const ids = new Set(L.items.map(i => i.id))
       expect(ids.size).toBe(L.items.length)
       // charge/libraries are real buildings: the layer builder keeps them 8 m apart at least; everything else 15 m
-      const m = id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'racks' ? 10 : 15
+      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'racks' ? 10 : 15
       for (let i = 0; i < L.items.length; i++) for (let j = i + 1; j < L.items.length; j++) {
         const a = L.items[i], b = L.items[j]
         if (Math.abs(a.lat - b.lat) > 0.0003) continue

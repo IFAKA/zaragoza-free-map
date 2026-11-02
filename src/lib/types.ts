@@ -1,10 +1,10 @@
 import type { CitySched } from './cityHours'
 
-export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'racks'
+export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'racks' | 'shelter'
 /** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
-export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock'
+export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter'
 
 export interface Item {
   id: string
@@ -34,6 +34,8 @@ export interface Item {
   buz?: boolean
   /** Always available (e.g. an outdoor charger with no opening hours): never hidden by "Open now". */
   always?: boolean
+  /** Also a climate shelter in the city's list (a civic centre that is public and climate-controlled). */
+  shelter?: boolean
 }
 /** Item plus per-render fields (distance in metres, open state). */
 export interface RankedItem extends Item {

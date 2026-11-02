@@ -6,6 +6,7 @@ import fountains from './fountains.json'
 import libraries from './libraries.json'
 import osm from './osm.json'
 import racks from './racks.json'
+import shelters from './shelters.json'
 import toiletsgo from './toiletsgo.json'
 import wifi from './wifi.json'
 
@@ -13,12 +14,12 @@ export interface Snap<T> { src: string; updated: string | null; rows: T[] }
 export type OsmSnap = { src: string; updated: string | null } & OsmRows
 export interface Data {
   fountains: Snap<FountainRow>; wifi: Snap<WifiRow>; libraries: Snap<EquipRow>; civic: Snap<EquipRow>
-  bizi: Snap<BiziRow>; racks: Snap<RackRow>; toiletsgo: Snap<TgoRow>; osm: OsmSnap
+  bizi: Snap<BiziRow>; racks: Snap<RackRow>; toiletsgo: Snap<TgoRow>; shelters: Snap<EquipRow>; osm: OsmSnap
 }
 export const DATA: Data = {
-  fountains, wifi, libraries, civic, bizi, racks, toiletsgo, osm,
+  fountains, wifi, libraries, civic, bizi, racks, toiletsgo, shelters, osm,
 } as unknown as Data
 
 /** Newest snapshot date across all files (shown as "Data refreshed" in the credits). */
 export const dataRefreshed = (d: Data = DATA): string | null =>
-  [d.fountains, d.wifi, d.libraries, d.civic, d.bizi, d.racks, d.toiletsgo, d.osm].map(s => s.updated).filter((x): x is string => !!x).sort().pop() ?? null
+  [d.fountains, d.wifi, d.libraries, d.civic, d.bizi, d.racks, d.toiletsgo, d.shelters, d.osm].map(s => s.updated).filter((x): x is string => !!x).sort().pop() ?? null

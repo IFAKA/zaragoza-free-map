@@ -1,7 +1,7 @@
 // Pure readers for the raw upstream formats. Used by scripts/build-data.mjs (at data-refresh time only) and by tests.
 // The running app never calls these: it imports the JSON they produced (src/data/*.json).
 // Relative imports carry the .ts extension because Node runs this file directly.
-import { parseCityHorario, type CitySched } from './cityHours.ts'
+import { htmlLines, parseCityHorario, type CitySched } from './cityHours.ts'
 import { BBOX, okCoord } from './geo.ts'
 import { utm30ToLatLon } from './utm.ts'
 
@@ -38,6 +38,38 @@ export function cityEquipRows(j: CityResponse | undefined): EquipRow[] {
   }
   return out
 }
+/**
+ * Climate shelters (city GeoJSON, CRS84): same row shape as city equipment, so the same hours reader applies.
+ * The city's HTML has a few broken entities ("S&aacute,bado": comma instead of semicolon); they are repaired before reading.
+ * Free-text hours that the reader does not fully understand stay "unknown" (0): never guessed.
+ */
+export interface ShelterCollection { features?: { properties?: Record<string, unknown>; geometry?: { coordinates?: [number, number] } }[] }
+export function shelterRows(j: ShelterCollection | undefined): EquipRow[] {
+  const fix = (h: unknown) => String(h ?? '').replace(/&([a-z]+),/gi, '&$1;').replace(/&nbsp;?,?/g, ' ')
+  return cityEquipRows({ result: (j?.features || []).map(f => {
+    const p = f.properties || {}
+    return { id: p.id as number, title: p.title as string, calle: p.streetAddress as string, tel: p.telephone as string, lastUpdated: p.lastUpdated as string, horario: shelterHours(fix(p.openingHours)), geometry: f.geometry }
+  }) })
+}
+/**
+ * Senior-centre hours are one free sentence ("Todos los días del año, de 10 a 21 h. Cerrado fines de semana de julio y agosto").
+ * Try the library/civic reader first. If it gives up, split the sentence into an hours part and a closure part and feed those back to it.
+ * Anything still not understood returns "" (hours unknown).
+ */
+export function shelterHours(raw: string): string {
+  const html = raw.replace(/\([^)]*\)/g, ' ') // side notes such as "(solo abierta Cafetería)" or a study-room break
+  if (parseCityHorario(html)) return html
+  const flat = htmlLines(html).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim()
+  const [open, ...rest] = flat.split(/\bcerrado\b/i)
+  const closed = rest.join(' ').toLowerCase()
+  let h = open.replace(/[\s.,;:]+$/, '').replace(/^\s*(?:todos los dias(?: del)?(?: ano)?|de lunes a domingos?)\s*[,:]?\s*/i, 'lunes a domingo ').trim()
+  if (/^de\s+\d/i.test(h)) h = 'lunes a domingo ' + h
+  const lines = [h]
+  if (/julio y agosto/.test(closed)) lines.push('Fines de semana de julio y agosto.')
+  const out = '<ul>' + lines.map(l => `<li>${l}</li>`).join('') + '</ul>'
+  return parseCityHorario(out) ? out : ''
+}
+
 /** Bizi stations: location only. Live bikes and docks are dropped on purpose (the app makes no runtime calls). [id, title, lat, lon] */
 export type BiziRow = [string, string, number, number]
 export function biziRows(j: CityResponse | undefined): BiziRow[] {

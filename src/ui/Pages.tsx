@@ -2,9 +2,9 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { Tabs } from '@base-ui/react/tabs'
-import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon } from '@phosphor-icons/react'
+import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
-import { dataRefreshed } from '../data'
+import { DATA, dataRefreshed } from '../data'
 import { revealDelta } from '../lib/reveal'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
@@ -52,6 +52,17 @@ function Occupancy({ item }: { item: RankedItem }) {
     return <a href={BUZ_URL} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center gap-1 font-bold text-brand-text underline-offset-2 hov:underline">{t('occLive')} <ArrowUpRight size="1em" weight="bold" aria-hidden /></a>
   }
   return <span className="inline-flex items-center"><span className={sub}>{t('occNone')}</span><InfoPop label={t('occInfoTitle')} title={t('occInfoTitle')}>{t('occInfo')}</InfoPop></span>
+}
+
+/** Climate-shelter tag and the plain note. Not an official programme claim: it only says the building is public and has climate control. */
+function ShelterNote() {
+  const { t } = useT()
+  return (
+    <div className="flex flex-col items-start gap-1" data-testid="shelter-note">
+      <span className="inline-flex items-center gap-1 rounded-full bg-shelter px-2.5 py-0.5 text-[0.8em] font-bold text-on-brand"><Thermometer size="1.1em" weight="fill" aria-hidden />{t('shelterTag')}</span>
+      <span className={sub}>{t('shelterNote')}</span>
+    </div>
+  )
 }
 
 const DIST_MIN = 'min'
@@ -276,7 +287,7 @@ export function AboutPage({ onBack, locked }: { onBack: () => void; locked: bool
           <p className="m-0">{t('noGuarantee')}</p>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
-            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
+            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
           </ul>
           {d && <p className="m-0 font-bold" data-testid="refreshed">{t('dataRefreshed')}: {d}</p>}
           <a className="font-bold text-brand-text" href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">{t('fixOsm')}</a>
@@ -301,6 +312,7 @@ export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked }: { lay
           <div className={sub}>{type(item.type)}{item.cust ? ` · ${t('cust')}` : ''}{item.note ? ` · ${item.note}` : ''}</div>
           <div className="font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
           <div><Status item={item} layer={layer} /></div>
+          {item.shelter && <ShelterNote />}
           <div className="flex flex-wrap gap-2">
             <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk}>{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
             <Button variant="secondary" {...linkProps(reportUrl(item))} onClick={() => track('report')}>{t('report')}</Button>

@@ -44,6 +44,7 @@
   --color-library: #006A00;        /* Ciudad */
   --color-bike: #485D6D;           /* equipment palette */
   --color-rack: #6B6B00;           /* olive: own-bike racks, apart from Bizi slate */
+  --color-shelter: #A3315F;        /* raspberry: climate-controlled indoor places (6.6:1 with white) */
   --color-me: #4B83B4;
 
   --radius-btn: 0.46em;
