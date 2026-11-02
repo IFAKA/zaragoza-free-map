@@ -10,7 +10,7 @@ Mobile-first map of free water, toilets, phone charging, WiFi (plus libraries an
     npm run preview
 
 ## Deploy (Vercel)
-Import this repo as a Vite project (auto-detected, output `dist/`). `vercel.json` only sets cache headers. Nothing is required. Optional anonymous statistics (Umami cloud, EU, cookieless, no location or searches, off when the browser sends Do Not Track): in Vercel go to Project Settings > Environment Variables, add `VITE_UMAMI_WEBSITE_ID` (the website id from cloud.umami.is), then redeploy. Without it, or in dev, no script loads. The script is not precached by the service worker, so the app works offline.
+Import this repo as a Vite project (auto-detected, output `dist/`). `vercel.json` only sets cache headers. Nothing is required. Optional anonymous statistics (GoatCounter, free, cookieless, no location or searches, off when the browser sends Do Not Track): create a site at goatcounter.com, then in Vercel go to Project Settings > Environment Variables, add `VITE_GOATCOUNTER_CODE` (the site code, the part before `.goatcounter.com`), then redeploy. Without it, or in dev, no script loads. The script is not precached by the service worker, so the app works offline.
 
 ## Data (no runtime APIs)
 The app makes no data requests. All data is static JSON in `src/data/*.json`, bundled into the build and precached by the service worker. Only map tiles (Esri gray canvas, keyless) come from the network.
