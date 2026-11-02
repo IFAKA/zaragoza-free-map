@@ -56,6 +56,13 @@
   --ease-drawer: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-overlay: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* motion tokens: the same values as src/ui/motion.ts (a unit test checks they agree) */
+  --dur-press: 120ms;
+  --dur-small: 150ms;
+  --dur-card: 120ms;
+  --dur-slide: 260ms;
+  --dur-pick: 300ms;
+  --pick-scale: 1.15;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -95,14 +102,13 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 }
 :focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
 
-/* Page turn inside the drawer (Settings, About, Details; never a tab switch): the new page fades in over 200ms.
+/* Page turn inside the drawer (Settings, About, Details; never a tab switch): the new page fades in (--dur-small).
    A transition from @starting-style, not a keyframe animation, so a quick second turn retargets instead of restarting. */
-.page-in { transition: opacity 200ms var(--ease-out); @starting-style { opacity: 0; } }
+.page-in { transition: opacity var(--dur-small) var(--ease-out); @starting-style { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   /* only opacity and colour may change: no slide, no scale (press feedback included), the drawer and toasts fade */
   *, *::before, *::after { transition-property: opacity, color, background-color, border-color !important; scale: none !important; }
-  .page-in { transition-duration: 150ms; }
-  [data-slot=drawer-popup] { transition-duration: 150ms !important; }
+  [data-slot=drawer-popup] { transition-duration: var(--dur-small) !important; }
 }
 
 /* Map */
@@ -118,9 +124,15 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .mk:active{transform:scale(.97)}
 .mk.sel{transform:scale(1.67);border-width:1.5px;box-shadow:0 2px 8px rgb(0 0 0 / .45)}
 .mk.sel:active{transform:scale(1.62)}
+/* the "you picked this place" moment: the marker swells once and a soft ring fades out (user picks only; MapView adds .pulse) */
+.mk{position:relative}
+.mk.pulse{animation:mkpop var(--dur-pick) var(--ease-out)}
+.mk.pulse::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--c);pointer-events:none;animation:mkring var(--dur-pick) var(--ease-out) both}
+@keyframes mkpop{0%{transform:scale(1.67)}40%{transform:scale(calc(1.67 * var(--pick-scale)))}100%{transform:scale(1.67)}}
+@keyframes mkring{from{opacity:.5;transform:scale(1)}to{opacity:0;transform:scale(1.9)}}
 /* zoom buttons (desktop): press feedback like every other control; no sticky hover on touch screens */
-.leaflet-bar a{transition:transform 120ms var(--ease-out),background-color 120ms}
+.leaflet-bar a{transition:transform var(--dur-press) var(--ease-out),background-color var(--dur-press)}
 .leaflet-bar a:active{transform:scale(.97)}
 @media (hover:none),(pointer:coarse){.leaflet-bar a:hover{background-color:var(--color-paper)}}
 .me{width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
-@media (prefers-reduced-motion:reduce){.mk,.leaflet-bar a{transition:none}.mk:active,.leaflet-bar a:active{transform:none}.mk.sel{transform:none;width:3.8em;height:3.8em;margin:-0.765em 0 0 -0.765em}}
+@media (prefers-reduced-motion:reduce){.mk.pulse,.mk.pulse::after{animation:none}.mk,.leaflet-bar a{transition:none}.mk:active,.leaflet-bar a:active{transform:none}.mk.sel{transform:none;width:3.8em;height:3.8em;margin:-0.765em 0 0 -0.765em}}

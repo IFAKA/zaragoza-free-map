@@ -45,8 +45,9 @@ Montserrat (titles) and Nunito Sans (everything else), both self-hosted from `@f
 Button radius 0.46em, tiles 0.467em, cards 0.26em, modal sheet 0.73em. Touch targets are at least 44px.
 
 ## Motion
+The tokens and variants live in `src/ui/motion.ts` (see `docs/motion.md` for the plain-words version). Library: `motion` with `LazyMotion` (`domAnimation`, `strict`), `m.*` components, `MotionConfig reducedMotion="user"`. Only transform and opacity move. Press feedback is `whileTap` scale .97 (`tap`), not CSS `active:scale`. The Settings view slides in from the right in 260 ms; the chip row shifts 8 px toward the new goal with a fade (150 ms); the goal underline uses one critically damped spring. Durations in CSS come from `--dur-*` variables that mirror `motion.ts`.
 - Drawer transform and height: 450ms, `cubic-bezier(0.22, 1, 0.36, 1)`. Overlay: `cubic-bezier(0.32, 0.72, 0, 1)`. Swipe close duration scales with swipe strength.
-- Page turn inside the drawer: 200ms opacity transition (`@starting-style`), not a keyframe. No animation on tab switches, chip changes, list updates or live counts: they change in place.
+- Page turn inside the drawer: 200ms opacity transition (`@starting-style`), not a keyframe. List rows, tab labels and distances never animate.
 - Press: `active:scale-[.97]` at 100-160ms with `--ease-out` on every tappable element (tabs, rows, chips, buttons, map markers, zoom buttons, toasts' close, info buttons, switches). Tailwind v4 scales with the CSS `scale` property, so transitions name `scale` and `translate`, not `transform`. No `transition: all`, no scaling from 0, no ease-in; UI transitions under 300ms and exits faster than enters (popover 150ms in, 100ms out; toast 250ms in, 150ms out). Retriggerable things use transitions, not keyframes. The drawer snap stays 450ms (below).
 - Loading placeholders (pharmacy list, Bizi counts): a quiet grey row with the same height as a real row, no shimmer.
 - `-webkit-tap-highlight-color: transparent` and `touch-action: manipulation` everywhere.
@@ -56,12 +57,13 @@ Button radius 0.46em, tiles 0.467em, cards 0.26em, modal sheet 0.73em. Touch tar
 ## Layout
 - Mobile: bottom drawer with four snap points (closed, peek, half, full), non-modal at peek and half so the map stays usable; scroll only at full.
 - Desktop (900px and up): persistent 400px left panel with the same pages.
-- Tab bar:  one scrolling row of equal cells (we use 9) with the next tab half cut at the right edge on a 390px phone, and the active tab kept in view; short labels. Order: Toilets, Water, Bizi, Bus, Pharmacy, WiFi, Charge, Libraries; Warm (shelter) is 3rd in its season, last otherwise. There is no racks tab: racks are the chip "My bike" under Bizi. Icon on top, label below; selected = brand colour + 2px underline as wide as the label; selection is instant (only a 120ms colour change and scale(.97) on press, no sliding indicator, no layout shift). Full names stay as aria-label and tooltip. Settings is not a tab: it is a 44px gear button at the right of the home title row (below the tabs on mobile, so the closed sheet shows only the tab bar; above the tabs on desktop). There is no More tab.
+- Goal tabs: three equal columns, no scrolling: Now (toilets, water, pharmacy, shelter), Getting around (bus, Bizi), Connect (WiFi, charge, libraries). Under them, a second row of equal chips for the active goal (at most 4, hidden when a goal has one service). Each goal remembers its last service (this device only). A new visitor opens on Now > Toilets. The goal order follows tap counts, read once when the app opens and never changing during a session. Warm (shelter) is 3rd in Now from 1 Nov to 31 Mar, last otherwise. Every service is at most 2 taps away.
 - Settings holds only Language and About. Language defaults to Spanish whatever the browser says; the user's choice is saved.
 - Selecting a place (marker or row) frames the place AND the user with `fitBounds` (padding for the open sheet, max zoom 17, Leaflet's own short easing). With no user position it pans the place above the sheet.
 - The selected card is pinned under the tabs; only the list scrolls. Selecting (row or map marker) scrolls the list the minimum so the row is fully visible, and not at all if it already is.
 - The selected-place card shows only name, distance and walk time, one-word open status if known, and the two buttons (walk, Details). Type, source and date, hours, notes, WiFi range, report link and the rest live on the Details page.
-- Pages (Settings, Language, About, Details) are pages inside the same drawer. Back, Escape and swipe go up a page.
+- Details is a page inside the same drawer; Back, Escape and swipe go up a page.
+- Settings, Language and About are NOT in the drawer. They are a full-screen view that slides in from the right (a 420 px panel on desktop). A close cross sits top right, where the floating Settings button was; the title is on the left. Language and About push inside the view with a small left chevron; the cross closes everything, the phone back gesture and Escape go up one level. Focus moves in and returns to the button; the app behind is inert and body scroll is locked.
 
 ## Interaction rules
 - Every enabled control shows the pointer cursor (global rule in `src/styles.css`, base layer; Tailwind v4 resets it). Disabled controls show not-allowed.
