@@ -39,6 +39,27 @@ Each file is `{ "src", "updated", "rows" }`. Cards show the source and date. The
 
 `scripts/build-data.mjs` fetches, normalises (UTM30N to lat/lon, spatial dedupe) and writes the files. The workflow `.github/workflows/refresh-data.yml` runs it every Monday and on demand, and commits "chore(data): refresh snapshots" only when files changed. The script never fetches live data: pharmacies and Bizi counts are read in the browser only, so `bizi.json` holds places (name and position) and nothing that changes by the minute.
 
+## Motion
+The `motion` library with `LazyMotion` (`domAnimation`, strict). All timings live in `src/ui/motion.ts`; read `docs/motion.md` for the rules.
+
+## Analytics events
+GoatCounter, cookieless, no personal data, no coordinates. Page views are counted under one title, `Zaragoza a mano` (set in the script settings, any language), so `/` groups under the new name. The full list is `EVENTS` in `src/lib/analytics.ts`; a unit test checks every `track()` call uses a name from it.
+
+| Event | When | Why |
+|---|---|---|
+| `goal-<id>` | a real switch of goal (now, move, connect) | which goals people want |
+| `tab-<layer>` | a real switch of service | which services are used (same name as before) |
+| `select-<layer>` | a list row or marker picked | engagement per service |
+| `directions-<layer>` | walking directions opened | people who go there |
+| `times-bus` | next buses opened | bus link-outs |
+| `report` | the OpenStreetMap report link | data quality |
+| `locate-granted`, `locate-denied` | the answer to the location question | how many share a position |
+| `settings-open` | the Settings view opens | is Settings found |
+| `settings-close-x`, `-back`, `-escape` | how it closed | which close works |
+| `lang-<code>` | language changed (en, es) | language need |
+
+Planned, not built yet: `bus-line-<line>` and `route-open`.
+
 ## Design system
 Colours, type, shape and motion are tokens in `src/styles.css`; see `docs/design-system.md`. Style follows the Ayuntamiento de Zaragoza public design system. This is an independent project, not affiliated with the Ayuntamiento, and it uses no municipal logo or mark.
 
@@ -47,11 +68,11 @@ Marker colour mapping: water `--color-water` (#006B87), toilets `--color-toilet`
 ## Credits for live data
 Live Bizi bike and dock counts: [CityBikes](https://citybik.es) (`api.citybik.es`). The About page credits it in English and Spanish and says the counts are live. Pharmacies on duty: Ayuntamiento de Zaragoza.
 
-## Tabs and first moment
-Order: Toilets, Water, Bizi, Bus, Pharmacy, WiFi, Charge, Libraries, with Warm (shelter) third in its season and last otherwise. A first visit opens on Toilets; a saved choice wins. The tab row scrolls, and a half-cut tab shows at the right edge on a 390 px phone. The first tab tap asks for the location once (if the browser has not blocked it), inside the tap so browsers allow the prompt. Until then the list says "Distances from the city centre" with a big Use my location button; if blocked it shows one calm line on how to allow it. The anonymous events `locate-granted` and `locate-denied` are counted (no coordinates). The "add to home screen" hint is hidden when installed and in in-app browsers (Reddit, Instagram, Facebook, TikTok, Android WebView, iOS without Safari), see `src/lib/install.ts`.
+## Goals and first moment
+Three goal tabs (Now, Getting around, Connect) with a row of service chips under them; see `src/layers/goals.ts`. Now: toilets, water, pharmacy, shelter. Getting around: bus, Bizi. Connect: WiFi, charge, libraries (tram and trains are planned, not built). Each goal remembers its last service. The goal order follows how often each goal was tapped on this device (`zgz:v2:taps`), read once at app open. A first visit opens on Now > Toilets. The first tab tap asks for the location once (if the browser has not blocked it), inside the tap so browsers allow the prompt. Until then the list says "Distances from the city centre" with a big Use my location button; if blocked it shows one calm line on how to allow it. The anonymous events `locate-granted` and `locate-denied` are counted (no coordinates). The "add to home screen" hint is hidden when installed and in in-app browsers (Reddit, Instagram, Facebook, TikTok, Android WebView, iOS without Safari), see `src/lib/install.ts`.
 
 ## Browser check
-`e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network (the CityBikes feed is mocked), taps every control, checks the Bizi counts, stale and failed states, chips, the half-cut tab, the first-tap location prompt (granted, denied, blocked), the install hint under in-app browser UAs, one Pixel 7 emulation run, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.
+`e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network (the CityBikes feed is mocked), taps every control, checks the Bizi counts, stale and failed states, the goal tabs and chips (fit at 360 and 390 px, memory, order, 2-tap reach), the Settings view (slide, close cross, back, Escape, focus), the analytics events, the first-tap location prompt (granted, denied, blocked), the install hint under in-app browser UAs, one Pixel 7 emulation run, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.
 
 ## Layout
 `src/data/*` bundled data, `src/layers/*` layer building, `src/lib/*` geo, utm, hours, cityHours, i18n, rank, bizi (live counts), duty (pharmacies), install (in-app browser check), `src/ui/*` React components (`PagedDrawer.tsx` = pages in one drawer), `scripts/build-data.mjs` data builder.

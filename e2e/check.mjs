@@ -60,7 +60,20 @@ const settle = p => p.evaluate(() => new Promise(res => {
   f()
 }))
 const ready = async p => { await p.waitForSelector('.mk'); await settle(p) }
+// Equal columns, 44 px tall, no clipped label, and the page does not scroll sideways.
+const fits = (p, sel) => p.evaluate(s => {
+  const es = [...document.querySelectorAll(s)]
+  if (!es.length) return false
+  const r = es.map(e => e.getBoundingClientRect())
+  return es.every((e, i) => r[i].height >= 43.5 && e.scrollWidth <= e.clientWidth + 1 && r[i].left >= -0.5 && r[i].right <= innerWidth + 0.5 && Math.abs(r[i].width - r[0].width) < 1.5) && document.documentElement.scrollWidth <= innerWidth
+}, sel)
 const markers = p => p.locator('.mk').count()
+// A service chip only shows for the active goal: open its goal first if the chip is hidden (at most 2 taps), then the chip.
+const GOAL_OF = { toilets: 'now', water: 'now', pharmacy: 'now', shelter: 'now', bus: 'move', bizi: 'move', wifi: 'connect', charge: 'connect', libraries: 'connect' }
+const go = async (p, id, how = 'click') => {
+  if (!(await p.getByTestId('tab-' + id).isVisible())) { await p.getByTestId('goal-' + GOAL_OF[id])[how](); await settle(p) }
+  await p.getByTestId('tab-' + id)[how]()
+}
 const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top))
 
 // ---- mobile ----
@@ -70,12 +83,12 @@ todo.push(async () => {
   ok(await markers(p) > 0, 'toilets markers drawn')
   ok(await p.getByTestId('nearest-name').innerText() !== '', 'nearest toilet shown at once')
   for (const id of ['charge', 'wifi', 'water', 'toilets']) {
-    await p.getByTestId('tab-' + id).click(); await settle(p)
+    await go(p, id); await settle(p)
     ok(await markers(p) > 0, `layer ${id} renders markers`)
     ok(await p.getByTestId('nearest-name').count() === 1, `layer ${id} shows nearest`)
   }
   // tapping another tab at peek keeps the sheet at peek (the nearest-place card is already in view)
-  ok(Math.abs(await snapTop(p) - 560) < 6, `tab tap at peek keeps peek (top ${await snapTop(p)})`)
+  ok(Math.abs(await snapTop(p) - 539) < 6, `tab tap at peek keeps peek (top ${await snapTop(p)})`)
   // handle cycles peek -> half -> full -> peek
   await p.getByTestId('handle').click(); await settle(p)
   ok(Math.abs(await snapTop(p) - 344) < 6, 'handle goes to half')
@@ -92,47 +105,47 @@ todo.push(async () => {
   ok(await p.getByTestId('switch-open').getAttribute('aria-checked') === 'false', 'Open now OFF persisted after reload')
   await p.getByTestId('switch-open').click()
   // water has no switch
-  await p.getByTestId('tab-water').click(); await settle(p)
+  await go(p, 'water', 'click'); await settle(p)
   ok(await p.getByTestId('switch-open').count() === 0, 'water: no Open now switch')
   // wifi: range switch and chips
-  await p.getByTestId('tab-wifi').click(); await settle(p)
+  await go(p, 'wifi', 'click'); await settle(p)
   await p.getByTestId('switch-range').click(); await p.getByTestId('switch-range').click()
   for (const name of ['Public buildings', 'Cafés and bars', 'Other', 'All']) { await p.getByRole('radio', { name }).or(p.getByRole('button', { name })).first().click(); await settle(p) }
   // details page, back, escape
   await p.getByTestId('details').click(); await settle(p)
-  ok(await p.getByTestId('back').count() === 1, 'details page opened in same drawer')
+  ok(await p.getByTestId('back').last().count() === 1, 'details page opened in same drawer')
   ok(await p.getByRole('link', { name: /Report/ }).getAttribute('href').then(h => h.includes('openstreetmap.org/note')), 'report link')
   await p.keyboard.press('Escape'); await settle(p)
-  ok(await p.getByTestId('back').count() === 0, 'Escape goes up a page')
+  ok(await p.getByTestId('back').last().count() === 0, 'Escape goes up a page')
   await p.getByTestId('details').click(); await settle(p)
-  await p.getByTestId('back').click(); await settle(p)
-  ok(await p.getByTestId('back').count() === 0, 'Back goes up a page')
+  await p.getByTestId('back').last().click(); await settle(p)
+  ok(await p.getByTestId('back').last().count() === 0, 'Back goes up a page')
   // More: libraries, bizi, language, about
-  await p.getByTestId('tab-libraries').click(); await settle(p)
+  await go(p, 'libraries', 'click'); await settle(p)
   ok(await markers(p) > 0, 'libraries render')
   ok(await p.getByText(/Live occupancy|Occupancy not published/).count() > 0, 'library occupancy line honest')
   const pop = p.getByRole('button', { name: 'Why no numbers?' }).first()
   if (await pop.count()) { await pop.click(); await settle(p); ok(await p.getByText(/do not guess/).isVisible(), 'occupancy info popover opens'); await p.keyboard.press('Escape') }
   await p.screenshot({ path: out + '/m-libs.png' })
   ok(await p.getByTestId('tab-racks').count() === 0, 'no separate racks tab')
-  await p.getByTestId('tab-bizi').click(); await settle(p)
+  await go(p, 'bizi', 'click'); await settle(p)
   ok(await markers(p) > 0, 'bizi locations render')
   await p.getByTestId('open-settings').click(); await settle(p)
   await p.screenshot({ path: out + '/m-settings.png' })
   await p.getByTestId('row-language').click(); await settle(p)
   await p.getByTestId('lang-es').click(); await settle(p)
   ok(await p.getByText('Idioma').count() > 0, 'Spanish applied')
-  await p.getByTestId('back').click(); await settle(p)
+  await p.getByTestId('back').last().click(); await settle(p)
   ok(await p.getByTestId('row-about').count() === 1, 'language back to Settings')
   await p.getByTestId('row-about').click(); await settle(p)
   ok(await p.getByText(/Datos actualizados/).count() > 0, 'about shows data refreshed date')
   ok(await p.getByText(/sin relación con el Ayuntamiento/).count() > 0, 'disclaimer')
   await p.screenshot({ path: out + '/m-about.png' })
-  await p.getByTestId('back').click(); await settle(p)
+  await p.getByTestId('back').last().click(); await settle(p)
   ok(await p.getByTestId('row-about').count() === 1, 'About opened from Settings: Back returns to Settings')
-  await p.getByTestId('back').click(); await settle(p)
-  ok(await p.getByTestId('tab-water').count() === 1, 'then Back returns to the first page')
-  await p.getByTestId('open-settings').click(); await p.getByTestId('row-language').click(); await p.getByTestId('lang-en').click(); await p.getByTestId('back').click(); await p.getByTestId('back').click()
+  await p.getByTestId('close').last().click(); await settle(p)
+  ok(await p.getByTestId('settings-view').count() === 0, 'the cross on Settings closes the view')
+  await p.getByTestId('open-settings').click(); await p.getByTestId('row-language').click(); await p.getByTestId('lang-en').click(); await p.getByTestId('close').last().click()
   await ctx.close()
 })
 
@@ -180,16 +193,16 @@ todo.push(async () => {
     await drag(195, 380, 520, 300); ok(await lvl(p) === 'peek', 'half -> peek by dragging down')
     await drag(195, 580, 760, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
     await p.screenshot({ path: out + '/g-closed.png' })
-    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('tab-water').bottom, more: r('tab-bizi').bottom, h: innerHeight, handle: r('handle') } })
-    ok(vis.tab <= vis.h && vis.more <= vis.h, `closed: whole tab bar on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
+    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('goal-now').bottom, more: r('goal-connect').bottom, h: innerHeight, handle: r('handle') } })
+    ok(vis.tab <= vis.h && vis.more <= vis.h, `closed: all goal tabs on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
     ok(vis.handle.bottom <= vis.h && vis.handle.height >= 24 && vis.handle.width >= 44, 'closed: handle visible, at least 44 wide and 24 tall')
     ok(await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), 'closed: page body is inert (no focus off-screen)')
     ok(await p.locator('.mk').count() > 0 && (await p.getByTestId('map').boundingBox()).height === 844, 'closed: map fully visible')
-    await p.getByTestId('tab-toilets').tap(); await settle(p)
-    ok(await lvl(p) === 'half', 'closed: tapping a tab opens to half')
+    await p.getByTestId('goal-now').tap(); await settle(p)
+    ok(await lvl(p) === 'half', 'closed: tapping the goal tab opens to half')
     ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'and selects that layer')
-    await p.getByTestId('tab-toilets').tap(); await settle(p); ok(await lvl(p) === 'peek', 'tapping the active tab at half folds to peek')
-    await p.getByTestId('tab-toilets').tap(); await settle(p); ok(await lvl(p) === 'closed', 'tapping the active tab at peek folds to closed')
+    await p.getByTestId('goal-now').tap(); await settle(p); ok(await lvl(p) === 'peek', 'tapping the active goal tab at half folds to peek')
+    await p.getByTestId('goal-now').tap(); await settle(p); ok(await lvl(p) === 'closed', 'tapping the active goal tab at peek folds to closed')
     await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'half', 'closed: handle tap opens the sheet')
     await ctx.close()
   })
@@ -218,7 +231,7 @@ todo.push(async () => {
   // marker and row selection reveal the card above the sheet
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await p.getByTestId('tab-water').tap(); await settle(p)
+    await go(p, 'water', 'tap'); await settle(p)
     const before = await p.getByTestId('nearest-name').innerText()
     const mk = await p.evaluate(() => [...document.querySelectorAll('.mk:not(.sel)')].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }).find(c => c.y > 80 && c.y < 520 && c.x > 20 && c.x < 370))
     ok(!!mk, 'a marker is visible above the peek sheet')
@@ -248,9 +261,9 @@ todo.push(async () => {
     await drag(195, 570, 300); await drag(195, 600, 250)
     await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]'); v.scrollTop = v.scrollHeight })
     await p.getByRole('button', { name: 'About' }).tap(); await settle(p)
-    ok(await p.getByTestId('back').count() === 1, 'About opens from the footer')
-    await p.getByTestId('back').tap(); await settle(p)
-    ok(await p.getByTestId('tab-water').count() === 1 && await p.getByTestId('row-about').count() === 0, 'About from footer: Back returns to home, not Settings')
+    ok(await p.getByTestId('close').count() === 1 && await p.getByTestId('back').count() === 0, 'About opens from the footer (a cross, no chevron: it is the first page)')
+    await p.getByTestId('close').last().tap(); await settle(p)
+    ok(await p.getByTestId('tab-water').count() === 1 && await p.getByTestId('row-about').count() === 0, 'About from footer: Close returns to home, not Settings')
     await p.getByTestId('open-settings').tap(); await p.getByTestId('row-about').tap(); await settle(p)
     await p.keyboard.press('Escape'); await settle(p)
     ok(await p.getByTestId('row-about').count() === 1, 'Escape on About goes back to Settings')
@@ -259,17 +272,140 @@ todo.push(async () => {
     const l0 = await lvl(p)
     await p.keyboard.press('Escape'); await settle(p)
     ok(l0 === 'full' && await lvl(p) === 'half', `Escape on home lowers one step (${l0} -> ${await lvl(p)})`)
-    // closing from a sub page lands on home
-    await p.getByTestId('open-settings').tap(); await settle(p)
-    await p.getByTestId('handle').tap(); await settle(p)
     await ctx.close()
   })
 }
 
+// ---- the Settings view: a full-screen view, not a page of the sheet ----
+const view = async (opts = {}) => { const o = await open({ width: 390, height: 844 }, true, opts); await o.p.getByTestId('open-settings').tap(); await o.p.getByTestId('settings-view').waitFor(); await settle(o.p); return o }
+todo.push(async () => { // a cross at the top right, on the spot of the Settings button; the title on the left; no chevron on the root
+  const { ctx, p } = await open({ width: 390, height: 844 }, true)
+  const fab = await p.getByTestId('open-settings').boundingBox()
+  await p.getByTestId('open-settings').tap(); await p.getByTestId('settings-view').waitFor(); await settle(p)
+  const x = await p.getByTestId('close').boundingBox(), h = await p.getByTestId('settings-view').getByRole('heading').boundingBox()
+  ok(x.width >= 44 && x.height >= 44, `close cross is 44 px (${x.width}x${x.height})`)
+  ok(Math.abs(x.x - fab.x) <= 1 && Math.abs(x.y - fab.y) <= 1, `close cross sits where the Settings button was (${Math.round(x.x)},${Math.round(x.y)} vs ${Math.round(fab.x)},${Math.round(fab.y)})`)
+  ok(h.x < 100 && await p.getByTestId('back').count() === 0, 'title on the left, no back chevron on the root')
+  ok(await p.getByTestId('settings-view').getAttribute('aria-modal') === 'true' && await p.evaluate(() => getComputedStyle(document.body).overflow) === 'hidden', 'view is modal and body scroll is locked')
+  ok(await p.getByTestId('close').getAttribute('aria-label') === 'Close', 'cross is labelled Close')
+  await p.getByTestId('close').last().tap(); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  ok(await p.evaluate(() => document.activeElement?.getAttribute('data-testid')) === 'open-settings', 'closing returns focus to the Settings button')
+  ok(await p.evaluate(() => getComputedStyle(document.body).overflow) !== 'hidden', 'body scroll is free again')
+  await ctx.close()
+})
+todo.push(async () => { // sub-page: the cross closes everything, the chevron and the back gesture go up one level
+  const { ctx, p } = await view()
+  await p.getByTestId('row-language').tap(); await p.getByTestId('view-language').waitFor(); await settle(p)
+  ok(await p.getByTestId('view-language').getByTestId('close').count() === 1 && await p.getByTestId('view-language').getByTestId('back').count() === 1, 'sub-page has the cross and a small chevron')
+  await p.goBack(); await p.getByTestId('view-language').waitFor({ state: 'detached' }); await settle(p)
+  ok(await p.getByTestId('settings-view').count() === 1 && await p.getByTestId('row-about').count() === 1, 'browser back on a sub-page goes up one level')
+  await p.goBack(); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  ok(await p.getByTestId('settings-view').count() === 0, 'browser back on the root closes the view')
+  await ctx.close()
+})
+todo.push(async () => {
+  const { ctx, p } = await view()
+  await p.getByTestId('row-about').tap(); await p.getByTestId('view-about').waitFor(); await settle(p)
+  await p.getByTestId('view-about').getByTestId('close').last().tap(); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  ok(await p.getByTestId('settings-view').count() === 0 && await p.evaluate(() => history.state?.zgz ?? 0) === 0, 'the cross on a sub-page closes the whole view and clears its history')
+  await ctx.close()
+})
+todo.push(async () => { // the keyboard: focus is inside the view; Escape goes up one level
+  const { ctx, p } = await view()
+  ok(await p.evaluate(() => !!document.activeElement?.closest('[data-testid=settings-view]')), 'focus moves into the view')
+  ok(await p.evaluate(() => document.getElementById('root').hasAttribute('inert')), 'the app behind is inert while the view is open')
+  await p.keyboard.press('Escape'); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  ok(await p.getByTestId('settings-view').count() === 0, 'Escape closes the root view')
+  await ctx.close()
+})
+
+// ---- goal tabs: fit, memory, order, reach ----
+for (const [w, h, lang] of [[360, 740, 'es'], [360, 740, 'en'], [390, 844, 'es'], [390, 844, 'en']]) todo.push(async () => {
+  const { ctx, p } = await open({ width: w, height: h }, true, {}, lang)
+  for (const g of ['now', 'move', 'connect']) {
+    await p.getByTestId('goal-' + g).tap(); await settle(p)
+    ok(await fits(p, '[data-testid^=goal-]') && await fits(p, '[data-testid=services] [role=tab]'), `${w}px ${lang} goal ${g}: tabs and chips fit, equal columns, no sideways scroll`)
+  }
+  await ctx.close()
+})
+const reload = async p => { await p.reload(); await ready(p) }
+todo.push(async () => { // at peek the whole nearest-place card is on screen, for every service (the chips row takes space, peeks are measured with it)
+  const { ctx, p } = await open({ width: 360, height: 740 }, true)
+  for (const id of Object.keys(GOAL_OF)) {
+    await p.evaluate(i => localStorage.setItem('zgz:v2:layer', i), id); await p.reload(); await p.waitForSelector('[data-testid=nearest],[data-testid=duty-loading],[data-testid=duty-failed]'); await settle(p)
+    const gap = await p.evaluate(() => { const n = document.querySelector('[data-testid=nearest],[data-testid=duty-loading],[data-testid=duty-failed]'); return n ? Math.round(n.getBoundingClientRect().bottom - innerHeight) : 'none' })
+    ok(gap !== 'none' && gap <= 0, `peek shows the whole nearest card on ${id} (${gap} px past the screen)`)
+  }
+  await ctx.close()
+})
+todo.push(async () => { // every service is reachable in at most 2 taps, from any other service
+  const { ctx, p } = await open({ width: 390, height: 844 }, true)
+  for (const id of Object.keys(GOAL_OF)) {
+    const before = await p.getByTestId('tab-' + id).isVisible() ? 1 : 2
+    await go(p, id, 'tap'); await settle(p)
+    ok(before <= 2 && await p.getByTestId('tab-' + id).getAttribute('aria-selected') === 'true', `${id}: selected in ${before} tap(s)`)
+  }
+  ok(await p.locator('[data-testid=services] [role=tab]').count() <= 4, 'a goal shows at most 4 chips')
+  await ctx.close()
+})
+todo.push(async () => { // each goal remembers its last service
+  const { ctx, p } = await open({ width: 390, height: 844 }, true)
+  await go(p, 'charge', 'tap'); await settle(p)
+  await p.getByTestId('goal-now').tap(); await settle(p)
+  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'Now keeps its own last service (Toilets)')
+  await p.getByTestId('goal-connect').tap(); await settle(p)
+  ok(await p.getByTestId('tab-charge').getAttribute('aria-selected') === 'true', 'Connect comes back on Charge, not WiFi')
+  await reload(p)
+  ok(await p.getByTestId('tab-charge').getAttribute('aria-selected') === 'true', 'the last service survives a reload')
+  await ctx.close()
+})
+todo.push(async () => { // goal order comes from tap counts, decided when the app opens; it never moves during a session
+  const { ctx, p } = await open({ width: 390, height: 844 }, true)
+  const order = () => p.locator('[data-testid^=goal-]').evaluateAll(es => es.map(e => e.getAttribute('data-testid').slice(5)))
+  ok(JSON.stringify(await order()) === JSON.stringify(['now', 'move', 'connect']), 'new visitor: Now, Getting around, Connect')
+  for (let i = 0; i < 4; i++) { await p.getByTestId('goal-connect').tap(); await settle(p); await p.getByTestId('goal-move').tap(); await settle(p) }
+  await p.getByTestId('goal-connect').tap(); await settle(p)
+  ok(JSON.stringify(await order()) === JSON.stringify(['now', 'move', 'connect']), 'the order does not change during the session')
+  await reload(p)
+  ok(JSON.stringify(await order()) === JSON.stringify(['connect', 'move', 'now']), 'after a reload the most tapped goals come first: ' + JSON.stringify(await order()))
+  ok(await p.getByTestId('goal-connect').evaluate(e => e.getBoundingClientRect().left) < await p.getByTestId('goal-move').evaluate(e => e.getBoundingClientRect().left), 'and the first goal is the leftmost')
+  await ctx.close()
+})
+todo.push(async () => { // events: a real switch sends tab (with the layer id); the same tab again sends nothing
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { geo: 'blocked' })
+  await go(p, 'wifi', 'tap'); await settle(p); await go(p, 'wifi', 'tap'); await settle(p)
+  const ev = await p.evaluate(() => window.__ev)
+  ok(ev.filter(e => e === 'tab-wifi').length === 1 && ev.includes('goal-connect'), 'events: one tab-wifi and goal-connect ' + JSON.stringify(ev))
+  await ctx.close()
+})
+todo.push(async () => { // events for Settings: open, the way it closes, and a language change
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { geo: 'blocked' })
+  const ev = () => p.evaluate(() => window.__ev)
+  await p.getByTestId('open-settings').tap(); await p.getByTestId('settings-view').waitFor(); await settle(p)
+  await p.getByTestId('row-language').tap(); await p.getByTestId('view-language').waitFor(); await settle(p)
+  await p.getByTestId('lang-es').tap(); await settle(p)
+  await p.getByTestId('close').last().tap(); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  await p.getByTestId('open-settings').tap(); await p.getByTestId('settings-view').waitFor(); await settle(p)
+  await p.keyboard.press('Escape'); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  await p.getByTestId('open-settings').tap(); await p.getByTestId('settings-view').waitFor(); await settle(p)
+  await p.goBack(); await p.getByTestId('settings-view').waitFor({ state: 'detached' })
+  const e = await ev()
+  ok(JSON.stringify(e) === JSON.stringify(['settings-open', 'lang-es', 'settings-close-x', 'settings-open', 'settings-close-escape', 'settings-open', 'settings-close-back']), 'settings events: ' + e.join(','))
+  await ctx.close()
+})
+todo.push(async () => { // the place-selected moment: a ring on the marker only when a person picks it
+  const { ctx, p } = await open({ width: 390, height: 844 }, true)
+  ok(await p.locator('.mk.pulse').count() === 0, 'no pulse on load or on the nearest card')
+  await p.locator('.mk').first().click({ force: true }); await p.waitForSelector('.mk.pulse', { timeout: 2000 })
+  await p.waitForSelector('.mk.pulse', { state: 'detached', timeout: 2000 })
+  ok(true, 'a picked marker pulses once, then the class is gone')
+  await ctx.close()
+})
+
 // ---- bus stops and duty pharmacies ----
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true)
-  await p.getByTestId('tab-bus').tap(); await settle(p)
+  await go(p, 'bus', 'tap'); await settle(p)
   ok(await markers(p) > 500, 'Bus: stops are drawn')
   const next = p.getByTestId('next-buses')
   ok(await next.count() === 1 && /poste=\d+/.test(await next.getAttribute('href') || ''), 'Bus card: one Next buses link to the bus company page')
@@ -280,7 +416,7 @@ const farm = (date, hours = '09:00-22:00') => ({ result: [{ id: 'x1', title: 'Fa
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { serviceWorkers: 'block' })
   await p.route('**/farmacia.json*', r => r.fulfill({ status: 500, body: 'no' }))
-  await p.getByTestId('tab-pharmacy').tap(); await settle(p)
+  await go(p, 'pharmacy', 'tap'); await settle(p)
   ok(await p.getByTestId('duty-failed').count() === 1 && await p.getByTestId('duty-retry').count() === 1, 'Pharmacy: failed load shows the message and Try again')
   ok((await p.getByTestId('duty-city').getAttribute('href') || '').includes('zaragoza.es/sede/servicio/farmacia'), 'Pharmacy: failure links to the city page')
   ok(await p.getByTestId('walk').count() === 0, 'Pharmacy: no old list shown on failure')
@@ -300,19 +436,14 @@ todo.push(async () => {
   ok(await p.title() === 'Zaragoza a mano · Lo que necesitas, cerca de ti', 'page title in Spanish')
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && man.name === 'Zaragoza a mano', `manifest lang es (${man.lang}, ${man.name})`)
-  const labels = await p.locator('[role=tab]').allInnerTexts()
-  const base = labels.filter(l => l !== 'Calor'), calor = labels.indexOf('Calor')
-  ok(JSON.stringify(base) === JSON.stringify(['Aseos', 'Agua', 'Bizi', 'Bus', 'Farmacia', 'WiFi', 'Cargar', 'Biblio.']) && (calor === 2 || calor === 8), 'tab row (Calor 3rd in its season, else last): ' + labels.join(' | '))
-  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'first visit: Toilets is selected')
-  // 9 tabs in one scrolling row: each at least 44px, the first ones fit, the next one peeks in at the edge
-  const cells = await p.locator('[role=tab]').evaluateAll(es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, w: r.width, h: r.height, clipped: e.scrollWidth > e.clientWidth + 1 } }))
-  const list = await p.evaluate(() => { const e = document.querySelector('[role=tablist]'); return { sw: e.scrollWidth, cw: e.clientWidth, sb: getComputedStyle(e).scrollbarWidth } })
-  ok(list.sw > list.cw + 20 && list.sb === 'none', `tab row scrolls, no scrollbar (content ${list.sw}, width ${list.cw})`)
-  ok(cells.length === 9 && cells.every(c => c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), '9 tabs, equal width, at least 44px, labels not clipped')
-  ok(cells.filter(c => c.x >= -0.5 && c.x + c.w <= 390.5).length >= 5 && cells.some(c => c.x < 388 && c.x + c.w > 390.5 + 8), 'at least 5 tabs fully visible and the next one is half cut at the right edge')
-  const cut = cells.find(c => c.x < 390 && c.x + c.w > 390.5)
-  ok(!!cut && (390 - cut.x) / cut.w > 0.25 && (390 - cut.x) / cut.w < 0.8, `the cut tab shows ${cut ? Math.round((390 - cut.x) / cut.w * 100) : 0}% of itself (a clear hint to scroll)`)
-  ok(await p.getByTestId('tabs-prev').count() === 0 && await p.getByTestId('tabs-next').count() === 0, 'no chevrons')
+  // goal tabs: 3 equal columns, no scrolling; chips: the goal's services, equal columns, no scrolling (Spanish labels are the longest)
+  const goals = await p.locator('[data-testid^=goal-]').allInnerTexts()
+  ok(JSON.stringify(goals) === JSON.stringify(['Ahora', 'Moverse', 'Conectar']), 'goal tabs (no taps yet, default order): ' + goals.join(' | '))
+  const chips = await p.locator('[data-testid=services] [role=tab]').allInnerTexts()
+  ok(JSON.stringify(chips.filter(l => l !== 'Calor')) === JSON.stringify(['Aseos', 'Agua', 'Farmacia']) && chips.length === 4, 'Ahora chips (Calor 3rd in its season, else last): ' + chips.join(' | '))
+  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'first visit: Ahora > Toilets is selected')
+  ok(await fits(p, '[data-testid^=goal-]') && await fits(p, '[data-testid=services] [role=tab]'), 'goal tabs and chips: equal columns, at least 44 tall, labels not clipped, no sideways scroll')
+  ok(await p.locator('[role=tab]').count() >= 6 && await p.getByTestId('tabs-prev').count() === 0, 'no chevrons')
   await p.screenshot({ path: out + '/t-start.png' })
   const cdp = await ctx.newCDPSession(p)
   const top0 = await snapTop(p)
@@ -322,15 +453,12 @@ todo.push(async () => {
   for (let i = 1; i <= 14; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y: ty - 18 * i }] }); await p.waitForTimeout(16) }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await settle(p)
   ok(await snapTop(p) < top0 - 100, 'vertical drag starting on the tab row moves the sheet')
-  // selecting a tab: one tap, no menu; nothing moves
-  await p.evaluate(() => { document.querySelector('[role=tablist]').scrollLeft = 0 })
-  await p.getByTestId('tab-bizi').tap(); await settle(p)
-  ok(await p.getByTestId('tab-bizi').getAttribute('aria-selected') === 'true' && await p.locator('.mk').count() > 0, 'Bizi: one tap selects it and draws its markers')
-  const sel = await p.evaluate(() => { const l = document.querySelector('[role=tablist]').getBoundingClientRect(), t = document.querySelector('[data-testid=tab-bizi]').getBoundingClientRect(); return { left: t.left - l.left, right: t.right - l.left, w: l.width } })
-  ok(sel.left >= -1 && sel.right <= sel.w + 1, `the selected tab is scrolled fully into view (${Math.round(sel.left)}..${Math.round(sel.right)} of ${Math.round(sel.w)})`)
-  await p.getByTestId('tab-libraries').tap(); await settle(p)
+  // selecting a service: the goal tab, then the chip
+  await go(p, 'bizi', 'tap'); await settle(p)
+  ok(await p.getByTestId('tab-bizi').getAttribute('aria-selected') === 'true' && await p.locator('.mk').count() > 0, 'Bizi: goal tab then chip draws its markers')
+  await go(p, 'libraries', 'tap'); await settle(p)
   ok(await p.getByTestId('tab-libraries').getAttribute('aria-selected') === 'true' && await p.getByTestId('list').count() === 1, 'Libraries is a normal tab with its own list')
-  await p.getByTestId('tab-water').tap(); await settle(p)
+  await go(p, 'water', 'tap'); await settle(p)
   // Settings page in Spanish
   await p.getByTestId('open-settings').tap(); await settle(p)
   ok(await p.getByRole('heading', { name: 'Ajustes' }).count() === 1, 'Settings page titled Ajustes')
@@ -344,14 +472,14 @@ todo.push(async () => {
   const scan = async name => { const m = (await text()).match(EN); if (m) leaks.push(name + ':' + m[0]) }
   await scan('settings')
   await p.getByTestId('row-language').tap(); await settle(p); await scan('language')
-  await p.getByTestId('back').tap(); await settle(p)
+  await p.getByTestId('back').last().tap(); await settle(p)
   await p.getByTestId('row-about').tap(); await settle(p); await scan('about')
-  await p.getByTestId('back').tap(); await settle(p); await p.getByTestId('back').tap(); await settle(p)
-  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi']) { await p.getByTestId('tab-' + id).tap(); await settle(p); await scan(id) }
+  await p.getByTestId('back').last().tap(); await settle(p); await p.getByTestId('close').last().tap(); await settle(p)
+  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi']) { await go(p, id, 'tap'); await settle(p); await scan(id) }
   await p.getByTestId('details').tap(); await settle(p); await scan('details')
   ok(leaks.length === 0, 'no English left in Spanish mode ' + JSON.stringify(leaks))
   // Language choice persists, and the html lang follows
-  await p.getByTestId('back').tap(); await settle(p)
+  await p.getByTestId('back').last().tap(); await settle(p)
   await p.getByTestId('open-settings').tap(); await p.getByTestId('row-language').tap(); await p.getByTestId('lang-en').tap(); await settle(p)
   ok(await p.evaluate(() => document.documentElement.lang) === 'en', 'choosing English sets html lang')
   await p.reload(); await ready(p)
@@ -395,19 +523,32 @@ late.push(async () => {
   console.log('measured snap peek->half:', JSON.stringify(m))
   ok(Math.abs(m.transformMs - 450) < 60, `measured transform ${m.transformMs}ms ~ 450ms`)
   await settle(p)
-  await p.getByTestId('open-settings').click()
-  const f = await p.evaluate(() => { const el = document.querySelector('.page-in'); const cs = getComputedStyle(el); return { dur: cs.transitionDuration, prop: cs.transitionProperty, anim: cs.animationName } })
-  console.log('page fade:', JSON.stringify(f))
-  ok(f.dur === '0.2s' && f.prop === 'opacity' && f.anim === 'none', 'page fade is a 200ms opacity transition, not a keyframe animation')
+  await ctx.close()
+})
+// Frames of the Settings view while it opens: its x position and opacity, once per frame, from the tap until 500 ms later.
+const openFrames = (p, ms = 500) => p.evaluate(ms => new Promise(res => {
+  const t0 = performance.now(), fr = []
+  const f = () => {
+    const el = document.querySelector('[data-testid=settings-view]'), t = Math.round(performance.now() - t0)
+    if (el) { const cs = getComputedStyle(el); fr.push({ t, x: Math.round(new DOMMatrixReadOnly(cs.transform).m41), o: +(+cs.opacity).toFixed(2) }) }
+    if (t < ms) requestAnimationFrame(f); else res(fr)
+  }
+  document.querySelector('[data-testid=open-settings]').click(); requestAnimationFrame(f)
+}), ms)
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true)
+  const fr = await openFrames(p)
+  const first = fr[0], last = fr.at(-1), done = fr.find(f => f.x === 0)
+  ok(first.x > 100 && last.x === 0, `Settings slides in from the right (x ${first.x} -> ${last.x})`)
+  ok(fr.every((f, i) => i === 0 || f.x <= fr[i - 1].x), 'the slide only moves left, never back (no bounce)')
+  ok(!!done && done.t - first.t >= 150 && done.t - first.t <= 330, `the slide takes about 260 ms (${done ? done.t - first.t : '?'} ms)`)
   await ctx.close()
 })
 // ---- reduced motion ----
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { reducedMotion: 'reduce' })
-  await p.getByTestId('open-settings').click()
-  const f = await p.evaluate(() => { const cs = getComputedStyle(document.querySelector('.page-in')); return { anim: cs.animationName, prop: cs.transitionProperty } })
-  console.log('reduced-motion page:', JSON.stringify(f))
-  ok(f.anim === 'none' && !/transform|scale|translate|all/.test(f.prop), 'reduced motion: opacity and colour only')
+  const fr = await openFrames(p)
+  ok(fr.every(f => f.x === 0) && fr.some(f => f.o < 1) && fr.at(-1).o === 1, 'reduced motion: Settings only fades, it never moves')
   await ctx.close()
 })
 // ---- red only on interactive elements and titles (computed colour scan) ----
@@ -440,14 +581,14 @@ todo.push(async () => {
   const w = await p.getByTestId('panel').evaluate(e => e.getBoundingClientRect().width)
   ok(w === 400, 'desktop panel 400px')
   await p.screenshot({ path: out + '/d-water.png' })
-  for (const id of ['toilets', 'charge', 'wifi', 'water']) { await p.getByTestId('tab-' + id).click(); await settle(p); ok(await markers(p) > 0, `desktop ${id} renders`) }
-  await p.getByTestId('tab-libraries').click(); await settle(p)
+  for (const id of ['toilets', 'charge', 'wifi', 'water']) { await go(p, id); await settle(p); ok(await markers(p) > 0, `desktop ${id} renders`) }
+  await go(p, 'libraries', 'click'); await settle(p)
   await p.screenshot({ path: out + '/d-libs.png' })
   await ctx.close()
 })
 // ---- Bizi live counts (CityBikes mocked) ----
 const listText = p => p.getByTestId('list').innerText()
-const biziTab = async p => { await p.getByTestId('tab-bizi').tap(); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]') ; await settle(p) }
+const biziTab = async p => { await go(p, 'bizi', 'tap'); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]') ; await settle(p) }
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
   ok(mock.hits === 0, 'CityBikes is not called before the Bizi tab opens')
@@ -484,7 +625,7 @@ todo.push(async () => { // the same tab in Spanish, with a screenshot
 todo.push(async () => { // nothing in the list is wiped when the feed is down
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
   mock.mode = 'fail'
-  await p.getByTestId('tab-bizi').tap(); await settle(p)
+  await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=failed]')
   ok(/Live counts unavailable/.test(await p.getByTestId('bizi-status').innerText()) && await p.getByTestId('bizi-retry').count() === 1, 'failed feed: "Live counts unavailable" and Try again')
   ok(await markers(p) > 0 && (await p.getByTestId('list').locator('li').count()) > 5, 'failed feed: the places still show')
@@ -498,7 +639,7 @@ todo.push(async () => { // nothing in the list is wiped when the feed is down
 todo.push(async () => { // stale feed (stamps 10 minutes old) is never shown as live
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
   mock.mode = 'stale'
-  await p.getByTestId('tab-bizi').tap(); await settle(p)
+  await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=failed]')
   ok(!/bikes? · /.test(await listText(p)) && !/Live counts, updated/.test(await p.locator('body').innerText()), 'stale feed: not shown as live')
   await ctx.close()
@@ -506,7 +647,7 @@ todo.push(async () => { // stale feed (stamps 10 minutes old) is never shown as 
 todo.push(async () => { // no station has a bike: show them all and say so
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
   mock.mode = 'empty'
-  await p.getByTestId('tab-bizi').tap(); await settle(p)
+  await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=live]'); await settle(p)
   ok(await p.getByTestId('all-out').count() === 1 && (await p.getByTestId('list').locator('li').count()) > 5, 'no bikes anywhere: the message plus all stations')
   await ctx.close()
@@ -515,7 +656,7 @@ todo.push(async () => { // cached counts older than 5 minutes are not live; the 
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
   await biziTab(p)
   const n = mock.hits
-  await p.getByTestId('tab-water').tap(); await settle(p)
+  await go(p, 'water', 'tap'); await settle(p)
   await p.evaluate(() => window.dispatchEvent(new Event('focus')))
   await p.waitForTimeout(300)
   ok(mock.hits === n, 'leaving the Bizi tab: no more CityBikes calls')
@@ -529,23 +670,23 @@ todo.push(async () => {
   ok(await p.getByTestId('from-centre').innerText().then(t => /Distances from the city centre/.test(t)), 'before location: the list says distances are from the city centre')
   ok(await p.getByTestId('locate').count() === 1, 'before location: a Use my location button')
   await p.screenshot({ path: out + '/loc-before-en.png' })
-  await p.getByTestId('tab-water').tap(); await settle(p)
+  await go(p, 'water', 'tap'); await settle(p)
   ok(await p.evaluate(() => window.__geoCalls) === 1, 'the first tab tap asks for location once')
   await p.waitForFunction(() => /distances from you/i.test(document.body.innerText)); await settle(p)
   ok(await p.getByTestId('from-centre').count() === 0 && await p.getByTestId('locate').count() === 0, 'after location: header says from you, no button')
   await p.screenshot({ path: out + '/loc-after-en.png' })
-  await p.getByTestId('tab-toilets').tap(); await settle(p)
+  await go(p, 'toilets', 'tap'); await settle(p)
   ok(await p.evaluate(() => window.__geoCalls) === 1, 'later tab taps do not ask again')
   ok(await p.evaluate(() => window.__ev.includes('locate-granted')), 'event locate-granted sent: ' + await p.evaluate(() => window.__ev.join(',')))
   await ctx.close()
 })
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'deny', layer: null })
-  await p.getByTestId('tab-water').tap(); await settle(p)
+  await go(p, 'water', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=loc-denied]'); await settle(p)
   ok(/desde el centro/.test(await p.getByTestId('from-centre').innerText()), 'denied: still ranked from the centre')
   ok(await p.getByTestId('locate').count() === 0 && await p.getByTestId('toast').count() === 0, 'denied: one calm line, no button, no toast')
-  await p.getByTestId('tab-toilets').tap(); await settle(p); await p.getByTestId('tab-wifi').tap(); await settle(p)
+  await go(p, 'toilets', 'tap'); await settle(p); await go(p, 'wifi', 'tap'); await settle(p)
   ok(await p.evaluate(() => window.__geoCalls) === 1, 'denied: not asked again on later taps')
   ok(await p.evaluate(() => window.__ev.filter(e => e === 'locate-denied').length) === 1, 'event locate-denied sent once')
   ok(!(await p.evaluate(() => window.__ev.join(','))).match(/-?\d+\.\d{3}/), 'events carry no coordinates')
@@ -554,7 +695,7 @@ todo.push(async () => {
 })
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { geo: 'blocked', layer: null })
-  await p.getByTestId('tab-water').tap(); await settle(p)
+  await go(p, 'water', 'tap'); await settle(p)
   ok(await p.evaluate(() => window.__geoCalls) === 0 && await p.getByTestId('loc-denied').count() === 1, 'permission already denied: no ask, the calm line shows')
   await ctx.close()
 })
@@ -583,9 +724,9 @@ todo.push(async () => {
     return r.abort() })
   await p.goto(URL); await ready(p)
   ok(/Android/.test(await p.evaluate(() => navigator.userAgent)), 'Android Chrome UA emulation active')
-  await p.getByTestId('tab-bizi').tap(); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]')
+  await go(p, 'bizi', 'tap'); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]')
   ok(/bikes? · /.test(await p.getByTestId('list').innerText()), 'Android: Bizi counts show')
-  await p.getByTestId('tab-pharmacy').tap(); await settle(p)
+  await go(p, 'pharmacy', 'tap'); await settle(p)
   ok(await p.getByTestId('tab-pharmacy').getAttribute('aria-selected') === 'true', 'Android: tab switch works by touch')
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Android: no sideways page scroll')
   await p.screenshot({ path: out + '/android.png' })
