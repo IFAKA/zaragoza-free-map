@@ -15,17 +15,21 @@ import { LangCtx } from './lang'
 import { SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
-import { AboutPage, HomePage, LanguagePage, PlacePage, SettingsPage } from './Pages'
+import { HomePage, PlacePage } from './Pages'
+import { SettingsView, useSettingsView } from './SettingsView'
+import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
+import { GOAL_IDS, goalById, goalOf, serviceFor, type GoalId } from '../layers/goals'
+import { bumpTap, parseLast, parseTaps, rankByTaps } from '../lib/usage'
 import { SettingsFab } from './SettingsFab'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
 
-type Page = 'home' | 'settings' | 'language' | 'about' | 'place'
+type Page = 'home' | 'place'
 
 // Drawer levels. Closed shows only the tab bar; peek adds the nearest place; half shows the controls too; full is the whole list.
 const CLOSED = 0, PEEK = 1, HALF = 2, FULL = 3
-const PEEK_PX = 250, HALF_PX = 500 // measured: the nearest card (with its bottom padding) ends at 247-249 px of sheet on Toilets, Water and WiFi
+const PEEK_PX = 305, HALF_PX = 500 // measured with the goal tabs and service chips: the nearest card ends at 302-304 px of sheet on Toilets, Water and WiFi
 const DEFAULT_CLOSED_PX = 78
 /** Height of the closed sheet: the handle and the tab bar, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
@@ -74,6 +78,7 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [limit, setLimit] = useState(30)
   const [level, setLevel] = useState(PEEK)
+  const [pick, setPick] = useState(0)
   const [fly, setFly] = useState<FlyRequest | null>(null)
   const [tick, setTick] = useState(0)
   const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
@@ -100,7 +105,7 @@ export function App() {
   const bizi = useBizi(layerId === 'bizi', BIZI_STATIONS)
   const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layerId === 'bizi' ? withCounts(layer.items, bizi.counts) : layer.items), [layer, layerId, dutyRows, bizi.counts])
   const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
-  const setLang = (l: Lang) => { setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
+  const setLang = (l: Lang) => { if (l !== lang) track('lang', l); setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
   const setOpenOnly = (v: boolean) => { setOpenOnlyS(v); lsSet('open', v ? '1' : '0') }
   const setShowRange = (v: boolean) => { setShowRangeS(v); lsSet('range', v ? '1' : '0') }
 
@@ -108,6 +113,9 @@ export function App() {
   useEffect(() => { const i = setInterval(() => setTick(x => x + 1), 60_000); return () => clearInterval(i) }, [])
 
   const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
+  const view = useSettingsView()
+  // the order of the goal tabs: decided once, when the app opens, from this person's own tap counts (kept on this device). It never changes while the app is open.
+  const [goalOrder] = useState<GoalId[]>(() => rankByTaps(GOAL_IDS, parseTaps(lsGet('taps'))))
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
   const peekPx = layer.peek ?? PEEK_PX
@@ -144,21 +152,43 @@ export function App() {
   useEffect(() => { alreadyGranted().then(ok => { if (ok) locate() }) }, [alreadyGranted, locate])
 
   const raise = (min: number = HALF) => setLevel(l => Math.max(l, min))
-  const pickLayer = (id: LayerId) => {
+  const askLocation = () => {
     // the first tap is the first moment of intent (and a user gesture): ask for the position once, unless the person already blocked it
     if (!pos && !askedLocation.current && !blocked()) { askedLocation.current = true; void locate(true) }
-    // the tab of the layer you are already on: opens a closed sheet, folds an open one one step down
-    if (id === layerId && page === 'home' && !desktop) { setLevel(l => (l === CLOSED ? HALF : l - 1)); return }
+  }
+  /** Show a service: remember it as the last used in its goal, count the tap for the goal order (next time the app opens), reset the page. */
+  const switchTo = (id: LayerId, viaGoal: boolean) => {
+    const g = goalOf(id).id
+    if (viaGoal) track('goal', g)
     track('tab', id)
+    lsSet('taps', JSON.stringify(bumpTap(parseTaps(lsGet('taps')), g)))
+    lsSet('last', JSON.stringify({ ...parseLast(lsGet('last')), [g]: id }))
     setLayerId(id); lsSet('layer', id); setSelected(null); setCat(catStart(id)); setLimit(30)
     reset()
     if (level === CLOSED) setLevel(HALF)
     viewport.current?.scrollTo({ top: 0 })
   }
+  /** A service chip: switches service inside the goal. The chip of the service you are on does nothing. */
+  const pickLayer = (id: LayerId) => {
+    askLocation()
+    if (id === layerId) { if (page !== 'home') reset(); return }
+    switchTo(id, false)
+  }
+  /** A goal tab: opens the service last used in that goal. The tab of the goal you are on opens a closed sheet or folds an open one one step down. */
+  const pickGoal = (g: GoalId) => {
+    askLocation()
+    if (g === goalOf(layerId).id) {
+      if (page === 'home' && !desktop) setLevel(l => (l === CLOSED ? HALF : l - 1))
+      else reset()
+      return
+    }
+    switchTo(serviceFor(goalById(g), parseLast(lsGet('last'))), true)
+  }
   // a list row or a map marker: show its card at half, with the place and you both framed above the sheet (only the place when your position is unknown)
   const select = (id: string) => {
     track('select', layerId)
     setSelected(id)
+    setPick(n => n + 1)
     const it = arr.find(i => i.id === id)
     if (!desktop) setLevel(HALF)
     if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
@@ -181,22 +211,19 @@ export function App() {
   const turnTo = (p: Page) => { go(p); raise() }
   const back = () => { goUp() }
   // Escape and the back gesture: up one page, then lower the sheet one step
-  const escape = () => { if (!goUp()) setLevel(l => Math.max(CLOSED, l - 1)) }
+  const escape = () => { if (view.isOpen) return; if (!goUp()) setLevel(l => Math.max(CLOSED, l - 1)) }
   const cycle = () => setLevel(l => (l === CLOSED || l === PEEK ? HALF : l === HALF ? FULL : PEEK))
   const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
   const pageEl = (() => {
     switch (page) {
-      case 'settings': return <SettingsPage lang={lang} onBack={back} locked={mobileLow} go={turnTo} />
-      case 'language': return <LanguagePage lang={lang} setLang={setLang} onBack={back} locked={mobileLow} />
-      case 'about': return <AboutPage onBack={back} locked={mobileLow} />
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
       default: return (
         <HomePage
           layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
-          onPick={pickLayer} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
+          onPick={pickLayer} onGoal={pickGoal} goalOrder={goalOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
           desktop={desktop}
         />
       )
@@ -205,11 +232,12 @@ export function App() {
 
   return (
     <LangCtx.Provider value={lang}>
+      <MotionConfig reducedMotion="user"><LazyMotion features={domAnimation} strict>
       <ToastHost>
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
-              layer={layer} items={arr} selected={chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
+              layer={layer} items={arr} pick={pick} selected={chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
               showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
@@ -225,8 +253,10 @@ export function App() {
             </SheetClosedCtx.Provider>
           )}
         </div>
-        {(page === 'home' || page === 'place') && <SettingsFab label={t.settings} onClick={() => turnTo('settings')} />}
+        <SettingsFab label={t.settings} onClick={() => view.open('settings')} inert={view.isOpen} />
+        <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>
+      </LazyMotion></MotionConfig>
     </LangCtx.Provider>
   )
 }

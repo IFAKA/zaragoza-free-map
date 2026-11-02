@@ -17,7 +17,7 @@ const VARIANT: Record<Variant, string> = {
   secondary: 'border border-line-strong bg-transparent text-brand-text hov:bg-surface active:bg-surface',
   link: 'bg-transparent px-1 text-brand-text underline-offset-2 hov:underline',
 }
-const BTN = 'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:scale_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] disabled:opacity-50 motion-reduce:active:scale-100'
+const BTN = 'inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-btn px-4 text-center font-semibold no-underline [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] disabled:opacity-50 motion-reduce:active:scale-100'
 /** Primary = solid red. Secondary = grey border, red text (always next to a primary). Link = text only. */
 export function Button({ variant = 'primary', className, ...p }: ComponentProps<typeof BaseButton> & { variant?: Variant }) {
   const link = 'render' in p && !!p.render
@@ -36,9 +36,9 @@ export function Switch({ checked, onCheckedChange, label, hint, testId }: { chec
       </span>
       <BaseSwitch.Root
         checked={checked} onCheckedChange={onCheckedChange} data-testid={testId}
-        className="relative inline-flex h-[1.6em] w-[2.8em] shrink-0 items-center rounded-full border border-line-strong bg-surface p-[0.15em] [transition:background-color_150ms,border-color_150ms,scale_120ms_var(--ease-out)] active:scale-[.97] data-[checked]:border-brand data-[checked]:bg-brand"
+        className="relative inline-flex h-[1.6em] w-[2.8em] shrink-0 items-center rounded-full border border-line-strong bg-surface p-[0.15em] [transition:background-color_var(--dur-small),border-color_var(--dur-small),scale_var(--dur-press)_var(--ease-out)] active:scale-[.97] data-[checked]:border-brand data-[checked]:bg-brand"
       >
-        <BaseSwitch.Thumb className="block size-[1.1em] rounded-full bg-line-strong [transition:translate_150ms_var(--ease-out),background-color_150ms] data-[checked]:translate-x-[1.2em] data-[checked]:bg-on-brand" />
+        <BaseSwitch.Thumb className="block size-[1.1em] rounded-full bg-line-strong [transition:translate_var(--dur-small)_var(--ease-out),background-color_var(--dur-small)] data-[checked]:translate-x-[1.2em] data-[checked]:bg-on-brand" />
       </BaseSwitch.Root>
     </label>
   )
@@ -51,7 +51,7 @@ export function Chips({ value, onChange, options, label, allValue = 'all' }: { v
       {options.map(o => (
         <Toggle
           key={o.value} value={o.value}
-          className="min-h-11 select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] data-[pressed]:bg-brand data-[pressed]:text-on-brand motion-reduce:active:scale-100"
+          className="min-h-11 select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] data-[pressed]:bg-brand data-[pressed]:text-on-brand motion-reduce:active:scale-100"
         >{o.label}</Toggle>
       ))}
     </ToggleGroup>
@@ -70,7 +70,7 @@ export function Scroll({ children, locked, className, viewportRef }: { children:
       <ScrollArea.Viewport ref={viewportRef} className={cn('h-full overscroll-contain', locked && 'overflow-y-hidden!')} data-testid="scroll">
         <ScrollArea.Content>{children}</ScrollArea.Content>
       </ScrollArea.Viewport>
-      <ScrollArea.Scrollbar className="m-0.5 flex w-1.5 justify-center opacity-0 [transition:opacity_150ms] data-[hovering]:opacity-100 data-[scrolling]:opacity-100">
+      <ScrollArea.Scrollbar className="m-0.5 flex w-1.5 justify-center opacity-0 [transition:opacity_var(--dur-small)] data-[hovering]:opacity-100 data-[scrolling]:opacity-100">
         <ScrollArea.Thumb className="w-full rounded-full bg-handle" />
       </ScrollArea.Scrollbar>
     </ScrollArea.Root>
@@ -81,12 +81,12 @@ export function Scroll({ children, locked, className, viewportRef }: { children:
 export function InfoPop({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
   return (
     <Popover.Root>
-      <Popover.Trigger aria-label={label} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info [transition:scale_120ms_var(--ease-out)] active:scale-[.97]">
+      <Popover.Trigger aria-label={label} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info [transition:scale_var(--dur-press)_var(--ease-out)] active:scale-[.97]">
         <Info size="1.25em" weight="bold" aria-hidden />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={6} className="z-[60]">
-          <Popover.Popup className="max-w-[min(20em,calc(100vw-2em))] rounded-card border border-line bg-paper p-3 text-[0.93em] leading-snug text-ink shadow-[0_4px_16px_rgb(0_0_0/0.2)] origin-(--transform-origin) outline-none [transition:opacity_150ms_var(--ease-out),scale_150ms_var(--ease-out)] data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[ending-style]:[transition-duration:100ms]">
+          <Popover.Popup className="max-w-[min(20em,calc(100vw-2em))] rounded-card border border-line bg-paper p-3 text-[0.93em] leading-snug text-ink shadow-[0_4px_16px_rgb(0_0_0/0.2)] origin-(--transform-origin) outline-none [transition:opacity_var(--dur-small)_var(--ease-out),scale_var(--dur-small)_var(--ease-out)] data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[ending-style]:[transition-duration:var(--dur-press)]">
             {title && <Popover.Title className="mb-1 text-[1em] font-extrabold">{title}</Popover.Title>}
             <Popover.Description className="m-0">{children}</Popover.Description>
           </Popover.Popup>

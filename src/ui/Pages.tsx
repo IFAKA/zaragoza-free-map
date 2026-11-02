@@ -1,21 +1,24 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { Tabs } from '@base-ui/react/tabs'
-import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { revealDelta } from '../lib/reveal'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
-import { LAYERS, ORDER } from '../layers'
+import { LAYERS } from '../layers'
+import type { GoalId } from '../layers/goals'
+import { GoalTabs, ServiceChips } from './GoalBar'
+import { Tick } from './Tick'
+import { cardSwap, tap } from './motion'
+import { m } from 'motion/react'
 import { rangeMetres } from './MapView'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, biziLine, busUrl, clockMadrid, dotBetween, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
-import { ICONS } from './icons'
 import { useT } from './lang'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
@@ -29,10 +32,29 @@ export function PageHeader({ title, onBack }: { title: string; onBack: () => voi
   const { t } = useT()
   return (
     <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-3">
-      <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" className="inline-flex size-11 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:scale_120ms_var(--ease-out)] active:scale-[.97] motion-reduce:active:scale-100">
+      <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className="inline-flex size-[44px] items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
         <CaretLeft size="1.4em" weight="bold" aria-hidden />
       </BaseButton>
       <h1 className={h2}>{title}</h1>
+    </div>
+  )
+}
+
+/** Header of the full Settings view: title on the left, a close cross on the right (where the Settings button was). Sub-pages also get a small chevron to go up one level. */
+function ViewHeader({ title, onBack, onClose }: { title: string; onBack?: () => void; onClose: () => void }) {
+  const { t } = useT()
+  const btn = 'inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text'
+  return (
+    <div className="flex shrink-0 items-center gap-1 pb-1 pl-2 pt-[max(0.75rem,env(safe-area-inset-top))] mr-[calc(max(0.75rem,env(safe-area-inset-right))-env(safe-area-inset-right))]">
+      {onBack && (
+        <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className={btn}>
+          <CaretLeft size="1.3em" weight="bold" aria-hidden />
+        </BaseButton>
+      )}
+      <h1 className={h2 + (onBack ? '' : ' pl-2')}>{title}</h1>
+      <BaseButton onClick={onClose} aria-label={t('close')} data-testid="close" render={<m.button {...tap} />} className={btn + ' ml-auto'}>
+        <CloseIcon size="1.4em" weight="bold" aria-hidden />
+      </BaseButton>
     </div>
   )
 }
@@ -157,42 +179,6 @@ function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => vo
 
 const DIST_MIN = 'min'
 
-// ---------- tabs ----------
-/**
- * One row of category tabs that scrolls sideways (10 do not fit at 390 px). Every tab is one tap away: each is 1/5.5 of the width, so the next one
- * peeks in and shows there is more. Scroll-snap, no scrollbar, and the active tab is scrolled to the middle (also after a reload).
- * Settings is a button in the header, not a tab.
- */
-export function NeedTabs({ layer, onPick }: { layer: LayerId; onPick: (id: LayerId) => void }) {
-  const { lang, t } = useT()
-  const list = useRef<HTMLDivElement>(null)
-  const first = useRef(true)
-  useEffect(() => {
-    const el = list.current, tab = el?.querySelector<HTMLElement>(`[data-testid="tab-${layer}"]`)
-    if (!el || !tab) return
-    const left = tab.offsetLeft - (el.clientWidth - tab.offsetWidth) / 2
-    const calm = first.current || matchMedia('(prefers-reduced-motion: reduce)').matches
-    first.current = false
-    el.scrollTo({ left: Math.max(0, left), behavior: calm ? 'auto' : 'smooth' })
-  }, [layer])
-  const tab = 'group flex min-h-14 shrink-0 basis-[18.18%] snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0 text-ink [transition:color_120ms_var(--ease-out),scale_120ms_var(--ease-out)] active:scale-[.97] data-[active]:text-brand-text'
-  const label = 'max-w-full border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
-  return (
-    <Tabs.Root value={layer} className="flex shrink-0 border-b border-line">
-      <Tabs.List ref={list} className="flex min-w-0 flex-1 snap-x snap-proximity overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
-        {ORDER.map(id => {
-          const I = ICONS[LAYERS[id].icon]
-          return (
-            <Tabs.Tab key={id} value={id} className={tab} onClick={() => onPick(id)} data-testid={`tab-${id}`} aria-label={LAYERS[id].label[lang]} title={LAYERS[id].label[lang]}>
-              <I size="1.6em" weight={layer === id ? 'fill' : 'regular'} aria-hidden /><span className={label}>{LAYERS[id].short[lang]}</span>
-            </Tabs.Tab>
-          )
-        })}
-      </Tabs.List>
-    </Tabs.Root>
-  )
-}
-
 // ---------- the block with the nearest (or selected) place ----------
 export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
@@ -202,12 +188,12 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
   if (!item) return <div className="px-4 py-5"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   return (
-    <section className="px-4 pb-3 pt-4" data-testid="nearest" aria-label={kind}>
+    <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="nearest" aria-label={kind}>
       <div className={overline}>{kind}</div>
       <h2 className={cn(h2, 'mt-1')} data-testid="nearest-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
-      {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts">{biziLine(t, item, true)}</div>}
+      {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <div className="mt-0.5 font-semibold" data-testid="bus-lines">{t('lines')}: {item.lines.replace(/,/g, ', ')}</div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
@@ -216,7 +202,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
           <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
         </div>
       )}
-    </section>
+    </m.section>
   )
 }
 
@@ -224,10 +210,10 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, 
 function Row({ item, layer, selected, counting, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; counting: boolean; onSelect: () => void }) {
   const { t, type } = useT()
   const closed = layer.hours && item.open === false
-  const rowLine = item.type === 'bizi' ? (biziLine(t, item) || (counting ? <span aria-hidden className="inline-block h-[0.8em] w-32 rounded-sm bg-surface align-middle" /> : type(item.type))) : item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note
+  const rowLine = item.type === 'bizi' ? (biziLine(t, item) ? <Tick>{biziLine(t, item)}</Tick> : (counting ? <span aria-hidden className="inline-block h-[0.8em] w-32 rounded-sm bg-surface align-middle" /> : type(item.type))) : item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note
   return (
     <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
-      <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] after:absolute after:inset-0 hov:bg-surface active:scale-[.97] motion-reduce:active:scale-100">
+      <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] after:absolute after:inset-0 hov:bg-surface active:scale-[.97] motion-reduce:active:scale-100">
         <span className={cn('min-w-0', closed && 'opacity-60')}>
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
           <span className={cn(sub, 'block truncate')}>{rowLine}{dotBetween(rowLine, layer.hours)}{layer.hours && <Status item={item} layer={layer} />}</span>
@@ -288,7 +274,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
-  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void
+  limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onGoal: (id: GoalId) => void; goalOrder: GoalId[]
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
@@ -324,7 +310,8 @@ export function HomePage(p: {
   }, [p.selected]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
-      <NeedTabs layer={p.layer.id} onPick={p.onPick} />
+      <GoalTabs layer={p.layer.id} order={p.goalOrder} onGoal={p.onGoal} />
+      <ServiceChips layer={p.layer.id} order={p.goalOrder} onService={p.onPick} />
       <div className="shrink-0">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} onDetails={p.onDetails} onWalk={p.onWalk} />}
@@ -349,7 +336,7 @@ export function HomePage(p: {
 // ---------- More, Language, About, Place ----------
 function PageRow({ icon, title, description, status, onClick, testId, active }: { icon: ReactNode; title: string; description?: string; status?: string; onClick: () => void; testId: string; active?: boolean }) {
   return (
-    <BaseButton onClick={onClick} data-testid={testId} className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface', active && 'bg-brand-tint')}>
+    <BaseButton onClick={onClick} data-testid={testId} className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface', active && 'bg-brand-tint')}>
       <span className="flex size-10 shrink-0 items-center justify-center rounded-tile bg-surface text-ink">{icon}</span>
       <span className="min-w-0 flex-1"><span className="block font-bold">{title}</span>{description && <span className={cn(sub, 'block')}>{description}</span>}</span>
       {status && <span className={sub}>{status}</span>}
@@ -358,11 +345,11 @@ function PageRow({ icon, title, description, status, onClick, testId, active }: 
   )
 }
 
-export function SettingsPage({ lang, onBack, go, locked }: { lang: Lang; onBack: () => void; go: (p: 'language' | 'about') => void; locked: boolean }) {
+export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClose: () => void; go: (p: 'language' | 'about') => void; locked: boolean }) {
   const { t } = useT()
   return (
     <>
-      <PageHeader title={t('settingsTitle')} onBack={onBack} />
+      <ViewHeader title={t('settingsTitle')} onClose={onClose} />
       <Scroll locked={locked}>
         <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
@@ -371,15 +358,15 @@ export function SettingsPage({ lang, onBack, go, locked }: { lang: Lang; onBack:
   )
 }
 
-export function LanguagePage({ lang, setLang, onBack, locked }: { lang: Lang; setLang: (l: Lang) => void; onBack: () => void; locked: boolean }) {
+export function LanguagePage({ lang, setLang, onBack, onClose, locked }: { lang: Lang; setLang: (l: Lang) => void; onBack?: () => void; onClose: () => void; locked: boolean }) {
   const { t } = useT()
   return (
     <>
-      <PageHeader title={t('langTitle')} onBack={onBack} />
+      <ViewHeader title={t('langTitle')} onBack={onBack} onClose={onClose} />
       <Scroll locked={locked}>
         <RadioGroup value={lang} onValueChange={v => setLang(v as Lang)} aria-label={t('langTitle')}>
           {(['en', 'es'] as Lang[]).map(l => (
-            <Radio.Root key={l} value={l} data-testid={`lang-${l}`} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface">
+            <Radio.Root key={l} value={l} data-testid={`lang-${l}`} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:scale_var(--dur-press)_var(--ease-out),background-color_var(--dur-press)] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface">
               <span className="flex-1">{l === 'en' ? t('langEn') : t('langEs')}</span>
               <Radio.Indicator className="text-brand-text"><Check size="1.3em" weight="bold" aria-hidden /></Radio.Indicator>
             </Radio.Root>
@@ -390,12 +377,12 @@ export function LanguagePage({ lang, setLang, onBack, locked }: { lang: Lang; se
   )
 }
 
-export function AboutPage({ onBack, locked }: { onBack: () => void; locked: boolean }) {
+export function AboutPage({ onBack, onClose, locked }: { onBack?: () => void; onClose: () => void; locked: boolean }) {
   const { t } = useT()
   const d = dataRefreshed()
   return (
     <>
-      <PageHeader title={t('aboutTitle')} onBack={onBack} />
+      <ViewHeader title={t('aboutTitle')} onBack={onBack} onClose={onClose} />
       <Scroll locked={locked}>
         <div className="flex flex-col gap-3 px-4 pb-8 pt-2 leading-relaxed">
           <h2 className="font-title text-[1.1em] font-semibold text-brand-text" data-testid="app-name">{t('title')} · {t('subtitle')}</h2>

@@ -9,14 +9,14 @@ function List() {
   return list.map(t => (
     <Toast.Root
       key={t.id} toast={t}
-      className="pointer-events-auto absolute inset-x-0 bottom-0 mx-auto flex min-h-[3.73em] w-full items-center rounded-card bg-toast px-4 py-2 text-on-brand shadow-[0_4px_16px_rgb(0_0_0/0.25)] [transition:translate_250ms_var(--ease-out),opacity_250ms_var(--ease-out)] data-[starting-style]:translate-y-3 data-[starting-style]:opacity-0 data-[ending-style]:translate-y-3 data-[ending-style]:opacity-0 data-[ending-style]:[transition-duration:150ms] motion-reduce:data-[starting-style]:translate-y-0"
+      className="pointer-events-auto absolute inset-x-0 bottom-0 mx-auto flex min-h-[3.73em] w-full items-center rounded-card bg-toast px-4 py-2 text-on-brand shadow-[0_4px_16px_rgb(0_0_0/0.25)] [transition:translate_var(--dur-slide)_var(--ease-out),opacity_var(--dur-slide)_var(--ease-out)] data-[starting-style]:translate-y-3 data-[starting-style]:opacity-0 data-[ending-style]:translate-y-3 data-[ending-style]:opacity-0 data-[ending-style]:[transition-duration:var(--dur-small)] motion-reduce:data-[starting-style]:translate-y-0"
     >
       <Toast.Content className="flex w-full items-center gap-3">
         <div className="min-w-0 flex-1">
           <Toast.Title className="m-0 font-extrabold leading-tight" />
           <Toast.Description className="m-0 text-[0.93em] leading-snug" />
         </div>
-        <Toast.Close className="min-h-11 shrink-0 rounded-btn border border-on-brand/60 bg-transparent px-3 font-semibold text-on-brand [transition:scale_120ms_var(--ease-out)] active:scale-[.97]">{String(t.data?.close ?? 'OK')}</Toast.Close>
+        <Toast.Close className="min-h-11 shrink-0 rounded-btn border border-on-brand/60 bg-transparent px-3 font-semibold text-on-brand [transition:scale_var(--dur-press)_var(--ease-out)] active:scale-[.97]">{String(t.data?.close ?? 'OK')}</Toast.Close>
       </Toast.Content>
     </Toast.Root>
   ))

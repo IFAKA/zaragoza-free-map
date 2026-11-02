@@ -1,3 +1,4 @@
+import { MS } from './motion'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
@@ -10,6 +11,8 @@ interface Props {
   layer: LayerConfig
   items: RankedItem[]
   selected: string | null
+  /** Counts up on every pick by the person (a row or a marker), never on a refresh: each one plays the pick moment once. */
+  pick: number
   userPos: LatLon | null
   fly: FlyRequest | null
   /** Pixels at the bottom of the map that the drawer covers. */
@@ -31,7 +34,7 @@ const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Ligh
 const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
-export function MapView({ layer, items, selected, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
@@ -113,6 +116,16 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
     drawRings()
   }, [layer, items, selected, showRange])
 
+  // the pick moment: only when the person picked (pick counts up), on the marker that is now selected
+  useEffect(() => {
+    if (!pick) return
+    const el = live.current.selected ? markers.current.get(live.current.selected)?.getElement()?.firstElementChild : null
+    if (!el) return
+    el.classList.remove('pulse'); void (el as HTMLElement).offsetWidth; el.classList.add('pulse')
+    const done = () => el.classList.remove('pulse')
+    el.addEventListener('animationend', done, { once: true })
+  }, [pick])
+
   useEffect(() => {
     const m = map.current
     if (!m) return
@@ -128,13 +141,13 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
     const anim = !reduced() && !fly.instant
     if (fly.fitUser) {
       const b = L.latLngBounds([fly.fitUser, fly.to])
-      const o = { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, bottom + 30), maxZoom: fly.zoom, animate: anim, duration: 0.45 }
+      const o = { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, bottom + 30), maxZoom: fly.zoom, animate: anim, duration: MS.fly / 1000 }
       if (anim) m.flyToBounds(b, o); else m.fitBounds(b, o)
       return
     }
     const p = m.project(fly.to, fly.zoom).add([0, bottom / 2])
     const c = m.unproject(p, fly.zoom)
-    if (anim) m.flyTo(c, fly.zoom, { duration: 0.45 }); else m.setView(c, fly.zoom, { animate: false })
+    if (anim) m.flyTo(c, fly.zoom, { duration: MS.fly / 1000 }); else m.setView(c, fly.zoom, { animate: false })
   }, [fly])
 
   return <div ref={el} className="absolute inset-0 z-0" role="application" aria-label={label} data-testid="map" />
