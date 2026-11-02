@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "data": "node scripts/build-data.mjs",
-    "data:city": "node scripts/build-data.mjs --no-osm"
+    "data:city": "node scripts/build-data.mjs --no-osm",
+    "data:transit": "node scripts/build-data.mjs --transit-only"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -1,11 +1,13 @@
 // Generates every data file the app ships: src/data/*.json. Run with `npm run data` (Node 22.18+; it imports the .ts helpers directly).
 //   node scripts/build-data.mjs            all sources
 //   node scripts/build-data.mjs --no-osm   skip Overpass (keeps the existing src/data/osm.json)
+//   node scripts/build-data.mjs --transit-only    rebuild only busroutes.json, tram.json, cercanias.json (see scripts/transit.mjs; --no-transit skips them)
 //   node scripts/build-data.mjs --shelters-only   rebuild only src/data/shelters.json (add --shelters PATH to read a local GeoJSON)
 // The app itself makes NO runtime data requests: it only reads these files. Re-run (the refresh-data workflow does) to update.
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { writeTransit } from './transit.mjs'
 import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data')
@@ -57,6 +59,8 @@ if (process.argv.includes('--shelters-only')) {
   process.exit(0)
 }
 
+if (process.argv.includes('--transit-only')) { await writeTransit(OUT); process.exit(0) }
+
 const [wifi, libs, civic, bizi, racks, bus, fount, tgo, shelters] = await Promise.all([
   get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`),
   get(catalog('title==Biblioteca*')),
@@ -79,6 +83,9 @@ const f = fountainRows(fount)
 write('fountains', 'city', must('fountains', f.rows), { dropped: f.dropped })
 write('shelters', 'city', must('shelters', shelterRows(shelters)))
 write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo)))
+
+// bus routes, tram and Cercanías: if a source fails, keep the committed files and say so
+if (!process.argv.includes('--no-transit')) await writeTransit(OUT).catch(e => { console.error('transit: source failed, keeping the committed files:', String(e)); process.exitCode = 1 })
 
 if (skipOsm) console.log('osm: skipped (--no-osm), keeping', existsSync(`${OUT}/osm.json`) ? 'the existing file' : 'nothing (run without --no-osm somewhere Overpass works)')
 else {
