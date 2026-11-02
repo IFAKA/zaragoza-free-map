@@ -2,7 +2,7 @@ import { lsGet } from './cache'
 
 export type Lang = 'en' | 'es'
 const en = {
-  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', tabsNext: 'Show more services', tabsPrev: 'Show previous services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
+  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
   langTitle: 'Language', langEn: 'English', langEs: 'Español', close: 'Close',
   handle: 'Expand or collapse the panel', map: 'Map', zoomIn: 'Zoom in', zoomOut: 'Zoom out', panel: 'Services panel',
   openNow: 'Open now', openNowHint: 'Hide places that are closed', showRange: 'Show range', showRangeHint: 'WiFi range circles (estimate)',
@@ -20,7 +20,7 @@ const en = {
   bizi: 'Bizi is a cheap bike share, not free. This map shows the station places only. Bikes and free docks are not shown: the app has no live connection.',
   rangeEst: 'Approximate range (estimate). The city does not publish WiFi coverage.', rangeCity: 'about 40 m around the building', rangeOsm: 'about 25 m around the venue',
   installHint: 'Add this app to your home screen to open it in one tap. It works offline.', installClose: 'Got it',
-  privacy: 'Your location never leaves your device. No ads, no tracking. The app makes no data requests: everything is saved in it. Only map tiles load from the internet.',
+  privacy: 'Your location never leaves your device. No ads. The app makes no data requests: everything is saved in it. Only map tiles load from the internet. Anonymous usage statistics with Umami, no cookies and no location.',
   disclaimer: 'Independent project, not affiliated with the Ayuntamiento de Zaragoza. Visual style follows the city’s public design system.',
   dataRefreshed: 'Data refreshed', sources: 'Sources',
   creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'Toilet places: Ayuntamiento de Zaragoza equipment catalogue, list by toiletsgo', creditsTiles: 'Map tiles: Esri, HERE, Garmin and OpenStreetMap contributors',
@@ -29,7 +29,7 @@ const en = {
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
-  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', tabsNext: 'Ver más servicios', tabsPrev: 'Ver servicios anteriores', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
+  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
   langTitle: 'Idioma', langEn: 'English', langEs: 'Español', close: 'Cerrar',
   handle: 'Expandir o contraer el panel', map: 'Mapa', zoomIn: 'Acercar', zoomOut: 'Alejar', panel: 'Panel de servicios',
   openNow: 'Abierto ahora', openNowHint: 'Oculta los sitios cerrados', showRange: 'Ver alcance', showRangeHint: 'Círculos de alcance WiFi (estimación)',
@@ -47,7 +47,7 @@ const es: Record<Key, string> = {
   bizi: 'Bizi es bici compartida barata, no gratis. El mapa solo muestra dónde están las estaciones. No se muestran bicis ni anclajes libres: la app no tiene conexión en vivo.',
   rangeEst: 'Alcance aproximado (estimación). El Ayuntamiento no publica la cobertura WiFi.', rangeCity: 'unos 40 m alrededor del edificio', rangeOsm: 'unos 25 m alrededor del local',
   installHint: 'Añade esta app a tu pantalla de inicio para abrirla con un toque. Funciona sin conexión.', installClose: 'Entendido',
-  privacy: 'Tu ubicación no sale de tu dispositivo. Sin anuncios ni rastreo. La app no pide datos por internet: todo va guardado en ella. Solo los mapas se cargan de internet.',
+  privacy: 'Tu ubicación no sale de tu dispositivo. Sin anuncios. La app no pide datos por internet: todo va guardado en ella. Solo los mapas se cargan de internet. Estadísticas anónimas de uso con Umami, sin cookies ni ubicación.',
   disclaimer: 'Proyecto independiente, sin relación con el Ayuntamiento de Zaragoza. El estilo visual sigue el sistema de diseño público del Ayuntamiento.',
   dataRefreshed: 'Datos actualizados', sources: 'Fuentes',
   creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Aseos: catálogo de equipamientos del Ayuntamiento de Zaragoza, lista de toiletsgo', creditsTiles: 'Mapas: Esri, HERE, Garmin y colaboradores de OpenStreetMap',

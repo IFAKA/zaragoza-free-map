@@ -52,13 +52,13 @@ export function buildLayers(d: Data): Record<LayerId, LayerConfig> {
 
   const L = (id: LayerId, c: Omit<LayerConfig, 'id' | 'items'>, items: Item[], m = 15): LayerConfig => ({ id, ...c, items: dedupe(items, m) })
   return {
-    water: L('water', { icon: 'drop', color: 'var(--color-water)', label: { en: 'Water', es: 'Agua' }, hint: { en: 'Drinking fountains', es: 'Fuentes de agua' }, hours: false }, [...fountains, ...waterOsm]),
-    toilets: L('toilets', { icon: 'toilet', color: 'var(--color-toilet)', label: { en: 'Toilets', es: 'Aseos' }, hint: { en: 'Free public toilets', es: 'Aseos gratis' }, hours: true }, toilets),
+    water: L('water', { icon: 'drop', color: 'var(--color-water)', label: { en: 'Water', es: 'Agua' }, short: { en: 'Water', es: 'Agua' }, hint: { en: 'Drinking fountains', es: 'Fuentes de agua' }, hours: false }, [...fountains, ...waterOsm]),
+    toilets: L('toilets', { icon: 'toilet', color: 'var(--color-toilet)', label: { en: 'Toilets', es: 'Aseos' }, short: { en: 'Toilets', es: 'Aseos' }, hint: { en: 'Free public toilets', es: 'Aseos gratis' }, hours: true }, toilets),
     // two buildings can share a street, but never a doorstep: city libraries / centres are never merged with each other
-    charge: L('charge', { icon: 'charge', color: 'var(--color-charge)', label: { en: 'Charge', es: 'Cargar' }, hint: { en: 'Charge your phone', es: 'Cargar el móvil' }, hours: true }, [...lib, ...civic, ...chargers], 8),
-    wifi: L('wifi', { icon: 'wifi', color: 'var(--color-wifi)', label: { en: 'WiFi', es: 'WiFi' }, hint: { en: 'Free WiFi', es: 'WiFi gratis' }, hours: true, cats: ['muni', 'food', 'other'] }, [...wifiCity, ...without(wifiOsm, wifiCity, 30)]),
-    libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, hint: { en: 'Quiet and free', es: 'Tranquilas y gratis' }, hours: true }, lib, 8),
-    bizi: L('bizi', { icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, hint: { en: 'Cheap bike share', es: 'Bici compartida barata' }, hours: false },
+    charge: L('charge', { icon: 'charge', color: 'var(--color-charge)', label: { en: 'Charge', es: 'Cargar' }, short: { en: 'Charge', es: 'Cargar' }, hint: { en: 'Charge your phone', es: 'Cargar el móvil' }, hours: true }, [...lib, ...civic, ...chargers], 8),
+    wifi: L('wifi', { icon: 'wifi', color: 'var(--color-wifi)', label: { en: 'WiFi', es: 'WiFi' }, short: { en: 'WiFi', es: 'WiFi' }, hint: { en: 'Free WiFi', es: 'WiFi gratis' }, hours: true, cats: ['muni', 'food', 'other'] }, [...wifiCity, ...without(wifiOsm, wifiCity, 30)]),
+    libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Library', es: 'Biblio.' }, hint: { en: 'Quiet and free', es: 'Tranquilas y gratis' }, hours: true }, lib, 8),
+    bizi: L('bizi', { icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Cheap bike share', es: 'Bici compartida barata' }, hours: false },
       d.bizi.rows.map(r => ({ id: 'b' + r[0], part: 'city' as const, type: 'bizi', name: r[1], lat: r[2], lon: r[3], upd: d.bizi.updated ?? undefined })), 8),
   }
 }

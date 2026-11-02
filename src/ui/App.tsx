@@ -1,3 +1,4 @@
+import { track } from '../lib/analytics'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lsGet, lsSet } from '../lib/cache'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
@@ -114,6 +115,7 @@ export function App() {
 
   const raise = (min: number = HALF) => setLevel(l => Math.max(l, min))
   const pickLayer = (id: LayerId) => {
+    track('tab', id)
     // the tab of the layer you are already on: opens a closed sheet, folds an open one one step down
     if (id === layerId && page === 'home' && !desktop) { setLevel(l => (l === CLOSED ? HALF : l - 1)); return }
     setLayerId(id); lsSet('layer', id); setSelected(null); setCat('all'); setLimit(30)
@@ -123,6 +125,7 @@ export function App() {
   }
   // a list row or a map marker: show its card at half, with the place and you both framed above the sheet (only the place when your position is unknown)
   const select = (id: string) => {
+    track('select', layerId)
     setSelected(id)
     const it = arr.find(i => i.id === id)
     if (!desktop) setLevel(HALF)
@@ -139,6 +142,7 @@ export function App() {
     if (!p) toasts.add({ title: t.deniedTitle, description: t.deniedBody, data: { close: t.close } })
   }
   const onWalk = () => {
+    track('directions', layerId)
     if (!lsGet('hinted')) {
       lsSet('hinted', '1')
       setTimeout(() => toasts.add({ title: t.installHint, data: { close: t.installClose } }), 1200)
@@ -163,7 +167,7 @@ export function App() {
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
           onPick={pickLayer} onSettings={() => turnTo('settings')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}
-          title={desktop ? <div className="px-4 pb-1 pt-4"><div className="font-title text-[1.15em] font-bold text-brand-text">{t.title} · {t.subtitle}</div></div> : undefined}
+          desktop={desktop}
         />
       )
     }

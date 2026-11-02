@@ -3,10 +3,10 @@ import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { Tabs } from '@base-ui/react/tabs'
 import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon } from '@phosphor-icons/react'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { dataRefreshed } from '../data'
 import { revealDelta } from '../lib/reveal'
-import { lsGet, lsSet } from '../lib/cache'
+import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
@@ -57,77 +57,37 @@ function Occupancy({ item }: { item: RankedItem }) {
 const DIST_MIN = 'min'
 
 // ---------- tabs ----------
-/** One scrollable row: every service, then Settings. Fades at an edge hint that more tabs are off-screen; the active tab is scrolled into view. */
-export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick: (id: LayerId) => void; onSettings: () => void }) {
+/** One fixed row of 6 equal category cells. No scrolling; nothing moves when a tab is selected. Settings is a button in the header, not a tab. */
+export function NeedTabs({ layer, onPick }: { layer: LayerId; onPick: (id: LayerId) => void }) {
   const { lang, t } = useT()
-  const list = useRef<HTMLDivElement>(null)
-  const first = useRef(true)
-  const [edge, setEdge] = useState({ left: false, right: false })
-  const measure = useCallback(() => {
-    const e = list.current
-    if (!e) return
-    // hysteresis: a chevron column changes the row width, so show and hide use different thresholds (no flicker, no sub-pixel left chevron)
-    const sl = e.scrollLeft, rest = e.scrollWidth - sl - e.clientWidth
-    setEdge(p => ({ left: p.left ? sl > 2 : sl > 8, right: p.right ? rest > 4 : rest > 8 }))
-  }, [])
-  useEffect(() => {
-    const e = list.current
-    if (!e) return
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(e)
-    return () => ro.disconnect()
-  }, [measure])
-  useEffect(() => {
-    const e = list.current, a = e?.querySelector<HTMLElement>('[data-active]')
-    if (!e || !a) return
-    let left = Math.max(0, Math.min(e.scrollWidth - e.clientWidth, a.offsetLeft - (e.clientWidth - a.offsetWidth) / 2))
-    if (left < 48) left = 0 // never leave the first tab half-hidden next to the left chevron
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-    e.scrollTo({ left, behavior: first.current || reduced ? 'auto' : 'smooth' })
-    first.current = false
-  }, [layer])
-  // once per device: a short nudge shows that the row scrolls
-  useEffect(() => {
-    const e = list.current
-    if (!e || lsGet('tabsNudged') || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    let back = 0
-    const go = setTimeout(() => {
-      if (e.scrollWidth - e.clientWidth < 8) return
-      lsSet('tabsNudged', '1')
-      const from = e.scrollLeft
-      e.style.scrollSnapType = 'none' // else the snap pulls the 40px nudge straight back
-      e.scrollTo({ left: from + 40, behavior: 'smooth' })
-      back = window.setTimeout(() => { e.scrollTo({ left: from, behavior: 'smooth' }); setTimeout(() => { e.style.scrollSnapType = '' }, 500) }, 450)
-    }, 900)
-    return () => { clearTimeout(go); clearTimeout(back) }
-  }, [])
-  const step = (dir: 1 | -1) => {
-    const e = list.current
-    if (e) e.scrollBy({ left: dir * e.clientWidth * 0.6, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-  }
-  const tab = 'group relative flex min-h-14 w-[4.8rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 text-ink [transition:transform_120ms_var(--ease-out)] active:scale-[.95] data-[active]:text-brand-text'
-  const label = 'max-w-full truncate border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
-  const chev = 'flex w-11 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-brand-text active:opacity-60'
-  // The chevrons are columns beside the row (only while they show), so they never cover a tab.
+  const tab = 'group flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0 text-ink [transition:color_120ms_var(--ease-out),transform_120ms_var(--ease-out)] active:scale-[.97] data-[active]:text-brand-text'
+  const label = 'max-w-full border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
   return (
     <Tabs.Root value={layer} className="flex shrink-0 border-b border-line">
-      {edge.left && <BaseButton onClick={() => step(-1)} aria-label={t('tabsPrev')} data-testid="tabs-prev" className={chev}><CaretLeft size="1.4em" weight="bold" aria-hidden /></BaseButton>}
-      <Tabs.List ref={list} onScroll={measure} className="flex min-w-0 flex-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
+      <Tabs.List className="grid min-w-0 flex-1 grid-cols-6" aria-label={t('tabsLabel')}>
         {ORDER.map(id => {
           const I = ICONS[LAYERS[id].icon]
           return (
-            <Tabs.Tab key={id} value={id} className={tab} onClick={() => onPick(id)} data-testid={`tab-${id}`}>
-              <I size="1.6em" weight={layer === id ? 'fill' : 'regular'} aria-hidden /><span className={label}>{LAYERS[id].label[lang]}</span>
+            <Tabs.Tab key={id} value={id} className={tab} onClick={() => onPick(id)} data-testid={`tab-${id}`} aria-label={LAYERS[id].label[lang]} title={LAYERS[id].label[lang]}>
+              <I size="1.6em" weight={layer === id ? 'fill' : 'regular'} aria-hidden /><span className={label}>{LAYERS[id].short[lang]}</span>
             </Tabs.Tab>
           )
         })}
-        <Tabs.Tab value="settings" className={tab} onClick={onSettings} data-testid="tab-settings">
-          <GearSix size="1.6em" aria-hidden /><span className={label}>{t('settings')}</span>
-        </Tabs.Tab>
       </Tabs.List>
-      {edge.right && <BaseButton onClick={() => step(1)} aria-label={t('tabsNext')} data-testid="tabs-next" className={chev}><CaretRight size="1.4em" weight="bold" aria-hidden /></BaseButton>}
     </Tabs.Root>
+  )
+}
+
+/** The home page title row with the Settings button (gear, 44px) at the right. */
+function HomeHeader({ onSettings, desktop }: { onSettings: () => void; desktop: boolean }) {
+  const { t } = useT()
+  return (
+    <div className={cn('flex shrink-0 items-center justify-between gap-2 pl-4 pr-1', desktop ? 'pt-2' : 'border-b border-line')}>
+      <div className="min-w-0 truncate font-title text-[1.15em] font-bold text-brand-text">{t('title')} · {t('subtitle')}</div>
+      <BaseButton onClick={onSettings} aria-label={t('settings')} title={t('settings')} data-testid="open-settings" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:transform_120ms_var(--ease-out)] active:scale-[.97]">
+        <GearSix size="1.5em" aria-hidden />
+      </BaseButton>
+    </div>
   )
 }
 
@@ -205,7 +165,7 @@ export function HomePage(p: {
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onSettings: () => void
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
-  viewportRef?: React.Ref<HTMLDivElement>; title?: ReactNode
+  viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
   const listRef = useRef<HTMLUListElement>(null)
@@ -239,8 +199,9 @@ export function HomePage(p: {
   }, [p.selected]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
-      {p.title}
-      <NeedTabs layer={p.layer.id} onPick={p.onPick} onSettings={p.onSettings} />
+      {p.desktop && <HomeHeader onSettings={p.onSettings} desktop />}
+      <NeedTabs layer={p.layer.id} onPick={p.onPick} />
+      {!p.desktop && <HomeHeader onSettings={p.onSettings} desktop={false} />}
       <div className="shrink-0">
         <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} locating={p.locating} onLocate={p.onLocate} onDetails={p.onDetails} onWalk={p.onWalk} />
         <Separator />
@@ -342,7 +303,7 @@ export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked }: { lay
           <div><Status item={item} layer={layer} /></div>
           <div className="flex flex-wrap gap-2">
             <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk}>{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-            <Button variant="secondary" {...linkProps(reportUrl(item))}>{t('report')}</Button>
+            <Button variant="secondary" {...linkProps(reportUrl(item))} onClick={() => track('report')}>{t('report')}</Button>
           </div>
           <Separator />
           {field('address', item.addr)}

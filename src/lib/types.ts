@@ -48,6 +48,8 @@ export interface LayerConfig {
   /** CSS custom property of the marker colour, e.g. 'var(--color-water)'. */
   color: string
   label: Bilingual
+  /** Short name for the tab bar (about 6 characters). */
+  short: Bilingual
   hint: Bilingual
   /** Items have opening hours, so the "Open now" switch applies. */
   hours: boolean
