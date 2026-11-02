@@ -27,11 +27,12 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // App shell, fonts and all bundled data are precached: the app makes no data requests.
-        // Only map tiles come from the network; they are cached at runtime (stale-while-revalidate).
+        // App shell, fonts and all bundled data are precached. The network is used for map tiles (cached at runtime (stale-while-revalidate)) and for the live duty-pharmacy list (never cached here).
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
         runtimeCaching: [
+          // duty pharmacies change every day: never serve them from a service worker cache (lib/duty.ts keeps its own copy, dated)
+          { urlPattern: ({ url }) => url.hostname === 'www.zaragoza.es' && url.pathname.startsWith('/sede/servicio/farmacia'), handler: 'NetworkOnly' },
           {
             urlPattern: ({ url }) => url.hostname === 'server.arcgisonline.com',
             handler: 'StaleWhileRevalidate',

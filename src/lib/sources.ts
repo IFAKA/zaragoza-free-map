@@ -121,6 +121,25 @@ export function busRows(j: CityResponse | undefined): BusRow[] {
   return out
 }
 
+/**
+ * Pharmacies ON DUTY today (city `farmacia` endpoint: only the pharmacies with a `guardia` today).
+ * This list changes every day, so the app loads it live (see lib/duty.ts); this reader runs in the browser.
+ * [id, name, address, phone, lat, lon, duty date YYYY-MM-DD, duty hours text, sector]. Records without a duty are dropped.
+ */
+export type DutyRow = [number | string, string, string, string, number, number, string, string, string]
+export interface DutyRecord extends CityRecord { telefonos?: string; guardia?: { fecha?: string; turno?: string; horario?: string; sector?: string } }
+export function dutyRows(j: { result?: DutyRecord[] } | undefined): DutyRow[] {
+  const out: DutyRow[] = []
+  const clean = (s?: string) => String(s ?? '').replace(/\s+/g, ' ').trim()
+  for (const r of j?.result || []) {
+    const c = r.geometry?.coordinates, g = r.guardia
+    const date = /^(\d{4}-\d{2}-\d{2})/.exec(g?.fecha || '')?.[1]
+    if (!g || !date || !c || !okCoord(c[1], c[0]) || !inCity(c[1], c[0])) continue
+    out.push([r.id, clean(r.title), clean(r.calle), clean(r.telefonos), +c[1].toFixed(6), +c[0].toFixed(6), date, clean(g.horario), clean(g.sector)])
+  }
+  return out
+}
+
 // ---------- City fountains (Zenodo 8141704, EPSG:25830) ----------
 /** [lat, lon, street, district, year of last update (0 = not recorded)] */
 export type FountainRow = [number, number, string, string, number]

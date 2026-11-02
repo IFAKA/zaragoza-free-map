@@ -5,7 +5,7 @@ import { dist } from '../lib/geo'
 import { rank } from '../lib/rank'
 import type { LayerId } from '../lib/types'
 
-const ALL = ORDER as LayerId[]
+const ALL = ORDER.filter(id => !LAYERS[id].live) as LayerId[] // live layers (pharmacies on duty) have no bundled items
 const ids = (rows: unknown[][]) => rows.map(r => r[0])
 
 describe('bundled data', () => {

@@ -12,6 +12,7 @@ import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS, ORDER } from '../layers'
 import { rangeMetres } from './MapView'
+import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, busUrl, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import { ICONS } from './icons'
 import { useT } from './lang'
@@ -80,6 +81,43 @@ function BusActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) 
   )
 }
 
+/** Pharmacy on duty: the address, today's duty hours (the city's own text) and the area. Walk is the one primary button; Call is next to it. */
+function PharmacyInfo({ item }: { item: RankedItem }) {
+  const { t } = useT()
+  return (
+    <div className="mt-1" data-testid="duty-info">
+      {item.addr && <div className={sub}>{item.addr}{item.sector ? ` · ${item.sector}` : ''}</div>}
+      {item.duty && <div className="mt-0.5 font-semibold">{t('dutyToday')}: <span className="font-normal">{item.duty}</span></div>}
+    </div>
+  )
+}
+function PharmacyActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
+  const { t } = useT()
+  const tel = item.phone?.replace(/[^\d+]/g, '')
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+      {tel && <Button variant="secondary" render={<a href={`tel:${tel}`} />} nativeButton={false} data-testid="call">{t('call')} {item.phone}</Button>}
+    </div>
+  )
+}
+
+/** The live list could not be loaded (or is still loading): say so plainly, offer a retry and the city page. Never an old list. */
+function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry: () => void }) {
+  const { t } = useT()
+  if (state === 'loading') return <div className="px-4 py-5" role="status" data-testid="duty-loading"><p className={cn(sub, 'm-0')}>{t('dutyLoading')}</p></div>
+  return (
+    <section className="px-4 pb-3 pt-4" role="alert" data-testid="duty-failed">
+      <h2 className={h2}>{t('dutyFail')}</h2>
+      <p className={cn(sub, 'm-0 mt-1')}>{t('dutyFailBody')}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button onClick={onRetry} data-testid="duty-retry">{t('retry')}</Button>
+        <Button variant="secondary" {...linkProps(DUTY_PAGE)} data-testid="duty-city">{t('cityPage')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+      </div>
+    </section>
+  )
+}
+
 const DIST_MIN = 'min'
 
 // ---------- tabs ----------
@@ -132,7 +170,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
       {item.lines && <div className="mt-0.5 font-semibold" data-testid="bus-lines">{t('lines')}: {item.lines.replace(/,/g, ', ')}</div>}
-      {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : (
+      {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
+      {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
           <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
@@ -153,7 +192,7 @@ function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: Lay
       <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink after:absolute after:inset-0 hov:bg-surface">
         <span className="min-w-0">
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
-          <span className={cn(sub, 'block truncate')}>{item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
+          <span className={cn(sub, 'block truncate')}>{item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
         </span>
         <span className="whitespace-nowrap text-right font-bold">{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
       </BaseButton>
@@ -166,9 +205,10 @@ export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange
   layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {
   const { t } = useT()
-  if (!layer.hours && !layer.cats && layer.id !== 'bizi') return null
+  if (!layer.hours && !layer.cats && layer.id !== 'bizi' && layer.id !== 'pharmacy') return null
   return (
     <div className="px-4 pb-2">
+      {layer.id === 'pharmacy' && <p className={cn(sub, 'm-0 py-1')}>{t('dutyNote')} ({madridDate()})</p>}
       {layer.hours && <Switch checked={openOnly} onCheckedChange={setOpenOnly} label={t('openNow')} hint={t('openNowHint')} testId="switch-open" />}
       {layer.id === 'wifi' && <Switch checked={showRange} onCheckedChange={setShowRange} label={t('showRange')} hint={t('showRangeHint')} testId="switch-range" />}
       {layer.cats && <div className="mt-1"><Chips value={cat} onChange={setCat} label={t('typeLabel')} options={[{ value: 'all', label: t('all') }, ...layer.cats.map(c => ({ value: c, label: t(c as Key) }))]} /></div>}
@@ -190,7 +230,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 }
 
 export function HomePage(p: {
-  layer: LayerConfig; arr: RankedItem[]; allClosed: boolean; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
+  layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onSettings: () => void
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
@@ -232,13 +272,13 @@ export function HomePage(p: {
       <NeedTabs layer={p.layer.id} onPick={p.onPick} />
       {!p.desktop && <HomeHeader onSettings={p.onSettings} desktop={false} />}
       <div className="shrink-0">
-        <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} locating={p.locating} onLocate={p.onLocate} onDetails={p.onDetails} onWalk={p.onWalk} />
+        {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} locating={p.locating} onLocate={p.onLocate} onDetails={p.onDetails} onWalk={p.onWalk} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
-        <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />
+        {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
         {p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
-        <div className={cn(overline, 'border-y border-line bg-surface px-4 py-2')}>{p.arr.length} {t('places')}</div>
+        {!p.liveState && <div className={cn(overline, 'border-y border-line bg-surface px-4 py-2')}>{p.arr.length} {t('places')}</div>}
         <ul ref={listRef} className="m-0 list-none p-0" data-testid="list">
           {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => p.onSelect(it.id)} />)}
         </ul>
@@ -306,7 +346,7 @@ export function AboutPage({ onBack, locked }: { onBack: () => void; locked: bool
           <p className="m-0">{t('noGuarantee')}</p>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
-            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
+            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
           </ul>
           {d && <p className="m-0 font-bold" data-testid="refreshed">{t('dataRefreshed')}: {d}</p>}
           <a className="font-bold text-brand-text" href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">{t('fixOsm')}</a>

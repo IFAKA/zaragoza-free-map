@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
+import { biziRows, busRows, dutyRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
 
 describe('city normalisers', () => {
   it('wifi: swaps lon/lat and skips records without geometry', () => {
@@ -38,6 +38,15 @@ describe('city normalisers', () => {
       ['36', 'Av. Academia General Militar / Maz (Dir. Centro)', '35,N2,29', 41.68499, -0.87108],
       ['r36', 'C.E. Grande Covián', '102,201', 41.66455, -0.85932],
       ['9', 'Sin líneas', '', 41.65, -0.9],
+    ])
+  })
+  it('duty pharmacies: keeps the duty date, hours and sector; drops records with no duty', () => {
+    const duty = { id: 8767, title: 'Farmacia Torres Ferrandez - Torres Ferrandez CB', telefonos: '976270929', horario: 'Sábados horario de mañanas de 9:30 a 13:30 h.', calle: 'C/ Zafiro, 1',
+      geometry: { type: 'Point', coordinates: [-0.8761789445207417, 41.62328282277754] as [number, number] },
+      guardia: { fecha: '2026-11-02T00:00:00', turno: '29-B', horario: 'Abiertas de 9:15 h. a 13:45 h. y de 17:00 h. a 21:30 h. noche', sector: 'Sector Torrero-Paz, junto a Urb. Cala-Verde' } }
+    expect(dutyRows({ result: [duty, { ...duty, id: 1, guardia: undefined }, { ...duty, id: 2, geometry: undefined }] })).toEqual([
+      [8767, 'Farmacia Torres Ferrandez - Torres Ferrandez CB', 'C/ Zafiro, 1', '976270929', 41.623283, -0.876179, '2026-11-02',
+        'Abiertas de 9:15 h. a 13:45 h. y de 17:00 h. a 21:30 h. noche', 'Sector Torrero-Paz, junto a Urb. Cala-Verde'],
     ])
   })
   it('fountain street names', () => {

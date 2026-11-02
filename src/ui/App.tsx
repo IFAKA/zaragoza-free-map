@@ -1,11 +1,14 @@
 import { track } from '../lib/analytics'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lsGet, lsSet } from '../lib/cache'
+import { loadDuty, madridDate, readDutyCache, todays } from '../lib/duty'
+import type { DutyRow } from '../lib/sources.ts'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
 import { rankOrAll } from '../lib/rank'
 import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
+import { dutyItems } from '../layers/build'
 import { LangCtx } from './lang'
 import { SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest } from './MapView'
@@ -18,7 +21,7 @@ type Page = 'home' | 'settings' | 'language' | 'about' | 'place'
 
 // Drawer levels. Closed shows only the tab bar; peek adds the nearest place; half shows the controls too; full is the whole list.
 const CLOSED = 0, PEEK = 1, HALF = 2, FULL = 3
-const PEEK_PX = 284, PEEK_TALL_PX = 316, HALF_PX = 500
+const PEEK_PX = 284, HALF_PX = 500
 const DEFAULT_CLOSED_PX = 78
 /** Height of the closed sheet: the handle and the tab bar, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
@@ -70,6 +73,21 @@ export function App() {
   const viewport = useRef<HTMLDivElement>(null)
 
   const layer = LAYERS[layerId]
+  // Pharmacies on duty: loaded live when that tab is open, and only ever today's list (see lib/duty.ts)
+  const today = madridDate()
+  const [duty, setDuty] = useState<{ rows: DutyRow[] | null; failed: boolean }>({ rows: null, failed: false })
+  const [dutyTry, setDutyTry] = useState(0)
+  const onDuty = layerId === 'pharmacy'
+  useEffect(() => {
+    if (!onDuty) return
+    let live = true
+    setDuty({ rows: readDutyCache(today), failed: false }) // today's saved list shows at once; the live one replaces it
+    loadDuty(today).then(rows => { if (live) setDuty({ rows, failed: !rows }) })
+    return () => { live = false }
+  }, [onDuty, today, dutyTry])
+  const dutyRows = onDuty && duty.rows ? todays(duty.rows, today) : null
+  const liveState: 'loading' | 'failed' | null = !layer.live || dutyRows ? null : duty.failed ? 'failed' : 'loading'
+  const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layer.items), [layer, dutyRows])
   const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
   const setLang = (l: Lang) => { setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
   const setOpenOnly = (v: boolean) => { setOpenOnlyS(v); lsSet('open', v ? '1' : '0') }
@@ -81,17 +99,17 @@ export function App() {
   const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
-  const peekPx = layer.tall ? PEEK_TALL_PX : PEEK_PX
+  const peekPx = layer.peek ?? PEEK_PX
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', HALF_PX + 'px', 1], [closedPx, peekPx])
   const mobileClosed = !desktop && level === CLOSED
   // a closed sheet shows only the tab bar, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
 
   const { arr, allClosed } = useMemo(
-    () => rankOrAll(layer, layer.items, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
+    () => rankOrAll(layer, layerItems, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
     // tick re-evaluates open/closed as the minutes pass
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [layer, pos, openOnly, cat, tick])
+    [layer, layerItems, pos, openOnly, cat, tick])
   const chosen = selected ? arr.find(i => i.id === selected) ?? null : null
   const focus = chosen ?? arr[0] ?? null
 
@@ -164,7 +182,7 @@ export function App() {
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
       default: return (
         <HomePage
-          layer={layer} arr={arr} allClosed={allClosed} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
+          layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
           onPick={pickLayer} onSettings={() => turnTo('settings')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}

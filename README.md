@@ -12,8 +12,8 @@ Mobile-first map of free water, toilets, phone charging, WiFi (plus libraries an
 ## Deploy (Vercel)
 Import this repo as a Vite project (auto-detected, output `dist/`). `vercel.json` only sets cache headers. Nothing is required. Optional anonymous statistics (GoatCounter, free, cookieless, no location or searches, off when the browser sends Do Not Track): create a site at goatcounter.com, then in Vercel go to Project Settings > Environment Variables, add `VITE_GOATCOUNTER_CODE` (the site code, the part before `.goatcounter.com`), then redeploy. Without it, or in dev, no script loads. The script is not precached by the service worker, so the app works offline.
 
-## Data (no runtime APIs)
-The app makes no data requests. All data is static JSON in `src/data/*.json`, bundled into the build and precached by the service worker. Only map tiles (Esri gray canvas, keyless) come from the network.
+## Data (static, with one live exception)
+All data is static JSON in `src/data/*.json`, bundled into the build and precached by the service worker. Network requests: map tiles (Esri gray canvas, keyless), and ONE live list: the pharmacies on duty today (`https://www.zaragoza.es/sede/servicio/farmacia.json`, CORS open). It changes every day, so it is fetched in the browser when the Pharmacy tab is opened (`src/lib/duty.ts`), saved in localStorage with its date, and shown only if the duty date is today in Madrid. If the fetch fails and there is no list saved for today, the tab says so, with Try again and a link to the city page. The service worker never caches it (`NetworkOnly`).
 
 | File | Source | Rows |
 |---|---|---|
@@ -22,6 +22,7 @@ The app makes no data requests. All data is static JSON in `src/data/*.json`, bu
 | `src/data/libraries.json` | city open data `equipamiento` (Biblioteca*) | 77 |
 | `src/data/civic.json` | city open data `equipamiento` (Centro Cívico*) | 25 |
 | `src/data/bizi.json` | city open data `estacion-bicicleta` (locations only) | 276 |
+| `src/data/bus.json` | city open data `poste-autobus` (bus stops: number, name, lines, position; 983 city stops link to the bus company live times page, 288 rural stops have no live page) | 1271 |
 | `src/data/racks.json` | city open data `aparcamiento-bicicleta` (AparcaBicis: street racks for your own bike; location and kind only) | 2158 |
 | `src/data/shelters.json` | city open data `refugios_climaticos` (climate shelters: civic centres, senior centres, 2 offices; dataset page 6740) | 57 |
 | `src/data/toiletsgo.json` | City equipment catalogue places (ids checked), listed as toilets by toiletsgo | 49 |
@@ -39,7 +40,7 @@ Each file is `{ "src", "updated", "rows" }`. Cards show the source and date. The
 ## Design system
 Colours, type, shape and motion are tokens in `src/styles.css`; see `docs/design-system.md`. Style follows the Ayuntamiento de Zaragoza public design system. This is an independent project, not affiliated with the Ayuntamiento, and it uses no municipal logo or mark.
 
-Marker colour mapping: water `--color-water` (#006B87), toilets `--color-toilet` (#8B5400), charge `--color-charge` (#8958A9), WiFi `--color-wifi` (#4B83B4), libraries `--color-library` (#006A00), Bizi `--color-bike` (#485D6D), bike racks `--color-rack` (#6B6B00), warm or cool indoors `--color-shelter` (#A3315F).
+Marker colour mapping: water `--color-water` (#006B87), toilets `--color-toilet` (#8B5400), charge `--color-charge` (#8958A9), WiFi `--color-wifi` (#4B83B4), libraries `--color-library` (#006A00), Bizi `--color-bike` (#485D6D), bike racks `--color-rack` (#6B6B00), bus stops `--color-bus` (#3B4BA6), pharmacies on duty `--color-pharmacy` (#B3261E), warm or cool indoors `--color-shelter` (#A3315F).
 
 ## Browser check
 `e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network, taps every control, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.

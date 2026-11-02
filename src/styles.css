@@ -46,6 +46,7 @@
   --color-rack: #6B6B00;           /* olive: own-bike racks, apart from Bizi slate */
   --color-shelter: #A3315F;        /* raspberry: climate-controlled indoor places (6.6:1 with white) */
   --color-bus: #3B4BA6;            /* indigo: bus stops (7.7:1 with white) */
+  --color-pharmacy: #B3261E;       /* deep red: pharmacies on duty (6.5:1 with white) */
   --color-me: #4B83B4;
 
   --radius-btn: 0.46em;

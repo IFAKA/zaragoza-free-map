@@ -20,7 +20,7 @@ const en = {
   bizi: 'Bizi is a cheap bike share, not free. This map shows the station places only. Bikes and free docks are not shown: the app has no live connection.',
   rangeEst: 'Approximate range (estimate). The city does not publish WiFi coverage.', rangeCity: 'about 40 m around the building', rangeOsm: 'about 25 m around the venue',
   installHint: 'Add this app to your home screen to open it in one tap. It works offline.', installClose: 'Got it',
-  privacy: 'Your location never leaves your device. No ads. The app makes no data requests: everything is saved in it. Only map tiles load from the internet. Anonymous usage statistics with GoatCounter, no cookies and no location.',
+  privacy: 'Your location never leaves your device. No ads. Almost everything is saved in the app. Only map tiles, and today’s duty pharmacies when you open that tab, load from the internet. Anonymous usage statistics with GoatCounter, no cookies and no location.',
   disclaimer: 'Independent project, not affiliated with the Ayuntamiento de Zaragoza. Visual style follows the city’s public design system.',
   dataRefreshed: 'Data refreshed', sources: 'Sources',
   creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations, bike racks)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'Toilet places: Ayuntamiento de Zaragoza equipment catalogue, list by toiletsgo', creditsTiles: 'Map tiles: Esri, HERE, Garmin and OpenStreetMap contributors',
@@ -29,6 +29,8 @@ const en = {
   shelterTag: 'Climate-controlled', shelterNote: 'Public building with climate control. Check hours before you go.', nearestshelter: 'Nearest warm or cool place',
   creditsShelters: 'Climate shelters: Ayuntamiento de Zaragoza open data (Refugios climáticos)',
   nearestbus: 'Nearest bus stop', lines: 'Lines', nextBuses: 'Next buses', nextBusesHint: 'Opens the bus company page.', noLive: 'Live times are not available for this stop.',
+  nearestpharmacy: 'Nearest pharmacy on duty', dutyToday: 'On duty today', dutyHours: 'Hours today', dutyNote: 'On duty today, loaded live from the city. Hours are the city’s text, in Spanish.', dutyLoading: 'Loading today’s duty pharmacies…', dutyFail: 'Could not load today’s duty pharmacies', dutyFailBody: 'We never show an old list as today’s. Check your connection and try again.', retry: 'Try again', cityPage: 'Open the city page',
+  creditsPharmacy: 'Pharmacies on duty: Ayuntamiento de Zaragoza open data (Farmacias), loaded live when you open the tab',
   creditsBus: 'Bus stops: Ayuntamiento de Zaragoza open data (Postes de autobús). Live times: bus company page, opened in your browser',
 }
 export type Key = keyof typeof en
@@ -51,7 +53,7 @@ const es: Record<Key, string> = {
   bizi: 'Bizi es bici compartida barata, no gratis. El mapa solo muestra dónde están las estaciones. No se muestran bicis ni anclajes libres: la app no tiene conexión en vivo.',
   rangeEst: 'Alcance aproximado (estimación). El Ayuntamiento no publica la cobertura WiFi.', rangeCity: 'unos 40 m alrededor del edificio', rangeOsm: 'unos 25 m alrededor del local',
   installHint: 'Añade esta app a tu pantalla de inicio para abrirla con un toque. Funciona sin conexión.', installClose: 'Entendido',
-  privacy: 'Tu ubicación no sale de tu dispositivo. Sin anuncios. La app no pide datos por internet: todo va guardado en ella. Solo los mapas se cargan de internet. Estadísticas anónimas de uso con GoatCounter, sin cookies ni ubicación.',
+  privacy: 'Tu ubicación no sale de tu dispositivo. Sin anuncios. Casi todo va guardado en la app. Solo los mapas, y las farmacias de guardia de hoy cuando abres esa pestaña, se cargan de internet. Estadísticas anónimas de uso con GoatCounter, sin cookies ni ubicación.',
   disclaimer: 'Proyecto independiente, sin relación con el Ayuntamiento de Zaragoza. El estilo visual sigue el sistema de diseño público del Ayuntamiento.',
   dataRefreshed: 'Datos actualizados', sources: 'Fuentes',
   creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi, aparcabicis)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Aseos: catálogo de equipamientos del Ayuntamiento de Zaragoza, lista de toiletsgo', creditsTiles: 'Mapas: Esri, HERE, Garmin y colaboradores de OpenStreetMap',
@@ -60,15 +62,17 @@ const es: Record<Key, string> = {
   shelterTag: 'Con climatización', shelterNote: 'Edificio público con climatización. Mira el horario antes de ir.', nearestshelter: 'Refugio climático más cercano',
   creditsShelters: 'Refugios climáticos: datos abiertos del Ayuntamiento de Zaragoza',
   nearestbus: 'Parada de bus más cercana', lines: 'Líneas', nextBuses: 'Próximos buses', nextBusesHint: 'Abre la página de la empresa de buses.', noLive: 'No hay tiempos en vivo para esta parada.',
+  nearestpharmacy: 'Farmacia de guardia más cercana', dutyToday: 'De guardia hoy', dutyHours: 'Horario de hoy', dutyNote: 'De guardia hoy, cargado en directo del Ayuntamiento.', dutyLoading: 'Cargando las farmacias de guardia de hoy…', dutyFail: 'No se pudieron cargar las farmacias de guardia de hoy', dutyFailBody: 'Nunca mostramos una lista vieja como si fuera de hoy. Mira tu conexión y prueba otra vez.', retry: 'Reintentar', cityPage: 'Abrir la página del Ayuntamiento',
+  creditsPharmacy: 'Farmacias de guardia: datos abiertos del Ayuntamiento de Zaragoza (Farmacias), cargados en directo al abrir la pestaña',
   creditsBus: 'Paradas de bus: datos abiertos del Ayuntamiento de Zaragoza (Postes de autobús). Tiempos en vivo: página de la empresa de buses, se abre en tu navegador',
 }
 export const DICT: Record<Lang, Record<Key, string>> = { en, es }
 
 const TYPES: Record<Lang, Record<string, string>> = {
   en: { muni: 'Public building', cafe: 'Café', restaurant: 'Restaurant', fast_food: 'Fast food', bar: 'Bar or café', pub: 'Pub', ice_cream: 'Ice cream', library: 'Library', hotel: 'Hotel', hostel: 'Hostel', coworking_space: 'Coworking', community_centre: 'Community centre', museum: 'Museum', university: 'University', college: 'College',
-    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack', senior: 'Senior centre', office: 'City office', bus: 'Bus stop' },
+    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack', senior: 'Senior centre', office: 'City office', bus: 'Bus stop', pharmacy: 'Pharmacy on duty' },
   es: { muni: 'Edificio público', cafe: 'Café', restaurant: 'Restaurante', fast_food: 'Comida rápida', bar: 'Bar o café', pub: 'Pub', ice_cream: 'Heladería', library: 'Biblioteca', hotel: 'Hotel', hostel: 'Hostal', coworking_space: 'Coworking', community_centre: 'Centro cívico', museum: 'Museo', university: 'Universidad', college: 'Centro educativo',
-    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado', senior: 'Centro de convivencia para mayores', office: 'Oficina municipal', bus: 'Parada de bus' },
+    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado', senior: 'Centro de convivencia para mayores', office: 'Oficina municipal', bus: 'Parada de bus', pharmacy: 'Farmacia de guardia' },
 }
 export const typeLabel = (lang: Lang, type: string) => TYPES[lang][type] || type.replace(/_/g, ' ')
 

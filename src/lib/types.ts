@@ -1,10 +1,10 @@
 import type { CitySched } from './cityHours'
 
-export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'racks' | 'shelter' | 'bus'
+export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'racks' | 'shelter' | 'bus' | 'pharmacy'
 /** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
-export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter' | 'bus'
+export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter' | 'bus' | 'pharmacy'
 
 export interface Item {
   id: string
@@ -38,6 +38,9 @@ export interface Item {
   lines?: string
   /** Bus stop: number of the city stop (has a live times page). Rural stops have none. */
   stop?: string
+  /** Pharmacy on duty: today's duty hours (free text from the city) and sector (area of the city). */
+  duty?: string
+  sector?: string
   /** Also a climate shelter in the city's list (a civic centre that is public and climate-controlled). */
   shelter?: boolean
 }
@@ -59,8 +62,10 @@ export interface LayerConfig {
   hint: Bilingual
   /** Items have opening hours, so the "Open now" switch applies. */
   hours: boolean
-  /** The nearest-place card has extra lines (and a hint), so the peek sheet is a little taller. */
-  tall?: boolean
+  /** Height in px of the peek sheet when the nearest-place card needs more room than the default (extra lines, a hint). */
+  peek?: number
+  /** Items come from a live request (not the bundled data): the app loads them when the tab is opened and may have none. */
+  live?: boolean
   cats?: string[]
   /** All items of this layer, built once from the bundled data. */
   items: Item[]
