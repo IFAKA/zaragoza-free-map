@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { utm30ToLatLon } from './utm'
-import { TGO_SNAPSHOT } from '../layers/tgo-snapshot'
+import { DATA } from '../data'
+
+const TGO_SNAPSHOT = DATA.toiletsgo.rows
 
 // Independent forward projection (Krueger series, GRS80) used to round-trip the inverse.
 function forward(lat: number, lon: number): [number, number] {

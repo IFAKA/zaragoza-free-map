@@ -59,14 +59,15 @@ export function openState(str: string | undefined, day: number, min: number): bo
   return false
 }
 
-/** Current weekday and minute in Zaragoza. */
-export function nowMadrid(d = new Date()): { day: number; min: number } {
+export interface Now { day: number; min: number; md?: number }
+/** Current weekday, minute and month/day (month*100+day) in Zaragoza (Europe/Madrid), not the device's zone. */
+export function nowMadrid(d = new Date()): Required<Now> {
   try {
-    const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d)
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d)
     const g = (ty: string) => p.find(x => x.type === ty)!.value
     const days: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }
-    return { day: days[g('weekday')], min: (+g('hour') % 24) * 60 + +g('minute') }
+    return { day: days[g('weekday')], min: (+g('hour') % 24) * 60 + +g('minute'), md: +g('month') * 100 + +g('day') }
   } catch {
-    return { day: (d.getDay() + 6) % 7, min: d.getHours() * 60 + d.getMinutes() }
+    return { day: (d.getDay() + 6) % 7, min: d.getHours() * 60 + d.getMinutes(), md: (d.getMonth() + 1) * 100 + d.getDate() }
   }
 }

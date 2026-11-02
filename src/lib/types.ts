@@ -1,6 +1,10 @@
+import type { CitySched } from './cityHours'
+
 export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi'
+/** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
+export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike'
 
 export interface Item {
   id: string
@@ -9,47 +13,45 @@ export interface Item {
   name: string
   lat: number
   lon: number
+  /** Snapshot date of the file this record came from (YYYY-MM-DD). */
+  upd?: string
   cat?: string
   addr?: string
   phone?: string
+  /** OSM-style opening hours (OpenStreetMap records). */
   hours?: string
+  /** City library / civic centre posted hours, parsed (see lib/cityHours.ts). */
+  sched?: CitySched
   osm?: string
   ssid?: string
+  /** Year the city last updated this record (0 = not recorded). */
   yr?: number
   building?: boolean
   cust?: boolean
-  bikes?: number | null
-  docks?: number | null
-  est?: string
+  /** Short extra line (e.g. district for city fountains). */
+  note?: string
+  /** University of Zaragoza library (has a live occupancy page). */
+  buz?: boolean
+  /** Always available (e.g. an outdoor charger with no opening hours): never hidden by "Open now". */
+  always?: boolean
 }
 /** Item plus per-render fields (distance in metres, open state). */
 export interface RankedItem extends Item {
   d: number
+  /** true = open now, false = closed now, null = unknown (or not applicable). */
   open: boolean | null
 }
-export type PartState = 'load' | 'ok' | 'fail'
-export interface PartData {
-  items: Item[]
-  state: PartState
-  live: boolean
-  ts?: number
-}
 export interface Bilingual { en: string; es: string }
-export interface PartConfig {
-  k: PartKey
-  load: () => Promise<Item[]>
-  snap?: () => Item[]
-}
 export interface LayerConfig {
   id: LayerId
-  icon: string
+  icon: IconKey
+  /** CSS custom property of the marker colour, e.g. 'var(--color-water)'. */
   color: string
   label: Bilingual
   hint: Bilingual
+  /** Items have opening hours, so the "Open now" switch applies. */
   hours: boolean
-  more?: boolean
   cats?: string[]
-  nearKey?: 'nearest' | 'nearestBikes'
-  usable?: (it: Item) => boolean
-  parts: PartConfig[]
+  /** All items of this layer, built once from the bundled data. */
+  items: Item[]
 }

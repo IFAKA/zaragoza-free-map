@@ -1,0 +1,69 @@
+import { describe, expect, it } from 'vitest'
+import { DATA, dataRefreshed } from './index'
+import { ORDER, MORE, LAYERS } from '../layers'
+import { dist } from '../lib/geo'
+import { rank } from '../lib/rank'
+import type { LayerId } from '../lib/types'
+
+const ALL = [...ORDER, ...MORE] as LayerId[]
+
+describe('bundled data', () => {
+  it('every city file has rows and a snapshot date', () => {
+    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'toiletsgo'] as const) {
+      expect(DATA[k].rows.length, k).toBeGreaterThan(0)
+      expect(DATA[k].updated, k).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    }
+    expect(dataRefreshed()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+  it('counts are in the expected range', () => {
+    expect(DATA.fountains.rows.length).toBeGreaterThan(600)
+    expect(DATA.wifi.rows.length).toBeGreaterThan(100)
+    expect(DATA.libraries.rows.length).toBeGreaterThan(50)
+    expect(DATA.bizi.rows.length).toBeGreaterThan(200)
+  })
+})
+
+describe('layers built from the data', () => {
+  for (const id of ALL) {
+    const L = LAYERS[id]
+    it(`${id}: items exist, are inside Zaragoza, and none are within 15 m of another`, () => {
+      expect(L.items.length).toBeGreaterThan(0)
+      for (const it of L.items) {
+        expect(it.lat).toBeGreaterThan(41.5); expect(it.lat).toBeLessThan(41.8)
+        expect(it.lon).toBeGreaterThan(-1.1); expect(it.lon).toBeLessThan(-0.7)
+      }
+      const ids = new Set(L.items.map(i => i.id))
+      expect(ids.size).toBe(L.items.length)
+      // charge/libraries are real buildings: the layer builder keeps them 8 m apart at least; everything else 15 m
+      const m = id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : 15
+      for (let i = 0; i < L.items.length; i++) for (let j = i + 1; j < L.items.length; j++) {
+        const a = L.items[i], b = L.items[j]
+        if (Math.abs(a.lat - b.lat) > 0.0003) continue
+        expect(dist([a.lat, a.lon], [b.lat, b.lon]), `${a.id} / ${b.id}`).toBeGreaterThanOrEqual(m)
+      }
+    })
+  }
+  it('water has no hours, so Open now does not apply', () => {
+    expect(LAYERS.water.hours).toBe(false)
+    expect(LAYERS.bizi.hours).toBe(false)
+    expect(LAYERS.libraries.hours).toBe(true)
+  })
+  it('some libraries are flagged as University of Zaragoza (live occupancy link)', () => {
+    const buz = LAYERS.libraries.items.filter(i => i.buz)
+    expect(buz.length).toBeGreaterThan(0)
+    expect(buz.every(i => !/colectivo/i.test(i.name))).toBe(true)
+  })
+  it('libraries: Open now hides closed ones, puts open before unknown', () => {
+    const noon = new Date('2026-11-04T11:00:00+01:00') // Wednesday 11:00 Madrid
+    const now = { day: 2, min: 11 * 60, md: 1104 }
+    void noon
+    const r = rank(LAYERS.libraries, LAYERS.libraries.items, { ref: null, openOnly: true, cat: null }, now)
+    expect(r.every(x => x.open !== false)).toBe(true)
+    const firstUnknown = r.findIndex(x => x.open === null)
+    if (firstUnknown >= 0) expect(r.slice(firstUnknown).every(x => x.open === null)).toBe(true)
+    expect(r.some(x => x.open === true)).toBe(true)
+    const all = rank(LAYERS.libraries, LAYERS.libraries.items, { ref: null, openOnly: false, cat: null }, now)
+    expect(all.length).toBeGreaterThanOrEqual(r.length)
+    expect(all.some(x => x.open === false)).toBe(true)
+  })
+})

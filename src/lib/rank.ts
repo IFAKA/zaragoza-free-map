@@ -1,21 +1,30 @@
 import { CENTER, dist } from './geo'
-import { nowMadrid, openState } from './hours'
+import { nowMadrid, openState, type Now } from './hours'
+import { schedFor } from './cityHours'
 import type { Item, LatLon, LayerConfig, RankedItem } from './types'
 
 export interface RankOpts { ref: LatLon | null; openOnly: boolean; cat: string | null }
-/** Filter and sort a layer's items by distance. Items with unknown hours are always kept. */
+
+/** Open / closed / unknown for one item right now (Madrid time). Always-available items count as open. */
+export function itemOpen(it: Item, now: Required<Now>): boolean | null {
+  if (it.always) return true
+  const s = it.sched ? schedFor(it.sched, now.md) : it.hours
+  return s ? openState(s, now.day, now.min) : null
+}
+/**
+ * Filter and order a layer's items.
+ * Open now ON : closed items are hidden; open (or always available) first, then unknown hours, each by distance.
+ * Open now OFF: everything, by distance.
+ */
 export function rank(cfg: LayerConfig, items: Item[], o: RankOpts, now = nowMadrid()): RankedItem[] {
   const ref = o.ref || CENTER
   const out: RankedItem[] = []
   for (const it of items) {
     if (cfg.cats && o.cat && (it.cat || 'other') !== o.cat) continue
-    const open = cfg.hours && it.hours ? openState(it.hours, now.day, now.min) : null
+    const open = cfg.hours ? itemOpen(it, now) : null
     if (cfg.hours && o.openOnly && open === false) continue
     out.push({ ...it, d: dist(ref, [it.lat, it.lon]), open })
   }
-  return out.sort((a, b) => a.d - b.d)
-}
-/** Bizi: nearest station that has a bike (only trusted when the data is live). */
-export function nearestOf(cfg: LayerConfig, arr: RankedItem[], live: boolean): RankedItem | null {
-  return (cfg.usable && live ? arr.find(cfg.usable) : undefined) ?? arr[0] ?? null
+  const tier = (x: RankedItem) => (cfg.hours && o.openOnly ? (x.open === true ? 0 : 1) : 0)
+  return out.sort((a, b) => tier(a) - tier(b) || a.d - b.d)
 }
