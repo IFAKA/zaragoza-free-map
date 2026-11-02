@@ -7,9 +7,11 @@ const out = process.env.SHOTS || '/tmp/zgz-pw'
 let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++ }
 const b = await chromium.launch()
+const opts = e => { const { nudge, ...rest } = e; return rest }
 async function open(vp, mobile, extra = {}, lang = 'en') {
-  const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: mobile, isMobile: mobile, locale: 'en-US', timezoneId: 'Europe/Madrid', ...extra })
+  const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: mobile, isMobile: mobile, locale: 'en-US', timezoneId: 'Europe/Madrid', ...opts(extra) })
   if (lang) await ctx.addInitScript(l => { if (!localStorage.getItem('zgz:v2:lang')) localStorage.setItem('zgz:v2:lang', l) }, lang)
+  if (!extra.nudge) await ctx.addInitScript(() => localStorage.setItem('zgz:v2:tabsNudged', '1')) // the one-time nudge is tested on its own
   const p = await ctx.newPage()
   const blocked = []
   p.on('pageerror', e => { fails++; console.log('FAIL pageerror', e.message) })
@@ -226,6 +228,20 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   }
 }
 
+// ---- first visit: one short nudge of the tab row, then never again ----
+{
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, { nudge: true }, null)
+  const l = () => p.evaluate(() => Math.round(document.querySelector('[role=tablist]').scrollLeft))
+  await p.evaluate(() => { window.__max = 0; const e = document.querySelector('[role=tablist]'); const t = setInterval(() => { window.__max = Math.max(window.__max, e.scrollLeft) }, 30); setTimeout(() => clearInterval(t), 3500) })
+  await p.waitForTimeout(3600)
+  const mid = await p.evaluate(() => Math.round(window.__max))
+  ok(mid > 20 && mid < 80, `first visit: the tab row nudges (peak ${mid}px)`)
+  ok(await l() < 8, 'and returns to the start')
+  await p.reload(); await p.waitForTimeout(2200)
+  ok(await l() < 8, 'second visit: no nudge')
+  await ctx.close()
+}
+
 // ---- Spanish by default, one scrollable tab row, Settings page ----
 {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, null) // browser says en-US, nothing saved
@@ -240,6 +256,13 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   ok(r0.l < 8 && r0.max > 40, `tab row scrolls (left ${r0.l}, max ${r0.max}, width ${r0.w}, content ${r0.sw})`)
   ok(r0.fades[0] === '0' && r0.fades[1] === '1', 'edge fade: right shown, left hidden at the start')
   await p.screenshot({ path: out + '/t-start.png' })
+  // chevron: visible at the start on the right only, 44px, scrolls the row one step
+  ok(await p.getByTestId('tabs-prev').count() === 0 && await p.getByTestId('tabs-next').count() === 1, 'chevron: next shown, prev hidden at the start')
+  const cb = await p.getByTestId('tabs-next').boundingBox()
+  ok(cb.width >= 44 && cb.height >= 44, `chevron is a 44px target (${Math.round(cb.width)}x${Math.round(cb.height)})`)
+  await p.getByTestId('tabs-next').click(); await p.waitForTimeout(700)
+  ok((await row()).l > 80, 'chevron scrolls the row by a step')
+  await p.evaluate(() => document.querySelector('[role=tablist]').scrollTo({ left: 0 })); await p.waitForTimeout(300)
   // a horizontal swipe on the tab row scrolls the row and leaves the sheet where it is
   const cdp = await ctx.newCDPSession(p)
   const swipeX = async (y, x0, x1) => {

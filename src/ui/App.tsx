@@ -121,12 +121,12 @@ export function App() {
     if (level === CLOSED) setLevel(HALF)
     viewport.current?.scrollTo({ top: 0 })
   }
-  // a list row or a map marker: show its card at half, with the marker panned above the sheet
+  // a list row or a map marker: show its card at half, with the place and you both framed above the sheet (only the place when your position is unknown)
   const select = (id: string) => {
     setSelected(id)
     const it = arr.find(i => i.id === id)
     if (!desktop) setLevel(HALF)
-    if (it) flyTo([it.lat, it.lon], 18)
+    if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
     viewport.current?.scrollTo({ top: 0 })
   }
   // a tap on the bare map lowers the sheet one step: full/half to peek, peek to closed

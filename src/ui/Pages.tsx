@@ -5,6 +5,7 @@ import { Tabs } from '@base-ui/react/tabs'
 import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon } from '@phosphor-icons/react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { dataRefreshed } from '../data'
+import { lsGet, lsSet } from '../lib/cache'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
@@ -81,9 +82,29 @@ export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick
     e.scrollTo({ left, behavior: first.current || reduced ? 'auto' : 'smooth' })
     first.current = false
   }, [layer])
+  // once per device: a short nudge shows that the row scrolls
+  useEffect(() => {
+    const e = list.current
+    if (!e || lsGet('tabsNudged') || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let back = 0
+    const go = setTimeout(() => {
+      if (e.scrollWidth - e.clientWidth < 8) return
+      lsSet('tabsNudged', '1')
+      const from = e.scrollLeft
+      e.style.scrollSnapType = 'none' // else the snap pulls the 40px nudge straight back
+      e.scrollTo({ left: from + 40, behavior: 'smooth' })
+      back = window.setTimeout(() => { e.scrollTo({ left: from, behavior: 'smooth' }); setTimeout(() => { e.style.scrollSnapType = '' }, 500) }, 450)
+    }, 900)
+    return () => { clearTimeout(go); clearTimeout(back) }
+  }, [])
+  const step = (dir: 1 | -1) => {
+    const e = list.current
+    if (e) e.scrollBy({ left: dir * e.clientWidth * 0.6, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }
   const tab = 'group relative flex min-h-14 w-[4.8rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 text-ink [transition:transform_120ms_var(--ease-out)] active:scale-[.95] data-[active]:text-brand-text'
   const label = 'max-w-full truncate border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
-  const fade = 'pointer-events-none absolute inset-y-0 w-8 from-paper to-transparent transition-opacity duration-150'
+  const fade = 'pointer-events-none absolute inset-y-0 w-[44px] from-paper via-paper/80 to-transparent transition-opacity duration-150'
+  const chev = 'absolute inset-y-0 z-10 flex w-[44px] items-center border-0 bg-transparent p-0 text-brand-text transition-opacity duration-150 active:opacity-60'
   return (
     <Tabs.Root value={layer} className="relative shrink-0 border-b border-line">
       <Tabs.List ref={list} onScroll={measure} className="flex snap-x snap-proximity overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
@@ -101,6 +122,8 @@ export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick
       </Tabs.List>
       <div aria-hidden className={cn(fade, 'left-0 bg-linear-to-r', edge.left ? 'opacity-100' : 'opacity-0')} />
       <div aria-hidden className={cn(fade, 'right-0 bg-linear-to-l', edge.right ? 'opacity-100' : 'opacity-0')} />
+      {edge.left && <BaseButton onClick={() => step(-1)} aria-label={t('tabsPrev')} data-testid="tabs-prev" className={cn(chev, 'left-0 justify-start pl-1')}><CaretLeft size="1.4em" weight="bold" aria-hidden /></BaseButton>}
+      {edge.right && <BaseButton onClick={() => step(1)} aria-label={t('tabsNext')} data-testid="tabs-next" className={cn(chev, 'right-0 justify-end pr-1')}><CaretRight size="1.4em" weight="bold" aria-hidden /></BaseButton>}
     </Tabs.Root>
   )
 }
@@ -118,10 +141,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
       <div className={overline}>{kind}</div>
       <h2 className={cn(h2, 'mt-1')} data-testid="nearest-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
-      <div className={cn(sub, 'mt-0.5')}>{item.name ? type(item.type) : (item.note || '')}{item.cust ? ` · ${t('cust')}` : ''}{item.name && item.note ? ` · ${item.note}` : ''}</div>
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
-      <div className={cn(sub, 'mt-0.5')}>{srcLabel(t, item)}</div>
-      <Occupancy item={item} />
       <div className="mt-3 flex flex-wrap gap-2">
         <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
         <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>

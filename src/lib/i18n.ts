@@ -2,7 +2,7 @@ import { lsGet } from './cache'
 
 export type Lang = 'en' | 'es'
 const en = {
-  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
+  title: 'Free services', subtitle: 'Zaragoza', back: 'Back', settings: 'Settings', settingsTitle: 'Settings', tabsLabel: 'Services', tabsNext: 'Show more services', tabsPrev: 'Show previous services', typeLabel: 'Type', language: 'Language', about: 'About and credits', aboutTitle: 'About',
   langTitle: 'Language', langEn: 'English', langEs: 'Español', close: 'Close',
   handle: 'Expand or collapse the panel', map: 'Map', zoomIn: 'Zoom in', zoomOut: 'Zoom out', panel: 'Services panel',
   openNow: 'Open now', openNowHint: 'Hide places that are closed', showRange: 'Show range', showRangeHint: 'WiFi range circles (estimate)',
@@ -29,7 +29,7 @@ const en = {
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
-  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
+  title: 'Servicios gratis', subtitle: 'Zaragoza', back: 'Atrás', settings: 'Ajustes', settingsTitle: 'Ajustes', tabsLabel: 'Servicios', tabsNext: 'Ver más servicios', tabsPrev: 'Ver servicios anteriores', typeLabel: 'Tipo', language: 'Idioma', about: 'Acerca de y créditos', aboutTitle: 'Acerca de',
   langTitle: 'Idioma', langEn: 'English', langEs: 'Español', close: 'Cerrar',
   handle: 'Expandir o contraer el panel', map: 'Mapa', zoomIn: 'Acercar', zoomOut: 'Alejar', panel: 'Panel de servicios',
   openNow: 'Abierto ahora', openNowHint: 'Oculta los sitios cerrados', showRange: 'Ver alcance', showRangeHint: 'Círculos de alcance WiFi (estimación)',
