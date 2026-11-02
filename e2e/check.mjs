@@ -76,6 +76,8 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   const pop = p.getByRole('button', { name: 'Why no numbers?' }).first()
   if (await pop.count()) { await pop.click(); await p.waitForTimeout(300); ok(await p.getByText(/do not guess/).isVisible(), 'occupancy info popover opens'); await p.keyboard.press('Escape') }
   await p.screenshot({ path: out + '/m-libs.png' })
+  await p.getByTestId('tab-racks').click(); await p.waitForTimeout(700)
+  ok(await markers(p) > 0, 'bike racks render')
   await p.getByTestId('tab-bizi').click(); await p.waitForTimeout(700)
   ok(await markers(p) > 0, 'bizi locations render')
   ok(await p.getByText(/no live connection/).count() > 0, 'bizi says no availability numbers')
@@ -232,12 +234,12 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && /gratis/.test(man.name), `manifest lang es (${man.lang}, ${man.name})`)
   const labels = await p.locator('[role=tab]').allInnerTexts()
-  ok(JSON.stringify(labels) === JSON.stringify(['Aseos', 'Biblio.', 'Bizi', 'WiFi', 'Cargar', 'Agua']), 'tab row: ' + labels.join(' | '))
-  // all 6 tabs visible in one row: no scrolling, equal width, each at least 44px tall, inside the screen
+  ok(JSON.stringify(labels) === JSON.stringify(['Aseos', 'Biblio.', 'Bizi', 'WiFi', 'Cargar', 'Agua', 'Aparcab.']), 'tab row: ' + labels.join(' | '))
+  // all 7 tabs visible in one row: no scrolling, equal width, each at least 44px tall, inside the screen
   const cells = await p.locator('[role=tab]').evaluateAll(es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, w: r.width, h: r.height, clipped: e.scrollWidth > e.clientWidth + 1 } }))
   const list = await p.evaluate(() => { const e = document.querySelector('[role=tablist]'); return { sw: e.scrollWidth, cw: e.clientWidth } })
   ok(list.sw <= list.cw + 1, `tab row does not scroll (content ${list.sw}, width ${list.cw})`)
-  ok(cells.length === 6 && cells.every(c => c.x >= -0.5 && c.x + c.w <= 390.5 && c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), 'all 6 tabs visible, equal width, at least 44px, not clipped at 390px')
+  ok(cells.length === 7 && cells.every(c => c.x >= -0.5 && c.x + c.w <= 390.5 && c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), 'all 6 tabs visible, equal width, at least 44px, not clipped at 390px')
   ok(await p.getByTestId('tabs-prev').count() === 0 && await p.getByTestId('tabs-next').count() === 0, 'no chevrons')
   await p.screenshot({ path: out + '/t-start.png' })
   const cdp = await ctx.newCDPSession(p)
@@ -273,7 +275,7 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   await p.getByTestId('back').tap(); await p.waitForTimeout(500)
   await p.getByTestId('row-about').tap(); await p.waitForTimeout(600); await scan('about')
   await p.getByTestId('back').tap(); await p.waitForTimeout(400); await p.getByTestId('back').tap(); await p.waitForTimeout(500)
-  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi']) { await p.getByTestId('tab-' + id).tap(); await p.waitForTimeout(500); await scan(id) }
+  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi', 'racks']) { await p.getByTestId('tab-' + id).tap(); await p.waitForTimeout(500); await scan(id) }
   await p.getByTestId('details').tap(); await p.waitForTimeout(600); await scan('details')
   ok(leaks.length === 0, 'no English left in Spanish mode ' + JSON.stringify(leaks))
   // Language choice persists, and the html lang follows

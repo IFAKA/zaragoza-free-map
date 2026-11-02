@@ -1,10 +1,10 @@
 import type { CitySched } from './cityHours'
 
-export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi'
+export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'racks'
 /** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
-export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike'
+export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock'
 
 export interface Item {
   id: string

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { biziRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
+import { biziRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
 
 describe('city normalisers', () => {
   it('wifi: swaps lon/lat and skips records without geometry', () => {
@@ -14,6 +14,15 @@ describe('city normalisers', () => {
   it('bizi keeps the location only', () => {
     const r = biziRows({ result: [{ id: '279', title: '193- Pza. La Ermita', geometry: { coordinates: [-0.91, 41.63] } }, { id: 'x', title: 'bad' }] })
     expect(r).toEqual([['279', '193- Pza. La Ermita', 41.63, -0.91]])
+  })
+  it('bike racks keep location and kind, drop capacity', () => {
+    const r = rackRows({ result: [
+      { id: 1, title: 'RIOJA', tipo: 'Abierto', plazas: 4, geometry: { coordinates: [-0.9, 41.65] } },
+      { id: 2, title: 'ISLA  DE LANZAROTE', tipo: 'Cerrado', geometry: { coordinates: [-0.91, 41.66] } },
+      { id: 3, title: 'X', tipo: 'Vigilado', geometry: { coordinates: [-0.92, 41.67] } },
+      { id: 4, title: 'far away', tipo: 'Abierto', geometry: { coordinates: [2.1, 41.4] } },
+    ] })
+    expect(r).toEqual([['1', 'RIOJA', 41.65, -0.9, 'o'], ['2', 'ISLA DE LANZAROTE', 41.66, -0.91, 'c'], ['3', 'X', 41.67, -0.92, 'g']])
   })
   it('fountain street names', () => {
     expect(fountainStreet('CALLE CALLE MAYOR (3)')).toBe('Calle Mayor')

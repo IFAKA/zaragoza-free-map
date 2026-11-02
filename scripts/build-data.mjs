@@ -5,7 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { biziRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
+import { biziRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data')
 const skipOsm = process.argv.includes('--no-osm')
@@ -16,6 +16,15 @@ const ZGZ = 'https://www.zaragoza.es/sede/servicio/'
 const catalog = q => `${ZGZ}equipamiento/catalog.json?q=${encodeURIComponent(q)}&rows=500&srsname=wgs84`
 const EPS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter']
 
+// AparcaBicis has 2,000+ records and rows max 500 per call: page through it.
+async function getAll(url) {
+  const result = []
+  for (let start = 0; ; start += 500) {
+    const j = await get(`${url}&rows=500&start=${start}`)
+    result.push(...(j.result || []))
+    if (!j.result?.length || result.length >= j.totalCount) return { result }
+  }
+}
 async function get(url, as = 'json', ms = 60000, init) {
   const r = await fetch(url, { signal: AbortSignal.timeout(ms), ...init })
   if (!r.ok) throw new Error(`${url} -> HTTP ${r.status}`)
@@ -29,11 +38,12 @@ function write(name, src, rows, extra = {}) {
 }
 const must = (name, rows) => { if (!rows.length) throw new Error(`${name}: 0 rows, refusing to overwrite the committed file`); return rows }
 
-const [wifi, libs, civic, bizi, fount, tgo] = await Promise.all([
+const [wifi, libs, civic, bizi, racks, fount, tgo] = await Promise.all([
   get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`),
   get(catalog('title==Biblioteca*')),
   get(catalog('title==Centro Cívico*')),
   get(`${ZGZ}urbanismo-infraestructuras/estacion-bicicleta.json?rows=500&srsname=wgs84`),
+  getAll(`${ZGZ}urbanismo-infraestructuras/equipamiento/aparcamiento-bicicleta.json?srsname=wgs84`),
   fountainsFile ? JSON.parse(readFileSync(fountainsFile, 'utf8')) : get('https://zenodo.org/records/8141704/files/fuentes.json?download=1', 'json', 60000, { headers: { 'user-agent': 'Mozilla/5.0 (zgz-free-services data build)' } }),
   get('https://raw.githubusercontent.com/IFAKA/toiletsgo/HEAD/src/data.ts', 'text'),
 ])
@@ -41,6 +51,7 @@ write('wifi', 'city', must('wifi', cityWifiRows(wifi)))
 write('libraries', 'city', must('libraries', cityEquipRows(libs)))
 write('civic', 'city', must('civic', cityEquipRows(civic)))
 write('bizi', 'city', must('bizi', biziRows(bizi)))
+write('racks', 'city', must('racks', rackRows(racks)))
 const f = fountainRows(fount)
 write('fountains', 'city', must('fountains', f.rows), { dropped: f.dropped })
 write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo)))

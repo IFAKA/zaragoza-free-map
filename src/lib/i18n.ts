@@ -9,7 +9,7 @@ const en = {
   open: 'Open now', closed: 'Closed now', hoursUnknown: 'Hours unknown', alwaysOn: 'Always available', hours: 'Hours', holidays: 'Hours can differ on public holidays.',
   walk: 'Walk there', details: 'Details', useLocation: 'Use my location', locating: 'Finding you…', fromCentre: 'from the city centre', fromYou: 'from you', minWalk: 'min walk',
   deniedTitle: 'Location is off', deniedBody: 'Distances are from the city centre. Allow location in your browser to see yours.',
-  nearestwater: 'Nearest drinking fountain', nearesttoilets: 'Nearest free toilet', nearestcharge: 'Nearest place to charge', nearestwifi: 'Nearest free WiFi', nearestlibraries: 'Nearest library', nearestbizi: 'Nearest Bizi station',
+  nearestwater: 'Nearest drinking fountain', nearesttoilets: 'Nearest free toilet', nearestcharge: 'Nearest place to charge', nearestwifi: 'Nearest free WiFi', nearestlibraries: 'Nearest library', nearestbizi: 'Nearest Bizi station', nearestracks: 'Nearest bike rack',
   selected: 'Selected', places: 'places', all: 'All', muni: 'Public buildings', food: 'Cafés and bars', other: 'Other',
   noneOpen: 'Nothing known to be open. Turn off “Open now” to see everything.', showMore: 'Show more',
   srcCity: 'City record', srcOsm: 'OpenStreetMap', srcTgo: 'City equipment catalogue (toilet list by toiletsgo)', snapshot: 'snapshot', notVerified: 'not verified by us',
@@ -23,7 +23,7 @@ const en = {
   privacy: 'Your location never leaves your device. No ads. The app makes no data requests: everything is saved in it. Only map tiles load from the internet. Anonymous usage statistics with GoatCounter, no cookies and no location.',
   disclaimer: 'Independent project, not affiliated with the Ayuntamiento de Zaragoza. Visual style follows the city’s public design system.',
   dataRefreshed: 'Data refreshed', sources: 'Sources',
-  creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'Toilet places: Ayuntamiento de Zaragoza equipment catalogue, list by toiletsgo', creditsTiles: 'Map tiles: Esri, HERE, Garmin and OpenStreetMap contributors',
+  creditsCity: 'Ayuntamiento de Zaragoza open data (WiFi points, libraries, civic centres, Bizi stations, bike racks)', creditsFountains: 'Drinking fountains: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'OpenStreetMap contributors (ODbL)', creditsTgo: 'Toilet places: Ayuntamiento de Zaragoza equipment catalogue, list by toiletsgo', creditsTiles: 'Map tiles: Esri, HERE, Garmin and OpenStreetMap contributors',
   noGuarantee: 'Being listed does not mean a place works or is open right now.',
   fixOsm: 'Fix it on OpenStreetMap',
 }
@@ -36,7 +36,7 @@ const es: Record<Key, string> = {
   open: 'Abierto ahora', closed: 'Cerrado ahora', hoursUnknown: 'Horario desconocido', alwaysOn: 'Siempre disponible', hours: 'Horario', holidays: 'El horario puede cambiar en festivos.',
   walk: 'Cómo llegar a pie', details: 'Detalles', useLocation: 'Usar mi ubicación', locating: 'Buscándote…', fromCentre: 'desde el centro', fromYou: 'desde ti', minWalk: 'min a pie',
   deniedTitle: 'Ubicación desactivada', deniedBody: 'Las distancias son desde el centro. Permite la ubicación en el navegador para ver las tuyas.',
-  nearestwater: 'Fuente de agua más cercana', nearesttoilets: 'Aseo gratis más cercano', nearestcharge: 'Sitio más cercano para cargar', nearestwifi: 'WiFi gratis más cercano', nearestlibraries: 'Biblioteca más cercana', nearestbizi: 'Estación Bizi más cercana',
+  nearestwater: 'Fuente de agua más cercana', nearesttoilets: 'Aseo gratis más cercano', nearestcharge: 'Sitio más cercano para cargar', nearestwifi: 'WiFi gratis más cercano', nearestlibraries: 'Biblioteca más cercana', nearestbizi: 'Estación Bizi más cercana', nearestracks: 'Aparcabicis más cercano',
   selected: 'Elegido', places: 'sitios', all: 'Todos', muni: 'Edificios públicos', food: 'Cafés y bares', other: 'Otros',
   noneOpen: 'Nada abierto que sepamos. Quita «Abierto ahora» para verlo todo.', showMore: 'Ver más',
   srcCity: 'Dato municipal', srcOsm: 'OpenStreetMap', srcTgo: 'Catálogo de equipamientos del Ayuntamiento (lista de aseos de toiletsgo)', snapshot: 'copia del', notVerified: 'sin verificar por nosotros',
@@ -50,7 +50,7 @@ const es: Record<Key, string> = {
   privacy: 'Tu ubicación no sale de tu dispositivo. Sin anuncios. La app no pide datos por internet: todo va guardado en ella. Solo los mapas se cargan de internet. Estadísticas anónimas de uso con GoatCounter, sin cookies ni ubicación.',
   disclaimer: 'Proyecto independiente, sin relación con el Ayuntamiento de Zaragoza. El estilo visual sigue el sistema de diseño público del Ayuntamiento.',
   dataRefreshed: 'Datos actualizados', sources: 'Fuentes',
-  creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Aseos: catálogo de equipamientos del Ayuntamiento de Zaragoza, lista de toiletsgo', creditsTiles: 'Mapas: Esri, HERE, Garmin y colaboradores de OpenStreetMap',
+  creditsCity: 'Datos abiertos del Ayuntamiento de Zaragoza (puntos WiFi, bibliotecas, centros cívicos, estaciones Bizi, aparcabicis)', creditsFountains: 'Fuentes de agua: Ayuntamiento de Zaragoza (Zenodo 8141704)', creditsOsm: 'Colaboradores de OpenStreetMap (ODbL)', creditsTgo: 'Aseos: catálogo de equipamientos del Ayuntamiento de Zaragoza, lista de toiletsgo', creditsTiles: 'Mapas: Esri, HERE, Garmin y colaboradores de OpenStreetMap',
   noGuarantee: 'Aparecer en la lista no garantiza que el sitio funcione o esté abierto ahora.',
   fixOsm: 'Corrígelo en OpenStreetMap',
 }
@@ -58,9 +58,9 @@ export const DICT: Record<Lang, Record<Key, string>> = { en, es }
 
 const TYPES: Record<Lang, Record<string, string>> = {
   en: { muni: 'Public building', cafe: 'Café', restaurant: 'Restaurant', fast_food: 'Fast food', bar: 'Bar or café', pub: 'Pub', ice_cream: 'Ice cream', library: 'Library', hotel: 'Hotel', hostel: 'Hostel', coworking_space: 'Coworking', community_centre: 'Community centre', museum: 'Museum', university: 'University', college: 'College',
-    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station' },
+    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack' },
   es: { muni: 'Edificio público', cafe: 'Café', restaurant: 'Restaurante', fast_food: 'Comida rápida', bar: 'Bar o café', pub: 'Pub', ice_cream: 'Heladería', library: 'Biblioteca', hotel: 'Hotel', hostel: 'Hostal', coworking_space: 'Coworking', community_centre: 'Centro cívico', museum: 'Museo', university: 'Universidad', college: 'Centro educativo',
-    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi' },
+    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado' },
 }
 export const typeLabel = (lang: Lang, type: string) => TYPES[lang][type] || type.replace(/_/g, ' ')
 

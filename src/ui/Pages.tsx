@@ -64,7 +64,7 @@ export function NeedTabs({ layer, onPick }: { layer: LayerId; onPick: (id: Layer
   const label = 'max-w-full border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
   return (
     <Tabs.Root value={layer} className="flex shrink-0 border-b border-line">
-      <Tabs.List className="grid min-w-0 flex-1 grid-cols-6" aria-label={t('tabsLabel')}>
+      <Tabs.List className="grid min-w-0 flex-1" style={{ gridTemplateColumns: `repeat(${ORDER.length}, minmax(0, 1fr))` }} aria-label={t('tabsLabel')}>
         {ORDER.map(id => {
           const I = ICONS[LAYERS[id].icon]
           return (

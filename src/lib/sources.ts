@@ -49,6 +49,21 @@ export function biziRows(j: CityResponse | undefined): BiziRow[] {
   return out
 }
 
+/** AparcaBicis (street racks for your own bike): [id, street, lat, lon, kind]. kind: o = open, c = closed, g = guarded. Capacity is dropped. */
+export type RackRow = [string, string, number, number, 'o' | 'c' | 'g']
+export function rackRows(j: (CityResponse & { result?: (CityRecord & { tipo?: string })[] }) | undefined): RackRow[] {
+  const out: RackRow[] = [], seen = new Set<string>()
+  for (const r of j?.result || []) {
+    if (seen.has(String(r.id))) continue // the city feed repeats a few ids
+    seen.add(String(r.id))
+    const c = r.geometry?.coordinates
+    if (!c || !okCoord(c[1], c[0]) || !inCity(c[1], c[0])) continue
+    const t = String(r.tipo || '').toLowerCase()
+    out.push([String(r.id), String(r.title || '').replace(/\s+/g, ' ').trim(), +c[1].toFixed(6), +c[0].toFixed(6), t.startsWith('cerr') ? 'c' : t.startsWith('vigil') ? 'g' : 'o'])
+  }
+  return out
+}
+
 // ---------- City fountains (Zenodo 8141704, EPSG:25830) ----------
 /** [lat, lon, street, district, year of last update (0 = not recorded)] */
 export type FountainRow = [number, number, string, string, number]

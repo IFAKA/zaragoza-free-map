@@ -31,6 +31,7 @@ Dark mode is automatic (`prefers-color-scheme`). Tokens are overridden so brand 
 | WiFi | `--color-wifi` | `#4B83B4` | info blue |
 | Libraries | `--color-library` | `#006A00` | Ciudad |
 | Bizi | `--color-bike` | `#485D6D` | equipment |
+| Bike racks | `--color-rack` | `#6B6B00` | olive, own-bike racks (lock icon) |
 
 Markers are circles of 2.27em with a white Phosphor glyph. The selected marker is 3.8em with a white border. WiFi range circles (about 40 m around city buildings, about 25 m around OpenStreetMap venues) use the WiFi colour, dashed, and are labelled as an estimate.
 

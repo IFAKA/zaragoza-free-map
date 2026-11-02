@@ -60,6 +60,8 @@ export function buildLayers(d: Data): Record<LayerId, LayerConfig> {
     libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Library', es: 'Biblio.' }, hint: { en: 'Quiet and free', es: 'Tranquilas y gratis' }, hours: true }, lib, 8),
     bizi: L('bizi', { icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Cheap bike share', es: 'Bici compartida barata' }, hours: false },
       d.bizi.rows.map(r => ({ id: 'b' + r[0], part: 'city' as const, type: 'bizi', name: r[1], lat: r[2], lon: r[3], upd: d.bizi.updated ?? undefined })), 8),
+    racks: L('racks', { icon: 'lock', color: 'var(--color-rack)', label: { en: 'Bike racks', es: 'Aparcabicis' }, short: { en: 'Racks', es: 'Aparcab.' }, hint: { en: 'Lock your own bike', es: 'Deja tu bici' }, hours: false },
+      d.racks.rows.map(r => ({ id: 'r' + r[0], part: 'city' as const, type: r[4] === 'c' ? 'rack_closed' : r[4] === 'g' ? 'rack_guarded' : 'rack', name: cleanName(r[1]), lat: r[2], lon: r[3], upd: d.racks.updated ?? undefined })), 10),
   }
 }
 
