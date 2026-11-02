@@ -28,3 +28,14 @@ export function rank(cfg: LayerConfig, items: Item[], o: RankOpts, now = nowMadr
   const tier = (x: RankedItem) => (cfg.hours && o.openOnly ? (x.open === true ? 0 : 1) : 0)
   return out.sort((a, b) => tier(a) - tier(b) || a.d - b.d)
 }
+
+/**
+ * Like rank, but when "Open now" is on and every place is closed, show them all by distance
+ * (each row keeps its own closed state) instead of an empty map. `allClosed` tells the UI to say so.
+ */
+export function rankOrAll(cfg: LayerConfig, items: Item[], o: RankOpts, now = nowMadrid()): { arr: RankedItem[]; allClosed: boolean } {
+  const arr = rank(cfg, items, o, now)
+  if (arr.length || !cfg.hours || !o.openOnly) return { arr, allClosed: false }
+  const all = rank(cfg, items, { ...o, openOnly: false }, now)
+  return { arr: all, allClosed: all.length > 0 }
+}

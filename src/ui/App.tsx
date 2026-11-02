@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lsGet, lsSet } from '../lib/cache'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
-import { rank } from '../lib/rank'
+import { rankOrAll } from '../lib/rank'
 import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
 import { LangCtx } from './lang'
@@ -86,8 +86,8 @@ export function App() {
   // a closed sheet shows only the tab bar, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
 
-  const arr = useMemo(
-    () => rank(layer, layer.items, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
+  const { arr, allClosed } = useMemo(
+    () => rankOrAll(layer, layer.items, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
     // tick re-evaluates open/closed as the minutes pass
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [layer, pos, openOnly, cat, tick])
@@ -163,7 +163,7 @@ export function App() {
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
       default: return (
         <HomePage
-          layer={layer} arr={arr} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
+          layer={layer} arr={arr} allClosed={allClosed} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
           onPick={pickLayer} onSettings={() => turnTo('settings')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}

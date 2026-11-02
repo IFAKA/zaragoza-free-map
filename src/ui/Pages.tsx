@@ -172,7 +172,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 }
 
 export function HomePage(p: {
-  layer: LayerConfig; arr: RankedItem[]; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
+  layer: LayerConfig; arr: RankedItem[]; allClosed: boolean; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onSettings: () => void
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
@@ -219,6 +219,7 @@ export function HomePage(p: {
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />
+        {p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         <div className={cn(overline, 'border-y border-line bg-surface px-4 py-2')}>{p.arr.length} {t('places')}</div>
         <ul ref={listRef} className="m-0 list-none p-0" data-testid="list">
           {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => p.onSelect(it.id)} />)}
