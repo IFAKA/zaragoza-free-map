@@ -28,6 +28,8 @@ const en = {
   fixOsm: 'Fix it on OpenStreetMap',
   shelterTag: 'Climate-controlled', shelterNote: 'Public building with climate control. Check hours before you go.', nearestshelter: 'Nearest warm or cool place',
   creditsShelters: 'Climate shelters: Ayuntamiento de Zaragoza open data (Refugios climáticos)',
+  nearestbus: 'Nearest bus stop', lines: 'Lines', nextBuses: 'Next buses', nextBusesHint: 'Opens the bus company page.', noLive: 'Live times are not available for this stop.',
+  creditsBus: 'Bus stops: Ayuntamiento de Zaragoza open data (Postes de autobús). Live times: bus company page, opened in your browser',
 }
 export type Key = keyof typeof en
 const es: Record<Key, string> = {
@@ -57,14 +59,16 @@ const es: Record<Key, string> = {
   fixOsm: 'Corrígelo en OpenStreetMap',
   shelterTag: 'Con climatización', shelterNote: 'Edificio público con climatización. Mira el horario antes de ir.', nearestshelter: 'Refugio climático más cercano',
   creditsShelters: 'Refugios climáticos: datos abiertos del Ayuntamiento de Zaragoza',
+  nearestbus: 'Parada de bus más cercana', lines: 'Líneas', nextBuses: 'Próximos buses', nextBusesHint: 'Abre la página de la empresa de buses.', noLive: 'No hay tiempos en vivo para esta parada.',
+  creditsBus: 'Paradas de bus: datos abiertos del Ayuntamiento de Zaragoza (Postes de autobús). Tiempos en vivo: página de la empresa de buses, se abre en tu navegador',
 }
 export const DICT: Record<Lang, Record<Key, string>> = { en, es }
 
 const TYPES: Record<Lang, Record<string, string>> = {
   en: { muni: 'Public building', cafe: 'Café', restaurant: 'Restaurant', fast_food: 'Fast food', bar: 'Bar or café', pub: 'Pub', ice_cream: 'Ice cream', library: 'Library', hotel: 'Hotel', hostel: 'Hostel', coworking_space: 'Coworking', community_centre: 'Community centre', museum: 'Museum', university: 'University', college: 'College',
-    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack', senior: 'Senior centre', office: 'City office' },
+    fountain: 'Drinking fountain', toilet: 'Public toilet', charger: 'Charging point', lib: 'Library', civic: 'Civic centre', youth: 'Youth centre', townhall: 'Town hall', place: 'Public place', bizi: 'Bizi station', rack: 'Bike rack', rack_closed: 'Closed bike rack', rack_guarded: 'Guarded bike rack', senior: 'Senior centre', office: 'City office', bus: 'Bus stop' },
   es: { muni: 'Edificio público', cafe: 'Café', restaurant: 'Restaurante', fast_food: 'Comida rápida', bar: 'Bar o café', pub: 'Pub', ice_cream: 'Heladería', library: 'Biblioteca', hotel: 'Hotel', hostel: 'Hostal', coworking_space: 'Coworking', community_centre: 'Centro cívico', museum: 'Museo', university: 'Universidad', college: 'Centro educativo',
-    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado', senior: 'Centro de convivencia para mayores', office: 'Oficina municipal' },
+    fountain: 'Fuente de agua potable', toilet: 'Aseo público', charger: 'Punto de carga', lib: 'Biblioteca', civic: 'Centro cívico', youth: 'Zona joven', townhall: 'Ayuntamiento', place: 'Lugar público', bizi: 'Estación Bizi', rack: 'Aparcabicis', rack_closed: 'Aparcabicis cerrado', rack_guarded: 'Aparcabicis vigilado', senior: 'Centro de convivencia para mayores', office: 'Oficina municipal', bus: 'Parada de bus' },
 }
 export const typeLabel = (lang: Lang, type: string) => TYPES[lang][type] || type.replace(/_/g, ' ')
 

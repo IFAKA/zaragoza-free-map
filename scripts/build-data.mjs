@@ -6,7 +6,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { biziRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
+import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data')
 const skipOsm = process.argv.includes('--no-osm')
@@ -29,10 +29,19 @@ async function getAll(url) {
     if (!j.result?.length || result.length >= j.totalCount) return { result }
   }
 }
+// The city server sometimes answers with an empty body or a 5xx: try each request up to 3 times.
 async function get(url, as = 'json', ms = 60000, init) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(ms), ...init })
-  if (!r.ok) throw new Error(`${url} -> HTTP ${r.status}`)
-  return as === 'json' ? r.json() : r.text()
+  for (let n = 1; ; n++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(ms), ...init })
+      if (!r.ok) throw new Error(`${url} -> HTTP ${r.status}`)
+      return as === 'json' ? await r.json() : await r.text()
+    } catch (e) {
+      if (n >= 3) throw e
+      console.warn(`retry ${n} for ${url}: ${e}`)
+      await new Promise(res => setTimeout(res, 1500 * n))
+    }
+  }
 }
 function write(name, src, rows, extra = {}) {
   const body = '{' + [`"src":${JSON.stringify(src)}`, `"updated":${JSON.stringify(today)}`, ...Object.entries(extra).map(([k, v]) => `${JSON.stringify(k)}:${JSON.stringify(v)}`), '"rows":[\n' + rows.map(r => JSON.stringify(r)).join(',\n') + '\n]'].join(',') + '}\n'
@@ -48,12 +57,14 @@ if (process.argv.includes('--shelters-only')) {
   process.exit(0)
 }
 
-const [wifi, libs, civic, bizi, racks, fount, tgo, shelters] = await Promise.all([
+const [wifi, libs, civic, bizi, racks, bus, fount, tgo, shelters] = await Promise.all([
   get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`),
   get(catalog('title==Biblioteca*')),
   get(catalog('title==Centro Cívico*')),
-  get(`${ZGZ}urbanismo-infraestructuras/estacion-bicicleta.json?rows=500&srsname=wgs84`),
+  // Bizi is the flakiest city endpoint (sometimes an empty body for hours): if it fails, keep the committed file instead of failing the whole refresh
+  get(`${ZGZ}urbanismo-infraestructuras/estacion-bicicleta.json?rows=500&srsname=wgs84`).catch(e => { console.warn('bizi: source failed, keeping the committed bizi.json:', String(e)); return null }),
   getAll(`${ZGZ}urbanismo-infraestructuras/equipamiento/aparcamiento-bicicleta.json?srsname=wgs84`),
+  getAll(`${ZGZ}urbanismo-infraestructuras/transporte-urbano/poste-autobus.json?srsname=wgs84`),
   fountainsFile ? JSON.parse(readFileSync(fountainsFile, 'utf8')) : get('https://zenodo.org/records/8141704/files/fuentes.json?download=1', 'json', 60000, { headers: { 'user-agent': 'Mozilla/5.0 (zgz-free-services data build)' } }),
   get('https://raw.githubusercontent.com/IFAKA/toiletsgo/HEAD/src/data.ts', 'text'),
   getShelters(),
@@ -61,8 +72,9 @@ const [wifi, libs, civic, bizi, racks, fount, tgo, shelters] = await Promise.all
 write('wifi', 'city', must('wifi', cityWifiRows(wifi)))
 write('libraries', 'city', must('libraries', cityEquipRows(libs)))
 write('civic', 'city', must('civic', cityEquipRows(civic)))
-write('bizi', 'city', must('bizi', biziRows(bizi)))
+if (bizi) write('bizi', 'city', must('bizi', biziRows(bizi)))
 write('racks', 'city', must('racks', rackRows(racks)))
+write('bus', 'city', must('bus', busRows(bus)))
 const f = fountainRows(fount)
 write('fountains', 'city', must('fountains', f.rows), { dropped: f.dropped })
 write('shelters', 'city', must('shelters', shelterRows(shelters)))

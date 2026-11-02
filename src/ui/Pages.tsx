@@ -12,7 +12,7 @@ import type { Key, Lang } from '../lib/i18n'
 import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS, ORDER } from '../layers'
 import { rangeMetres } from './MapView'
-import { BUZ_URL, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, busUrl, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import { ICONS } from './icons'
 import { useT } from './lang'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -62,6 +62,21 @@ function ShelterNote() {
       <span className="inline-flex items-center gap-1 rounded-full bg-shelter px-2.5 py-0.5 text-[0.8em] font-bold text-on-brand"><Thermometer size="1.1em" weight="fill" aria-hidden />{t('shelterTag')}</span>
       <span className={sub}>{t('shelterNote')}</span>
     </div>
+  )
+}
+
+/** Bus stop buttons: ONE primary "Next buses" (opens the bus company page: its times page cannot be read by a browser, so we link out), then Walk. Rural stops have no live page. */
+function BusActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
+  const { t } = useT()
+  const walk = <Button variant={item.stop ? 'secondary' : 'primary'} {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+  return (
+    <>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {item.stop && <Button {...linkProps(busUrl(item.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
+        {walk}
+      </div>
+      <p className={cn(sub, 'm-0 mt-1.5')}>{item.stop ? t('nextBusesHint') : t('noLive')}</p>
+    </>
   )
 }
 
@@ -116,10 +131,13 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
       <h2 className={cn(h2, 'mt-1')} data-testid="nearest-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-        <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
-      </div>
+      {item.lines && <div className="mt-0.5 font-semibold" data-testid="bus-lines">{t('lines')}: {item.lines.replace(/,/g, ', ')}</div>}
+      {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+          <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
+        </div>
+      )}
       {!hasPos && (
         <Button variant="link" onClick={onLocate} disabled={locating} className="mt-1" data-testid="locate"><Crosshair size="1.2em" aria-hidden />{locating ? t('locating') : t('useLocation')}</Button>
       )}
@@ -129,13 +147,13 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
 
 // ---------- list ----------
 function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; onSelect: () => void }) {
-  const { type } = useT()
+  const { t, type } = useT()
   return (
     <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
       <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink after:absolute after:inset-0 hov:bg-surface">
         <span className="min-w-0">
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
-          <span className={cn(sub, 'block truncate')}>{item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
+          <span className={cn(sub, 'block truncate')}>{item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
         </span>
         <span className="whitespace-nowrap text-right font-bold">{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
       </BaseButton>
@@ -288,7 +306,7 @@ export function AboutPage({ onBack, locked }: { onBack: () => void; locked: bool
           <p className="m-0">{t('noGuarantee')}</p>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
-            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
+            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
           </ul>
           {d && <p className="m-0 font-bold" data-testid="refreshed">{t('dataRefreshed')}: {d}</p>}
           <a className="font-bold text-brand-text" href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">{t('fixOsm')}</a>

@@ -1,6 +1,7 @@
 // Typed view of the bundled snapshots written by scripts/build-data.mjs. The app reads only these files.
-import type { BiziRow, EquipRow, FountainRow, OsmRows, RackRow, TgoRow, WifiRow } from '../lib/sources.ts'
+import type { BiziRow, BusRow, EquipRow, FountainRow, OsmRows, RackRow, TgoRow, WifiRow } from '../lib/sources.ts'
 import bizi from './bizi.json'
+import bus from './bus.json'
 import civic from './civic.json'
 import fountains from './fountains.json'
 import libraries from './libraries.json'
@@ -14,12 +15,12 @@ export interface Snap<T> { src: string; updated: string | null; rows: T[] }
 export type OsmSnap = { src: string; updated: string | null } & OsmRows
 export interface Data {
   fountains: Snap<FountainRow>; wifi: Snap<WifiRow>; libraries: Snap<EquipRow>; civic: Snap<EquipRow>
-  bizi: Snap<BiziRow>; racks: Snap<RackRow>; toiletsgo: Snap<TgoRow>; shelters: Snap<EquipRow>; osm: OsmSnap
+  bizi: Snap<BiziRow>; racks: Snap<RackRow>; bus: Snap<BusRow>; toiletsgo: Snap<TgoRow>; shelters: Snap<EquipRow>; osm: OsmSnap
 }
 export const DATA: Data = {
-  fountains, wifi, libraries, civic, bizi, racks, toiletsgo, shelters, osm,
+  fountains, wifi, libraries, civic, bizi, racks, bus, toiletsgo, shelters, osm,
 } as unknown as Data
 
 /** Newest snapshot date across all files (shown as "Data refreshed" in the credits). */
 export const dataRefreshed = (d: Data = DATA): string | null =>
-  [d.fountains, d.wifi, d.libraries, d.civic, d.bizi, d.racks, d.toiletsgo, d.shelters, d.osm].map(s => s.updated).filter((x): x is string => !!x).sort().pop() ?? null
+  [d.fountains, d.wifi, d.libraries, d.civic, d.bizi, d.racks, d.bus, d.toiletsgo, d.shelters, d.osm].map(s => s.updated).filter((x): x is string => !!x).sort().pop() ?? null

@@ -10,7 +10,7 @@ const ids = (rows: unknown[][]) => rows.map(r => r[0])
 
 describe('bundled data', () => {
   it('every city file has rows and a snapshot date', () => {
-    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'racks', 'toiletsgo', 'shelters'] as const) {
+    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'racks', 'bus', 'toiletsgo', 'shelters'] as const) {
       expect(DATA[k].rows.length, k).toBeGreaterThan(0)
       expect(DATA[k].updated, k).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }
@@ -22,6 +22,7 @@ describe('bundled data', () => {
     expect(DATA.libraries.rows.length).toBeGreaterThan(50)
     expect(DATA.bizi.rows.length).toBeGreaterThan(200)
     expect(DATA.racks.rows.length).toBeGreaterThan(1500)
+    expect(DATA.bus.rows.length).toBeGreaterThan(1200)
   })
 })
 
@@ -64,7 +65,7 @@ describe('layers built from the data', () => {
       const ids = new Set(L.items.map(i => i.id))
       expect(ids.size).toBe(L.items.length)
       // charge/libraries are real buildings: the layer builder keeps them 8 m apart at least; everything else 15 m
-      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'racks' ? 10 : 15
+      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'racks' ? 10 : id === 'bus' ? 0 : 15
       for (let i = 0; i < L.items.length; i++) for (let j = i + 1; j < L.items.length; j++) {
         const a = L.items[i], b = L.items[j]
         if (Math.abs(a.lat - b.lat) > 0.0003) continue
@@ -87,6 +88,16 @@ describe('layers built from the data', () => {
       expect(['rack', 'rack_closed', 'rack_guarded']).toContain(i.type)
     }
     expect(LAYERS.libraries.hours).toBe(true)
+  })
+  it('bus stops: every one has a name; city stops (numbers only) have a live-times number, rural stops do not', () => {
+    const L = LAYERS.bus
+    expect(L.hours).toBe(false)
+    expect(L.items.length).toBe(DATA.bus.rows.length)
+    expect(L.items.filter(i => i.stop).length).toBeGreaterThan(900)
+    expect(L.items.filter(i => !i.stop).length).toBeGreaterThan(0)
+    for (const i of L.items) { expect(i.name.length).toBeGreaterThan(0); expect(i.type).toBe('bus'); expect(i.lines).toMatch(/^[\w]*(,[\w]+)*$/) }
+    const colours = Object.values(LAYERS).map(l => l.color)
+    expect(new Set(colours).size).toBe(colours.length)
   })
   it('some libraries are flagged as University of Zaragoza (live occupancy link)', () => {
     const buz = LAYERS.libraries.items.filter(i => i.buz)

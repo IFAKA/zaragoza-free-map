@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { biziRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
+import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
 
 describe('city normalisers', () => {
   it('wifi: swaps lon/lat and skips records without geometry', () => {
@@ -23,6 +23,22 @@ describe('city normalisers', () => {
       { id: 4, title: 'far away', tipo: 'Abierto', geometry: { coordinates: [2.1, 41.4] } },
     ] })
     expect(r).toEqual([['1', 'RIOJA', 41.65, -0.9, 'o'], ['2', 'ISLA DE LANZAROTE', 41.66, -0.91, 'c'], ['3', 'X', 41.67, -0.92, 'g']])
+  })
+  it('bus stops: number and lines are taken out of the title, rural stops keep a prefix', () => {
+    const r = busRows({ result: [
+      { id: 'tuzsa-688', title: '(688) P. Reyes De Aragón N.º 24 Líneas: 58', geometry: { coordinates: [-0.9072975810322448, 41.62702649728611] } },
+      { id: 'tuzsa-36', title: '(36) Av. Academia General Militar / Maz (Dir. Centro) Líneas: 35, N2, 29', geometry: { coordinates: [-0.87108, 41.68499] } },
+      { id: 'rural-36', title: '(36) C.E. Grande Covián Líneas: 102, 201', geometry: { coordinates: [-0.85932, 41.66455] } },
+      { id: 'tuzsa-9', title: '(9) Sin líneas', geometry: { coordinates: [-0.9, 41.65] } },
+      { id: 'tuzsa-688', title: '(688) repeated id', geometry: { coordinates: [-0.9, 41.65] } },
+      { id: 'tuzsa-1', title: '(1) far away Líneas: 1', geometry: { coordinates: [2.1, 41.4] } },
+    ] })
+    expect(r).toEqual([
+      ['688', 'P. Reyes De Aragón N.º 24', '58', 41.627026, -0.907298],
+      ['36', 'Av. Academia General Militar / Maz (Dir. Centro)', '35,N2,29', 41.68499, -0.87108],
+      ['r36', 'C.E. Grande Covián', '102,201', 41.66455, -0.85932],
+      ['9', 'Sin líneas', '', 41.65, -0.9],
+    ])
   })
   it('fountain street names', () => {
     expect(fountainStreet('CALLE CALLE MAYOR (3)')).toBe('Calle Mayor')

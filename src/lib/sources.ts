@@ -96,6 +96,31 @@ export function rackRows(j: (CityResponse & { result?: (CityRecord & { tipo?: st
   return out
 }
 
+/**
+ * Bus stops: [stop id, name, lines, lat, lon]. Lines is a comma list like "58" or "34,N1".
+ * City stops (TUZSA, id "tuzsa-688") keep the plain number "688"; it names the third-party live times page (busUrl in ui/labels.ts).
+ * Rural stops (id "rural-4", lines 1xx/2xx/5xx) have no live page and keep "r4". Their numbers repeat the city ones, so the prefix matters.
+ * The city title is "(688) P. Reyes De Aragón N.º 24 Líneas: 58": the number and the lines are taken out of it.
+ */
+export type BusRow = [string, string, string, number, number]
+export function busRows(j: CityResponse | undefined): BusRow[] {
+  const out: BusRow[] = [], seen = new Set<string>()
+  for (const r of j?.result || []) {
+    const c = r.geometry?.coordinates
+    if (!c || !okCoord(c[1], c[0]) || !inCity(c[1], c[0])) continue
+    const raw = String(r.title || '').replace(/\s+/g, ' ').trim()
+    const num = /^(?:tuzsa|rural)-(\d+)$/.exec(String(r.id))
+    if (!num) continue
+    const id = (String(r.id).startsWith('rural') ? 'r' : '') + num[1]
+    if (seen.has(id)) continue
+    seen.add(id)
+    const m = /^(?:\(\d+\)\s*)?(.*?)\s*(?:Líneas?:\s*(.*))?$/i.exec(raw)
+    const lines = (m?.[2] ?? '').split(/[,\s]+/).filter(Boolean).join(',')
+    out.push([id, (m?.[1] ?? raw).trim(), lines, +c[1].toFixed(6), +c[0].toFixed(6)])
+  }
+  return out
+}
+
 // ---------- City fountains (Zenodo 8141704, EPSG:25830) ----------
 /** [lat, lon, street, district, year of last update (0 = not recorded)] */
 export type FountainRow = [number, number, string, string, number]

@@ -12,6 +12,8 @@ export function srcLabel(t: TF, it: Item): string {
 export const srcExplain = (t: TF, it: Item): string => (it.part === 'osm' ? t('srcInfoOsm') : it.part === 'tgo' ? t('srcInfoTgo') : t('srcInfoCity'))
 /** One tap to tell the map's owners something is wrong: opens the OpenStreetMap note form at this spot. */
 export const reportUrl = (it: Item) => `https://www.openstreetmap.org/note/new#map=19/${it.lat}/${it.lon}`
+/** The bus company's live times page for a city stop (third-party; it sends no CORS header, so the app links to it and never fetches it). */
+export const busUrl = (stop: string) => `https://zaragoza-pasobus.avanzagrupo.com/frm_esquemaparadatime.php?poste=${stop}`
 export const BUZ_URL = 'https://biblioteca.unizar.es/servicios/ocupacion-bibliotecas'
 
 const DAYS_ES: Record<string, string> = { Mo: 'Lu', Tu: 'Ma', We: 'Mi', Th: 'Ju', Fr: 'Vi', Sa: 'Sá', Su: 'Do', PH: 'festivos', off: 'cerrado', '24/7': '24 h' }

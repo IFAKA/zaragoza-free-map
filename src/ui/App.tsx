@@ -18,7 +18,7 @@ type Page = 'home' | 'settings' | 'language' | 'about' | 'place'
 
 // Drawer levels. Closed shows only the tab bar; peek adds the nearest place; half shows the controls too; full is the whole list.
 const CLOSED = 0, PEEK = 1, HALF = 2, FULL = 3
-const PEEK_PX = 284, HALF_PX = 500
+const PEEK_PX = 284, PEEK_TALL_PX = 316, HALF_PX = 500
 const DEFAULT_CLOSED_PX = 78
 /** Height of the closed sheet: the handle and the tab bar, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
@@ -81,7 +81,8 @@ export function App() {
   const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
-  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, PEEK_PX + 'px', HALF_PX + 'px', 1], [closedPx])
+  const peekPx = layer.tall ? PEEK_TALL_PX : PEEK_PX
+  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', HALF_PX + 'px', 1], [closedPx, peekPx])
   const mobileClosed = !desktop && level === CLOSED
   // a closed sheet shows only the tab bar, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
@@ -96,8 +97,8 @@ export function App() {
 
   const insetPx = useCallback(() => {
     if (desktop) return 0
-    return level === CLOSED ? closedPx : level === PEEK ? PEEK_PX : HALF_PX
-  }, [desktop, level, closedPx])
+    return level === CLOSED ? closedPx : level === PEEK ? peekPx : HALF_PX
+  }, [desktop, level, closedPx, peekPx])
 
   const flyTo = useCallback((to: LatLon, zoom: number, o: Partial<FlyRequest> = {}) => setFly({ n: ++flyN.current, to, zoom, ...o }), [])
 
