@@ -1,6 +1,6 @@
 import type { CitySched } from './cityHours'
 
-export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'racks' | 'shelter' | 'bus' | 'pharmacy'
+export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'shelter' | 'bus' | 'pharmacy'
 /** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
@@ -41,6 +41,10 @@ export interface Item {
   /** Pharmacy on duty: today's duty hours (free text from the city) and sector (area of the city). */
   duty?: string
   sector?: string
+  /** Bizi station, live counts (set only while fresh): bikes to take, free docks, e-bikes among the bikes. */
+  bikes?: number
+  docks?: number
+  ebikes?: number
   /** Also a climate shelter in the city's list (a civic centre that is public and climate-controlled). */
   shelter?: boolean
 }
@@ -67,6 +71,8 @@ export interface LayerConfig {
   /** Items come from a live request (not the bundled data): the app loads them when the tab is opened and may have none. */
   live?: boolean
   cats?: string[]
+  /** Chip selected when the tab opens. Unset = no chip filter ('all'); set = there is no 'All' chip. */
+  catDefault?: string
   /** All items of this layer, built once from the bundled data. */
   items: Item[]
 }

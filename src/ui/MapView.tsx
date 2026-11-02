@@ -97,10 +97,10 @@ export function MapView({ layer, items, selected, userPos, fly, inset, showRange
     if (s !== sig.current) {
       sig.current = s
       g.clearLayers(); markers.current.clear()
-      const mkIcon = (closed: boolean) => L.divIcon({ className: 'mkw', html: `<div class="mk${closed ? ' off' : ''}" style="--c:${layer.color}">${iconHtml(layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
-      const icons = [mkIcon(false), mkIcon(true)]
+      const mkIcon = (closed: boolean, rack: boolean) => L.divIcon({ className: 'mkw', html: `<div class="mk${closed ? ' off' : ''}" style="--c:${rack ? 'var(--color-rack)' : layer.color}">${iconHtml(rack ? 'lock' : layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
+      const icons = [mkIcon(false, false), mkIcon(true, false), mkIcon(false, true)]
       for (const it of items) {
-        const icon = icons[layer.hours && it.open === false ? 1 : 0]
+        const icon = icons[it.cat === 'mine' ? 2 : layer.hours && it.open === false ? 1 : 0] // Bizi tab: street racks keep their own colour and lock icon
         const mk = L.marker([it.lat, it.lon], { icon, keyboard: false, riseOnHover: false, title: it.name || undefined })
         mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
         markers.current.set(it.id, mk); g.addLayer(mk)

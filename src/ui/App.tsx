@@ -1,10 +1,12 @@
 import { track } from '../lib/analytics'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { withCounts } from '../lib/bizi'
 import { lsGet, lsSet } from '../lib/cache'
 import { loadDuty, madridDate, readDutyCache, todays } from '../lib/duty'
 import type { DutyRow } from '../lib/sources.ts'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
+import { canShowInstallHint, installEnv } from '../lib/install'
 import { rankOrAll } from '../lib/rank'
 import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
@@ -15,6 +17,7 @@ import { MapView, type FlyRequest } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { AboutPage, HomePage, LanguagePage, PlacePage, SettingsPage } from './Pages'
 import { ToastHost, toasts } from './ToastHost'
+import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
 
 type Page = 'home' | 'settings' | 'language' | 'about' | 'place'
@@ -46,6 +49,10 @@ function useClosedPx(dep: unknown) {
   return px
 }
 
+/** The Bizi stations (not the bike racks): the places that live counts are joined to. */
+const BIZI_STATIONS = LAYERS.bizi.items.filter(i => i.cat === 'station')
+/** Chip selected when a tab opens: Bizi starts on "Take a bike", the others on "All". */
+const catStart = (id: LayerId) => LAYERS[id].catDefault ?? 'all'
 const isLayer = (v: string | null): v is LayerId => !!v && v in LAYERS
 function useDesktop() {
   const q = '(min-width: 900px)'
@@ -62,13 +69,14 @@ export function App() {
   const [layerId, setLayerId] = useState<LayerId>(() => saved<LayerId>('layer', defaultLayer(), s => (isLayer(s) ? s : undefined)))
   const [openOnly, setOpenOnlyS] = useState(() => saved('open', true, s => s !== '0'))
   const [showRange, setShowRangeS] = useState(() => saved('range', true, s => s !== '0'))
-  const [cat, setCat] = useState('all')
+  const [cat, setCat] = useState(() => catStart(layerId))
   const [selected, setSelected] = useState<string | null>(null)
   const [limit, setLimit] = useState(30)
   const [level, setLevel] = useState(PEEK)
   const [fly, setFly] = useState<FlyRequest | null>(null)
   const [tick, setTick] = useState(0)
-  const { pos, locating, locate, alreadyGranted } = useLocation()
+  const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
+  const askedLocation = useRef(false)
   const flyN = useRef(0)
   const viewport = useRef<HTMLDivElement>(null)
 
@@ -87,7 +95,9 @@ export function App() {
   }, [onDuty, today, dutyTry])
   const dutyRows = onDuty && duty.rows ? todays(duty.rows, today) : null
   const liveState: 'loading' | 'failed' | null = !layer.live || dutyRows ? null : duty.failed ? 'failed' : 'loading'
-  const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layer.items), [layer, dutyRows])
+  // Bizi: live bike and dock counts while that tab is open (see lib/bizi.ts); the places always show
+  const bizi = useBizi(layerId === 'bizi', BIZI_STATIONS)
+  const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layerId === 'bizi' ? withCounts(layer.items, bizi.counts) : layer.items), [layer, layerId, dutyRows, bizi.counts])
   const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
   const setLang = (l: Lang) => { setLangState(l); lsSet('lang', l); document.documentElement.lang = l }
   const setOpenOnly = (v: boolean) => { setOpenOnlyS(v); lsSet('open', v ? '1' : '0') }
@@ -105,7 +115,7 @@ export function App() {
   // a closed sheet shows only the tab bar, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
 
-  const { arr, allClosed } = useMemo(
+  const { arr, allClosed, allOut } = useMemo(
     () => rankOrAll(layer, layerItems, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()),
     // tick re-evaluates open/closed as the minutes pass
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,10 +144,12 @@ export function App() {
 
   const raise = (min: number = HALF) => setLevel(l => Math.max(l, min))
   const pickLayer = (id: LayerId) => {
+    // the first tap is the first moment of intent (and a user gesture): ask for the position once, unless the person already blocked it
+    if (!pos && !askedLocation.current && !blocked()) { askedLocation.current = true; void locate(true) }
     // the tab of the layer you are already on: opens a closed sheet, folds an open one one step down
     if (id === layerId && page === 'home' && !desktop) { setLevel(l => (l === CLOSED ? HALF : l - 1)); return }
     track('tab', id)
-    setLayerId(id); lsSet('layer', id); setSelected(null); setCat('all'); setLimit(30)
+    setLayerId(id); lsSet('layer', id); setSelected(null); setCat(catStart(id)); setLimit(30)
     reset()
     if (level === CLOSED) setLevel(HALF)
     viewport.current?.scrollTo({ top: 0 })
@@ -156,13 +168,11 @@ export function App() {
     setSelected(null)
     if (!desktop) setLevel(l => (l === FULL ? PEEK : Math.max(CLOSED, l - 1)))
   }
-  const doLocate = async () => {
-    const p = await locate()
-    if (!p) toasts.add({ title: t.deniedTitle, description: t.deniedBody, data: { close: t.close } })
-  }
+  const doLocate = () => { askedLocation.current = true; void locate(true) }
   const onWalk = () => {
     track('directions', layerId)
-    if (!lsGet('hinted')) {
+    // the "add to home screen" hint: once, and only in a normal browser tab (not inside another app, not when installed)
+    if (!lsGet('hinted') && canShowInstallHint(installEnv())) {
       lsSet('hinted', '1')
       setTimeout(() => toasts.add({ title: t.installHint, data: { close: t.installClose } }), 1200)
     }
@@ -182,7 +192,7 @@ export function App() {
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
       default: return (
         <HomePage
-          layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
+          layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} locating={locating}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           limit={limit} onMoreRows={() => setLimit(l => l + 40)} locked={mobileLow} viewportRef={viewport}
           onPick={pickLayer} onSettings={() => turnTo('settings')} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => turnTo('about')}

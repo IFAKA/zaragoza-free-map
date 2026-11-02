@@ -25,3 +25,25 @@ describe('rankOrAll', () => {
     expect(rankOrAll({ hours: false } as LayerConfig, items, ref, { day: 0, min: H(23), md: 701 }).allClosed).toBe(false)
   })
 })
+
+describe('Bizi chips', () => {
+  const cfgB = { hours: false, cats: ['take', 'return', 'mine'] } as LayerConfig
+  const st = (id: string, lat: number, bikes?: number, docks?: number): Item => ({ id, part: 'city', type: 'bizi', cat: 'station', name: id, lat, lon: -0.88, bikes, docks } as Item)
+  const rack = { id: 'r', part: 'city', type: 'rack', cat: 'mine', name: 'r', lat: 41.641, lon: -0.88 } as Item
+  const all = [st('empty', 41.64, 0, 10), st('full', 41.65, 5, 0), st('mid', 41.7, 2, 3), rack]
+  const o = (cat: string) => ({ ref: [41.64, -0.88] as [number, number], openOnly: true, cat })
+  it('take: only stations with bikes, nearest first', () => expect(rankOrAll(cfgB, all, o('take')).arr.map(i => i.id)).toEqual(['full', 'mid']))
+  it('return: only stations with free docks', () => expect(rankOrAll(cfgB, all, o('return')).arr.map(i => i.id)).toEqual(['empty', 'mid']))
+  it('my bike: the racks', () => expect(rankOrAll(cfgB, all, o('mine')).arr.map(i => i.id)).toEqual(['r']))
+  it('no counts known: every station passes take and return', () => {
+    const none = [st('a', 41.64), st('b', 41.65), rack]
+    expect(rankOrAll(cfgB, none, o('take')).arr.map(i => i.id)).toEqual(['a', 'b'])
+    expect(rankOrAll(cfgB, none, o('return')).arr.map(i => i.id)).toEqual(['a', 'b'])
+  })
+  it('no station has a bike: all stations show by distance and it is flagged (like allClosed)', () => {
+    const r = rankOrAll(cfgB, [st('a', 41.64, 0, 5), st('b', 41.65, 0, 5), rack], o('take'))
+    expect(r.arr.map(i => i.id)).toEqual(['a', 'b'])
+    expect(r.allOut).toBe(true)
+    expect(rankOrAll(cfgB, all, o('take')).allOut).toBe(false)
+  })
+})

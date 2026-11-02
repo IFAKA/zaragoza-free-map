@@ -65,9 +65,10 @@ describe('layers built from the data', () => {
       const ids = new Set(L.items.map(i => i.id))
       expect(ids.size).toBe(L.items.length)
       // charge/libraries are real buildings: the layer builder keeps them 8 m apart at least; everything else 15 m
-      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'racks' ? 10 : id === 'bus' ? 0 : 15
+      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'bus' ? 0 : 15 // bizi: stations 8 m, racks 10 m (8 is the weaker bound)
       for (let i = 0; i < L.items.length; i++) for (let j = i + 1; j < L.items.length; j++) {
         const a = L.items[i], b = L.items[j]
+        if (id === 'bizi' && a.cat !== b.cat) continue // a rack may stand next to a station: the two groups are never merged
         if (Math.abs(a.lat - b.lat) > 0.0003) continue
         expect(dist([a.lat, a.lon], [b.lat, b.lon]), `${a.id} / ${b.id}`).toBeGreaterThanOrEqual(m)
       }
@@ -76,14 +77,16 @@ describe('layers built from the data', () => {
   it('water has no hours, so Open now does not apply', () => {
     expect(LAYERS.water.hours).toBe(false)
     expect(LAYERS.bizi.hours).toBe(false)
-    expect(LAYERS.racks.hours).toBe(false)
   })
-  it('bike racks are a separate layer from Bizi, inside the city, with a clean name and a known kind', () => {
-    const L = LAYERS.racks
-    expect(L.items.length).toBeGreaterThan(1500)
-    expect(L.color).not.toBe(LAYERS.bizi.color)
-    expect(L.icon).not.toBe(LAYERS.bizi.icon)
-    for (const i of L.items) {
+  it('bike racks live in the Bizi tab (chip My bike), apart from the stations, with a clean name and a known kind', () => {
+    const racks = LAYERS.bizi.items.filter(i => i.cat === 'mine'), stations = LAYERS.bizi.items.filter(i => i.cat === 'station')
+    expect(racks.length).toBeGreaterThan(1500)
+    expect(stations).toHaveLength(DATA.bizi.rows.length)
+    expect(racks.length + stations.length).toBe(LAYERS.bizi.items.length)
+    expect(LAYERS.bizi.cats).toEqual(['take', 'return', 'mine'])
+    expect(LAYERS.bizi.catDefault).toBe('take')
+    expect('racks' in LAYERS).toBe(false)
+    for (const i of racks) {
       expect(i.lat).toBeGreaterThan(41.5); expect(i.lat).toBeLessThan(41.8)
       expect(['rack', 'rack_closed', 'rack_guarded']).toContain(i.type)
     }

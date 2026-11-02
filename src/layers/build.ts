@@ -72,15 +72,19 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
     charge: L('charge', { icon: 'charge', color: 'var(--color-charge)', label: { en: 'Charge', es: 'Cargar' }, short: { en: 'Charge', es: 'Cargar' }, hint: { en: 'Charge your phone', es: 'Cargar el móvil' }, hours: true }, [...lib, ...civic, ...chargers], 8),
     wifi: L('wifi', { icon: 'wifi', color: 'var(--color-wifi)', label: { en: 'WiFi', es: 'WiFi' }, short: { en: 'WiFi', es: 'WiFi' }, hint: { en: 'Free WiFi', es: 'WiFi gratis' }, hours: true, cats: ['muni', 'food', 'other'] }, [...wifiCity, ...without(wifiOsm, wifiCity, 30)]),
     libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Library', es: 'Biblio.' }, hint: { en: 'Quiet and free', es: 'Tranquilas y gratis' }, hours: true }, lib, 8),
-    bizi: L('bizi', { icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Cheap bike share', es: 'Bici compartida barata' }, hours: false },
-      d.bizi.rows.map(r => ({ id: 'b' + r[0], part: 'city' as const, type: 'bizi', name: r[1], lat: r[2], lon: r[3], upd: d.bizi.updated ?? undefined })), 8),
+    // Bizi tab: stations (cat 'station', live counts joined at runtime) and the street bike racks (cat 'mine'). Racks are never merged into stations.
+    bizi: {
+      id: 'bizi', icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Take or return a bike', es: 'Coger o dejar una bici' }, hours: false, peek: 388, cats: ['take', 'return', 'mine'], catDefault: 'take',
+      items: [
+        ...dedupe(d.bizi.rows.map(r => ({ id: 'b' + r[0], part: 'city' as const, type: 'bizi', cat: 'station', name: r[1], lat: r[2], lon: r[3], upd: d.bizi.updated ?? undefined })), 8),
+        ...dedupe(d.racks.rows.map(r => ({ id: 'r' + r[0], part: 'city' as const, type: r[4] === 'c' ? 'rack_closed' : r[4] === 'g' ? 'rack_guarded' : 'rack', cat: 'mine', name: cleanName(r[1]), lat: r[2], lon: r[3], upd: d.racks.updated ?? undefined })), 10),
+      ],
+    },
     shelter: L('shelter', { icon: 'shelter', color: 'var(--color-shelter)', ...shelterName(seasonOf(now)), hint: { en: 'Public buildings with climate control', es: 'Edificios públicos con clima' }, hours: true }, shelters, 0),
     bus: L('bus', { icon: 'bus', color: 'var(--color-bus)', label: { en: 'Bus stops', es: 'Paradas de bus' }, short: { en: 'Bus', es: 'Bus' }, hint: { en: 'Next buses at your stop', es: 'Próximos buses en tu parada' }, hours: false, peek: 316 },
       d.bus.rows.map(r => ({ id: 'u' + r[0], part: 'city' as const, type: 'bus', name: r[1], lines: r[2], stop: /^\d+$/.test(r[0]) ? r[0] : undefined, lat: r[3], lon: r[4], upd: d.bus.updated ?? undefined })), 0),
     // live layer: its items come from lib/duty.ts when the tab is opened (see dutyItems), so it starts empty
     pharmacy: { id: 'pharmacy', icon: 'pharmacy', color: 'var(--color-pharmacy)', label: { en: 'Pharmacies on duty', es: 'Farmacias de guardia' }, short: { en: 'Pharmacy', es: 'Farmacia' }, hint: { en: 'Open today, day and night', es: 'Abiertas hoy, de día y de noche' }, hours: false, peek: 372, live: true, items: [] },
-    racks: L('racks', { icon: 'lock', color: 'var(--color-rack)', label: { en: 'Bike racks', es: 'Aparcabicis' }, short: { en: 'Racks', es: 'Aparcab.' }, hint: { en: 'Lock your own bike', es: 'Deja tu bici' }, hours: false },
-      d.racks.rows.map(r => ({ id: 'r' + r[0], part: 'city' as const, type: r[4] === 'c' ? 'rack_closed' : r[4] === 'g' ? 'rack_guarded' : 'rack', name: cleanName(r[1]), lat: r[2], lon: r[3], upd: d.racks.updated ?? undefined })), 10),
   }
 }
 

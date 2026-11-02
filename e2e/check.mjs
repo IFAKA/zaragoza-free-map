@@ -1,30 +1,52 @@
 // Browser check: node e2e/check.mjs [url]   (needs `playwright` installed and the app served, e.g. npm run build && npx vite preview --port 4173)
 // - blocks every request except the app itself and map tiles (the app must work with no data API)
 // - every layer renders markers; Water works; every control is tapped; drawer timings are measured
+import fs from 'node:fs'
 import os from 'node:os'
-import { chromium } from 'playwright'
+import { chromium, devices } from 'playwright'
 const URL = process.argv[2] || 'http://localhost:4173/'
 const out = process.env.SHOTS || '/tmp/zgz-pw'
 let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++ }
 const b = await chromium.launch()
 const todo = [], late = [] // each block below is independent (own browser context): `todo` blocks run in parallel, `late` (timing measurements) alone afterwards
-async function open(vp, mobile, extra = {}, lang = 'en') {
-  const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: mobile, isMobile: mobile, locale: 'en-US', timezoneId: 'Europe/Madrid', ...extra })
+// CityBikes is mocked (the real feed changes every minute): one station per bundled Bizi place, counts from its position in the list.
+// Station names are as the real feed writes them ("8-Puerta del Sol"), the stamp as the real feed writes it ("...+00:00Z").
+const BIZI = JSON.parse(fs.readFileSync([process.env.APP_DIR, process.cwd(), '/Users/faka/code/projects/web/zaragoza/maps-free-services/app'].filter(Boolean).map(d => d + '/src/data/bizi.json').find(f => fs.existsSync(f)), 'utf8')).rows
+const feedAt = (ms, bikes = i => (i % 5 === 0 ? 0 : i % 9), docks = i => (i * 3) % 11) => ({ network: { stations: BIZI.map((r, i) => ({
+  name: r[1].replace(/^(\d+)- ?/, '$1-'), latitude: r[2], longitude: r[3], free_bikes: bikes(i), empty_slots: docks(i), timestamp: new Date(ms).toISOString().replace('Z', '+00:00Z'),
+  extra: { ebikes: i % 3 ? 1 : 0, renting: true, returning: true } })) } })
+// mode: 'ok' (fresh), 'empty' (no bikes anywhere), 'stale' (stamps 10 min old), 'fail' (HTTP 500)
+async function open(vp, mobile, extra = {}, lang = 'en', o = {}) {
+  const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: mobile, isMobile: mobile, locale: 'en-US', timezoneId: 'Europe/Madrid', serviceWorkers: 'block', ...extra })
   if (lang) await ctx.addInitScript(l => { if (!localStorage.getItem('zgz:v2:lang')) localStorage.setItem('zgz:v2:lang', l) }, lang)
   // the app opens on the seasonal default layer (Calor in the cold months, often empty at night); these checks start on toilets
-  await ctx.addInitScript(() => { if (!localStorage.getItem('zgz:v2:layer')) localStorage.setItem('zgz:v2:layer', 'toilets') })
+  if (o.layer !== null) await ctx.addInitScript(l => { if (!localStorage.getItem('zgz:v2:layer')) localStorage.setItem('zgz:v2:layer', l) }, o.layer || 'toilets')
+  if (o.geo) await ctx.addInitScript(g => { // a scripted location answer: the permission stays "prompt" until the first ask
+    window.__geoCalls = 0; window.__ev = []
+    window.goatcounter = { count: e => window.__ev.push(e.path) }
+    navigator.permissions.query = async () => ({ state: g === 'blocked' ? 'denied' : 'prompt', addEventListener() {}, removeEventListener() {} })
+    navigator.geolocation.getCurrentPosition = (ok, err) => { window.__geoCalls++; setTimeout(() => (g === 'grant' ? ok({ coords: { latitude: 41.6488, longitude: -0.8891 } }) : err({ code: 1 })), 30) }
+  }, o.geo)
   const p = await ctx.newPage()
+  const mock = { mode: 'ok', hits: 0 }
   const blocked = []
   p.on('pageerror', e => { fails++; console.log('FAIL pageerror', e.message) })
   await p.route('**/*', r => {
     const u = r.request().url()
     if (u.startsWith(URL) || u.startsWith('data:') || u.startsWith('blob:')) return r.continue()
     if (u.includes('server.arcgisonline.com')) return r.continue()
+    if (u.startsWith('https://api.citybik.es/')) {
+      mock.hits++
+      if (mock.mode === 'fail') return r.fulfill({ status: 500, body: 'no' })
+      const ms = Date.now() - (mock.mode === 'stale' ? 10 * 60_000 : 0)
+      return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(feedAt(ms, mock.mode === 'empty' ? () => 0 : undefined)) })
+    }
     blocked.push(u); return r.abort()
   })
+  if (o.clock) await p.clock.install({ time: Date.now() })
   await p.goto(URL); await ready(p)
-  return { ctx, p, blocked }
+  return { ctx, p, blocked, mock }
 }
 // Wait until the page stops moving: no running animation or transition, and the drawer, map and a marker hold still for 4 frames. Replaces fixed sleeps.
 const settle = p => p.evaluate(() => new Promise(res => {
@@ -92,11 +114,9 @@ todo.push(async () => {
   const pop = p.getByRole('button', { name: 'Why no numbers?' }).first()
   if (await pop.count()) { await pop.click(); await settle(p); ok(await p.getByText(/do not guess/).isVisible(), 'occupancy info popover opens'); await p.keyboard.press('Escape') }
   await p.screenshot({ path: out + '/m-libs.png' })
-  await p.getByTestId('tab-racks').click(); await settle(p)
-  ok(await markers(p) > 0, 'bike racks render')
+  ok(await p.getByTestId('tab-racks').count() === 0, 'no separate racks tab')
   await p.getByTestId('tab-bizi').click(); await settle(p)
   ok(await markers(p) > 0, 'bizi locations render')
-  ok(await p.getByText(/no live connection/).count() > 0, 'bizi says no availability numbers')
   await p.getByTestId('open-settings').click(); await settle(p)
   await p.screenshot({ path: out + '/m-settings.png' })
   await p.getByTestId('row-language').click(); await settle(p)
@@ -281,13 +301,17 @@ todo.push(async () => {
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && /gratis/.test(man.name), `manifest lang es (${man.lang}, ${man.name})`)
   const labels = await p.locator('[role=tab]').allInnerTexts()
-  ok(JSON.stringify(labels) === JSON.stringify(['Calor', 'Bus', 'Farmacia', 'Aseos', 'Biblio.', 'Bizi', 'WiFi', 'Cargar', 'Agua', 'Aparcab.']), 'tab row: ' + labels.join(' | '))
-  // 10 tabs in one scrolling row: each at least 44px, the first ones fit, the next one peeks in at the edge
+  const base = labels.filter(l => l !== 'Calor'), calor = labels.indexOf('Calor')
+  ok(JSON.stringify(base) === JSON.stringify(['Aseos', 'Agua', 'Bizi', 'Bus', 'Farmacia', 'WiFi', 'Cargar', 'Biblio.']) && (calor === 2 || calor === 8), 'tab row (Calor 3rd in its season, else last): ' + labels.join(' | '))
+  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'first visit: Toilets is selected')
+  // 9 tabs in one scrolling row: each at least 44px, the first ones fit, the next one peeks in at the edge
   const cells = await p.locator('[role=tab]').evaluateAll(es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, w: r.width, h: r.height, clipped: e.scrollWidth > e.clientWidth + 1 } }))
   const list = await p.evaluate(() => { const e = document.querySelector('[role=tablist]'); return { sw: e.scrollWidth, cw: e.clientWidth, sb: getComputedStyle(e).scrollbarWidth } })
   ok(list.sw > list.cw + 20 && list.sb === 'none', `tab row scrolls, no scrollbar (content ${list.sw}, width ${list.cw})`)
-  ok(cells.length === 10 && cells.every(c => c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), '10 tabs, equal width, at least 44px, labels not clipped')
-  ok(cells.filter(c => c.x >= -0.5 && c.x + c.w <= 390.5).length >= 5 && cells.some(c => c.x < 390 && c.x + c.w > 390.5), 'at least 5 tabs fully visible and the next one peeks in')
+  ok(cells.length === 9 && cells.every(c => c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), '9 tabs, equal width, at least 44px, labels not clipped')
+  ok(cells.filter(c => c.x >= -0.5 && c.x + c.w <= 390.5).length >= 5 && cells.some(c => c.x < 388 && c.x + c.w > 390.5 + 8), 'at least 5 tabs fully visible and the next one is half cut at the right edge')
+  const cut = cells.find(c => c.x < 390 && c.x + c.w > 390.5)
+  ok(!!cut && (390 - cut.x) / cut.w > 0.25 && (390 - cut.x) / cut.w < 0.8, `the cut tab shows ${cut ? Math.round((390 - cut.x) / cut.w * 100) : 0}% of itself (a clear hint to scroll)`)
   ok(await p.getByTestId('tabs-prev').count() === 0 && await p.getByTestId('tabs-next').count() === 0, 'no chevrons')
   await p.screenshot({ path: out + '/t-start.png' })
   const cdp = await ctx.newCDPSession(p)
@@ -323,7 +347,7 @@ todo.push(async () => {
   await p.getByTestId('back').tap(); await settle(p)
   await p.getByTestId('row-about').tap(); await settle(p); await scan('about')
   await p.getByTestId('back').tap(); await settle(p); await p.getByTestId('back').tap(); await settle(p)
-  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi', 'racks']) { await p.getByTestId('tab-' + id).tap(); await settle(p); await scan(id) }
+  for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi']) { await p.getByTestId('tab-' + id).tap(); await settle(p); await scan(id) }
   await p.getByTestId('details').tap(); await settle(p); await scan('details')
   ok(leaks.length === 0, 'no English left in Spanish mode ' + JSON.stringify(leaks))
   // Language choice persists, and the html lang follows
@@ -372,17 +396,18 @@ late.push(async () => {
   ok(Math.abs(m.transformMs - 450) < 60, `measured transform ${m.transformMs}ms ~ 450ms`)
   await settle(p)
   await p.getByTestId('open-settings').click()
-  const f = await p.evaluate(() => { const el = document.querySelector('.page-in'); const cs = getComputedStyle(el); return { dur: cs.animationDuration, name: cs.animationName } })
+  const f = await p.evaluate(() => { const el = document.querySelector('.page-in'); const cs = getComputedStyle(el); return { dur: cs.transitionDuration, prop: cs.transitionProperty, anim: cs.animationName } })
   console.log('page fade:', JSON.stringify(f))
-  ok(f.dur === '0.3s', 'page fade 300ms')
+  ok(f.dur === '0.2s' && f.prop === 'opacity' && f.anim === 'none', 'page fade is a 200ms opacity transition, not a keyframe animation')
   await ctx.close()
 })
 // ---- reduced motion ----
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { reducedMotion: 'reduce' })
   await p.getByTestId('open-settings').click()
-  const f = await p.evaluate(() => { const el = document.querySelector('.page-in'); return getComputedStyle(el).animationName })
-  console.log('reduced-motion page animation:', f)
+  const f = await p.evaluate(() => { const cs = getComputedStyle(document.querySelector('.page-in')); return { anim: cs.animationName, prop: cs.transitionProperty } })
+  console.log('reduced-motion page:', JSON.stringify(f))
+  ok(f.anim === 'none' && !/transform|scale|translate|all/.test(f.prop), 'reduced motion: opacity and colour only')
   await ctx.close()
 })
 // ---- red only on interactive elements and titles (computed colour scan) ----
@@ -418,6 +443,152 @@ todo.push(async () => {
   for (const id of ['toilets', 'charge', 'wifi', 'water']) { await p.getByTestId('tab-' + id).click(); await settle(p); ok(await markers(p) > 0, `desktop ${id} renders`) }
   await p.getByTestId('tab-libraries').click(); await settle(p)
   await p.screenshot({ path: out + '/d-libs.png' })
+  await ctx.close()
+})
+// ---- Bizi live counts (CityBikes mocked) ----
+const listText = p => p.getByTestId('list').innerText()
+const biziTab = async p => { await p.getByTestId('tab-bizi').tap(); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]') ; await settle(p) }
+todo.push(async () => {
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
+  ok(mock.hits === 0, 'CityBikes is not called before the Bizi tab opens')
+  await biziTab(p)
+  ok(mock.hits >= 1, 'CityBikes is called when the Bizi tab opens')
+  ok(/Live counts, updated \d\d:\d\d/.test(await p.getByTestId('bizi-status').innerText()), 'Bizi: status says the counts are live, with the time')
+  const card = await p.getByTestId('bizi-counts').innerText()
+  ok(/^\d+ bikes? \(\d+ electric\) · \d+ free docks?$|^\d+ bikes? · \d+ free docks?$/.test(card), `Bizi card shows bikes, e-bikes and free docks (${card})`)
+  const chips = await p.getByTestId('bizi-bar').getByRole('button').allInnerTexts()
+  ok(JSON.stringify(chips.slice(0, 3)) === JSON.stringify(['Take a bike', 'Return a bike', 'My bike']), 'Bizi: three chips ' + chips.join(' | '))
+  ok(await p.getByTestId('bizi-bar').getByRole('button', { name: 'Take a bike' }).getAttribute('aria-pressed') === 'true', 'Take a bike is the default chip')
+  const take = await listText(p)
+  ok(/\d+ bikes? · \d+ free docks?/.test(take) && !/\b0 bikes\b/.test(take), 'Take: rows show counts and hide stations with 0 bikes')
+  await p.getByRole('button', { name: 'Return a bike' }).tap(); await settle(p)
+  const ret = await listText(p)
+  ok(/free docks?/.test(ret) && !/\b0 free docks\b/.test(ret) && /\b0 bikes\b/.test(ret), 'Return: stations with free docks (0 bikes allowed, 0 docks hidden)')
+  await p.getByRole('button', { name: 'My bike' }).tap(); await settle(p)
+  ok(await markers(p) > 0 && !/ free docks?/.test(await listText(p)) && await p.getByTestId('bizi-status').count() === 0, 'My bike: the racks, no counts, no live status')
+  await p.screenshot({ path: out + '/bizi-mine-en.png' })
+  // counts change without animation
+  await p.getByRole('button', { name: 'Take a bike' }).tap(); await settle(p)
+  ok(await p.evaluate(() => document.getAnimations().length) === 0, 'no animation running after a chip change')
+  await ctx.close()
+})
+todo.push(async () => { // the same tab in Spanish, with a screenshot
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es')
+  await biziTab(p)
+  ok(/Cifras en directo, actualizadas a las \d\d:\d\d/.test(await p.getByTestId('bizi-status').innerText()), 'ES: live status line')
+  ok(/bicis?( \(.*\))? · \d+ anclajes? libres?/.test(await p.getByTestId('bizi-counts').innerText()), 'ES: card counts')
+  ok(JSON.stringify((await p.getByTestId('bizi-bar').getByRole('button').allInnerTexts()).slice(0, 3)) === JSON.stringify(['Coger una bici', 'Dejar una bici', 'Mi bici']), 'ES chips')
+  await p.screenshot({ path: out + '/bizi-es.png' })
+  await ctx.close()
+})
+todo.push(async () => { // nothing in the list is wiped when the feed is down
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
+  mock.mode = 'fail'
+  await p.getByTestId('tab-bizi').tap(); await settle(p)
+  await p.waitForSelector('[data-testid=bizi-status][data-state=failed]')
+  ok(/Live counts unavailable/.test(await p.getByTestId('bizi-status').innerText()) && await p.getByTestId('bizi-retry').count() === 1, 'failed feed: "Live counts unavailable" and Try again')
+  ok(await markers(p) > 0 && (await p.getByTestId('list').locator('li').count()) > 5, 'failed feed: the places still show')
+  ok(!/bikes? · /.test(await listText(p)), 'failed feed: no counts shown')
+  await p.screenshot({ path: out + '/bizi-failed-en.png' })
+  mock.mode = 'ok'; await p.getByTestId('bizi-retry').tap()
+  await p.waitForSelector('[data-testid=bizi-status][data-state=live]')
+  ok(/bikes? · /.test(await listText(p)), 'Try again loads the counts')
+  await ctx.close()
+})
+todo.push(async () => { // stale feed (stamps 10 minutes old) is never shown as live
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
+  mock.mode = 'stale'
+  await p.getByTestId('tab-bizi').tap(); await settle(p)
+  await p.waitForSelector('[data-testid=bizi-status][data-state=failed]')
+  ok(!/bikes? · /.test(await listText(p)) && !/Live counts, updated/.test(await p.locator('body').innerText()), 'stale feed: not shown as live')
+  await ctx.close()
+})
+todo.push(async () => { // no station has a bike: show them all and say so
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
+  mock.mode = 'empty'
+  await p.getByTestId('tab-bizi').tap(); await settle(p)
+  await p.waitForSelector('[data-testid=bizi-status][data-state=live]'); await settle(p)
+  ok(await p.getByTestId('all-out').count() === 1 && (await p.getByTestId('list').locator('li').count()) > 5, 'no bikes anywhere: the message plus all stations')
+  await ctx.close()
+})
+todo.push(async () => { // cached counts older than 5 minutes are not live; the page makes no call while on another tab
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
+  await biziTab(p)
+  const n = mock.hits
+  await p.getByTestId('tab-water').tap(); await settle(p)
+  await p.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await p.waitForTimeout(300)
+  ok(mock.hits === n, 'leaving the Bizi tab: no more CityBikes calls')
+  await ctx.close()
+})
+
+// ---- location at the first moment of intent ----
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, { permissions: [] }, 'en', { geo: 'grant', layer: null })
+  ok(await p.evaluate(() => window.__geoCalls) === 0, 'location is not asked on load')
+  ok(await p.getByTestId('from-centre').innerText().then(t => /Distances from the city centre/.test(t)), 'before location: the list says distances are from the city centre')
+  ok(await p.getByTestId('locate').count() === 1, 'before location: a Use my location button')
+  await p.screenshot({ path: out + '/loc-before-en.png' })
+  await p.getByTestId('tab-water').tap(); await settle(p)
+  ok(await p.evaluate(() => window.__geoCalls) === 1, 'the first tab tap asks for location once')
+  await p.waitForFunction(() => /distances from you/i.test(document.body.innerText)); await settle(p)
+  ok(await p.getByTestId('from-centre').count() === 0 && await p.getByTestId('locate').count() === 0, 'after location: header says from you, no button')
+  await p.screenshot({ path: out + '/loc-after-en.png' })
+  await p.getByTestId('tab-toilets').tap(); await settle(p)
+  ok(await p.evaluate(() => window.__geoCalls) === 1, 'later tab taps do not ask again')
+  ok(await p.evaluate(() => window.__ev.includes('locate-granted')), 'event locate-granted sent: ' + await p.evaluate(() => window.__ev.join(',')))
+  await ctx.close()
+})
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'deny', layer: null })
+  await p.getByTestId('tab-water').tap(); await settle(p)
+  await p.waitForSelector('[data-testid=loc-denied]'); await settle(p)
+  ok(/desde el centro/.test(await p.getByTestId('from-centre').innerText()), 'denied: still ranked from the centre')
+  ok(await p.getByTestId('locate').count() === 0 && await p.getByTestId('toast').count() === 0, 'denied: one calm line, no button, no toast')
+  await p.getByTestId('tab-toilets').tap(); await settle(p); await p.getByTestId('tab-wifi').tap(); await settle(p)
+  ok(await p.evaluate(() => window.__geoCalls) === 1, 'denied: not asked again on later taps')
+  ok(await p.evaluate(() => window.__ev.filter(e => e === 'locate-denied').length) === 1, 'event locate-denied sent once')
+  ok(!(await p.evaluate(() => window.__ev.join(','))).match(/-?\d+\.\d{3}/), 'events carry no coordinates')
+  await p.screenshot({ path: out + '/loc-denied-es.png' })
+  await ctx.close()
+})
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { geo: 'blocked', layer: null })
+  await p.getByTestId('tab-water').tap(); await settle(p)
+  ok(await p.evaluate(() => window.__geoCalls) === 0 && await p.getByTestId('loc-denied').count() === 1, 'permission already denied: no ask, the calm line shows')
+  await ctx.close()
+})
+
+// ---- install hint is for a real browser tab only ----
+const hintAfterWalk = async ua => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, { userAgent: ua })
+  await p.getByTestId('walk').first().evaluate(a => { a.addEventListener('click', e => e.preventDefault(), true) })
+  await p.getByTestId('walk').first().click(); await p.waitForTimeout(1800)
+  const shown = (await p.locator('body').innerText()).includes('Add this app to your home screen')
+  await ctx.close(); return shown
+}
+todo.push(async () => {
+  ok(await hintAfterWalk('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36') === true, 'install hint shows in a normal Android Chrome tab')
+  ok(await hintAfterWalk('Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.0.0 Mobile Safari/537.36 Reddit/Version 2024.20.0') === false, 'no install hint in the Reddit in-app browser')
+  ok(await hintAfterWalk('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0') === false, 'no install hint in the Instagram in-app browser')
+})
+// ---- one run as a real Android Chrome (device emulation: UA, touch, DPR, no SW tricks) ----
+todo.push(async () => {
+  const d = devices['Pixel 7']
+  const ctx = await b.newContext({ ...d, locale: 'en-US', serviceWorkers: 'block' })
+  await ctx.addInitScript(() => { localStorage.setItem('zgz:v2:layer', 'toilets'); localStorage.setItem('zgz:v2:lang', 'en') })
+  const p = await ctx.newPage(); const mock = { hits: 0 }
+  await p.route('**/*', r => { const u = r.request().url(); if (u.startsWith(URL.replace(/\/$/, '')) || u.startsWith('http://localhost')) return r.continue(); if (u.includes('arcgisonline')) return r.continue()
+    if (u.startsWith('https://api.citybik.es/')) { mock.hits++; return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(feedAt(Date.now())) }) }
+    return r.abort() })
+  await p.goto(URL); await ready(p)
+  ok(/Android/.test(await p.evaluate(() => navigator.userAgent)), 'Android Chrome UA emulation active')
+  await p.getByTestId('tab-bizi').tap(); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]')
+  ok(/bikes? · /.test(await p.getByTestId('list').innerText()), 'Android: Bizi counts show')
+  await p.getByTestId('tab-pharmacy').tap(); await settle(p)
+  ok(await p.getByTestId('tab-pharmacy').getAttribute('aria-selected') === 'true', 'Android: tab switch works by touch')
+  ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Android: no sideways page scroll')
+  await p.screenshot({ path: out + '/android.png' })
   await ctx.close()
 })
 // run the blocks in a pool (half the cores), then the timing-sensitive ones alone

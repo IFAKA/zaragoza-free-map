@@ -13,7 +13,8 @@ import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS, ORDER } from '../layers'
 import { rangeMetres } from './MapView'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
-import { BUZ_URL, busUrl, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import type { useBizi } from './useBizi'
 import { ICONS } from './icons'
 import { useT } from './lang'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -28,7 +29,7 @@ export function PageHeader({ title, onBack }: { title: string; onBack: () => voi
   const { t } = useT()
   return (
     <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-3">
-      <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" className="inline-flex size-11 items-center justify-center rounded-full border-0 bg-transparent text-brand-text active:scale-95">
+      <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" className="inline-flex size-11 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:scale_120ms_var(--ease-out)] active:scale-[.97] motion-reduce:active:scale-100">
         <CaretLeft size="1.4em" weight="bold" aria-hidden />
       </BaseButton>
       <h1 className={h2}>{title}</h1>
@@ -118,6 +119,42 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
   )
 }
 
+/** A quiet stand-in for a list row while a live list loads: same structure and height as a real row, so nothing jumps when the real rows arrive. */
+function PlaceholderRow() {
+  return (
+    <li className="border-b border-line" aria-hidden>
+      <div className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-x-3 px-4 py-2">
+        <span className="min-w-0"><span className="block font-bold"><span className="inline-block h-[0.85em] w-44 max-w-full rounded-sm bg-surface align-middle" /></span><span className={cn(sub, 'block')}><span className="inline-block h-[0.8em] w-28 rounded-sm bg-surface align-middle" /></span></span>
+        <span className="whitespace-nowrap text-right font-bold"><span className="inline-block h-[0.85em] w-9 rounded-sm bg-surface align-middle" /><span className={cn(sub, 'block font-normal')}><span className="inline-block h-[0.8em] w-7 rounded-sm bg-surface align-middle" /></span></span>
+      </div>
+    </li>
+  )
+}
+const Placeholders = ({ n = 4 }: { n?: number }) => <ul className="m-0 list-none p-0" data-testid="placeholders">{Array.from({ length: n }, (_, i) => <PlaceholderRow key={i} />)}</ul>
+
+/** Bizi: the two real jobs as chips (take a bike, return a bike, my own bike), and one line about the live counts. Always in view, above the nearest place. */
+function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => void; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'> }) {
+  const { t } = useT()
+  const options = LAYERS.bizi.cats!.map(c => ({ value: c, label: t(c as Key) }))
+  return (
+    <div className="px-4 pb-1 pt-3" data-testid="bizi-bar">
+      <Chips value={cat} onChange={setCat} label={t('typeLabel')} options={options} allValue={LAYERS.bizi.catDefault} />
+      {cat !== 'mine' && (
+        <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
+          {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
+          {bizi.state === 'loading' && <p className={cn(sub, 'm-0')} role="status"><span className="sr-only">{t('biziLoading')}</span><span aria-hidden className="inline-block h-[0.8em] w-40 rounded-sm bg-surface align-middle" /></p>}
+          {bizi.state === 'failed' && (
+            <>
+              <p className={cn(sub, 'm-0 min-w-0')} role="alert"><span className="font-bold text-warn-ink">{t('biziFail')}</span></p>
+              <Button variant="link" onClick={bizi.retry} data-testid="bizi-retry">{t('retry')}</Button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const DIST_MIN = 'min'
 
 // ---------- tabs ----------
@@ -138,7 +175,7 @@ export function NeedTabs({ layer, onPick }: { layer: LayerId; onPick: (id: Layer
     first.current = false
     el.scrollTo({ left: Math.max(0, left), behavior: calm ? 'auto' : 'smooth' })
   }, [layer])
-  const tab = 'group flex min-h-14 shrink-0 basis-[18.18%] snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0 text-ink [transition:color_120ms_var(--ease-out),transform_120ms_var(--ease-out)] active:scale-[.97] data-[active]:text-brand-text'
+  const tab = 'group flex min-h-14 shrink-0 basis-[18.18%] snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0 text-ink [transition:color_120ms_var(--ease-out),scale_120ms_var(--ease-out)] active:scale-[.97] data-[active]:text-brand-text'
   const label = 'max-w-full border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
   return (
     <Tabs.Root value={layer} className="flex shrink-0 border-b border-line">
@@ -162,7 +199,7 @@ function HomeHeader({ onSettings, desktop }: { onSettings: () => void; desktop: 
   return (
     <div className={cn('flex shrink-0 items-center justify-between gap-2 pl-4 pr-1', desktop ? 'pt-2' : 'border-b border-line')}>
       <div className="min-w-0 truncate font-title text-[1.15em] font-bold text-brand-text">{t('title')} · {t('subtitle')}</div>
-      <BaseButton onClick={onSettings} aria-label={t('settings')} title={t('settings')} data-testid="open-settings" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:transform_120ms_var(--ease-out)] active:scale-[.97]">
+      <BaseButton onClick={onSettings} aria-label={t('settings')} title={t('settings')} data-testid="open-settings" className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:scale_120ms_var(--ease-out)] active:scale-[.97]">
         <GearSix size="1.5em" aria-hidden />
       </BaseButton>
     </div>
@@ -170,19 +207,20 @@ function HomeHeader({ onSettings, desktop }: { onSettings: () => void; desktop: 
 }
 
 // ---------- the block with the nearest (or selected) place ----------
-export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLocate, onDetails, onWalk }: {
-  layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; locating: boolean
-  onLocate: () => void; onDetails: () => void; onWalk: () => void
+export function NearestBlock({ layer, item, isSelected, hasPos, cat, onDetails, onWalk }: {
+  layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
+  onDetails: () => void; onWalk: () => void
 }) {
   const { t, type } = useT()
   if (!item) return <div className="px-4 py-5"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
-  const kind = isSelected ? t('selected') : t(('nearest' + layer.id) as Key)
+  const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   return (
     <section className="px-4 pb-3 pt-4" data-testid="nearest" aria-label={kind}>
       <div className={overline}>{kind}</div>
       <h2 className={cn(h2, 'mt-1')} data-testid="nearest-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
       <div className="mt-0.5"><Status item={item} layer={layer} /></div>
+      {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts">{biziLine(t, item, true)}</div>}
       {item.lines && <div className="mt-0.5 font-semibold" data-testid="bus-lines">{t('lines')}: {item.lines.replace(/,/g, ', ')}</div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
@@ -191,23 +229,20 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
           <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
         </div>
       )}
-      {!hasPos && (
-        <Button variant="link" onClick={onLocate} disabled={locating} className="mt-1" data-testid="locate"><Crosshair size="1.2em" aria-hidden />{locating ? t('locating') : t('useLocation')}</Button>
-      )}
     </section>
   )
 }
 
 // ---------- list ----------
-function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; onSelect: () => void }) {
+function Row({ item, layer, selected, counting, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; counting: boolean; onSelect: () => void }) {
   const { t, type } = useT()
   const closed = layer.hours && item.open === false
   return (
     <li className={cn('relative scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
-      <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink after:absolute after:inset-0 hov:bg-surface">
+      <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] after:absolute after:inset-0 hov:bg-surface active:scale-[.97] motion-reduce:active:scale-100">
         <span className={cn('min-w-0', closed && 'opacity-60')}>
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
-          <span className={cn(sub, 'block truncate')}>{item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
+          <span className={cn(sub, 'block truncate')}>{item.type === 'bizi' ? (biziLine(t, item) || (counting ? <span aria-hidden className="inline-block h-[0.8em] w-32 rounded-sm bg-surface align-middle" /> : type(item.type))) : item.lines ? `${t('lines')} ${item.lines.replace(/,/g, ', ')}` : item.type === 'pharmacy' ? item.addr : item.name ? type(item.type) : item.note}{layer.hours ? ' · ' : ''}{layer.hours && <Status item={item} layer={layer} />}</span>
         </span>
         <span className={cn('whitespace-nowrap text-right font-bold', closed && 'opacity-60')}>{fmtDist(item.d)}<span className={cn(sub, 'block font-normal')}>{walkMins(item.d)} {DIST_MIN}</span></span>
       </BaseButton>
@@ -220,14 +255,32 @@ export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange
   layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {
   const { t } = useT()
-  if (!layer.hours && !layer.cats && layer.id !== 'bizi' && layer.id !== 'pharmacy') return null
+  if (!layer.hours && !layer.cats && layer.id !== 'pharmacy') return null
   return (
     <div className="px-4 pb-2">
       {layer.id === 'pharmacy' && <p className={cn(sub, 'm-0 py-1')}>{t('dutyNote')} ({madridDate()})</p>}
       {layer.hours && <Switch checked={openOnly} onCheckedChange={setOpenOnly} label={t('openNow')} hint={t('openNowHint')} testId="switch-open" />}
       {layer.id === 'wifi' && <Switch checked={showRange} onCheckedChange={setShowRange} label={t('showRange')} hint={t('showRangeHint')} testId="switch-range" />}
-      {layer.cats && <div className="mt-1"><Chips value={cat} onChange={setCat} label={t('typeLabel')} options={[{ value: 'all', label: t('all') }, ...layer.cats.map(c => ({ value: c, label: t(c as Key) }))]} /></div>}
+      {layer.cats && layer.id !== 'bizi' && <div className="mt-1"><Chips value={cat} onChange={setCat} label={t('typeLabel')} options={[{ value: 'all', label: t('all') }, ...layer.cats.map(c => ({ value: c, label: t(c as Key) }))]} /></div>}
       {layer.id === 'bizi' && <p className={cn(sub, 'm-0 py-1')}>{t('bizi')}</p>}
+    </div>
+  )
+}
+
+/** Above the list: how many places, and whose distances they are. Without a position: the plain truth and one big button; blocked: one calm line. */
+function ListHeader({ count, hasPos, locating, denied, onLocate }: { count: number; hasPos: boolean; locating: boolean; denied: boolean; onLocate: () => void }) {
+  const { t } = useT()
+  return (
+    <div className="border-y border-line bg-surface" data-testid="list-header">
+      <div className={cn(overline, 'px-4 py-2')}>{count} {t('places')}{hasPos ? ` · ${t('distYou')}` : ''}</div>
+      {!hasPos && (
+        <div className="px-4 pb-3" data-testid="from-centre">
+          <p className={cn(sub, 'm-0 font-semibold')}>{t('distCentre')}</p>
+          {denied
+            ? <p className={cn(sub, 'm-0 mt-1')} data-testid="loc-denied">{t('locDenied')}</p>
+            : <Button onClick={onLocate} disabled={locating} className="mt-2 min-h-12 w-full" data-testid="locate"><Crosshair size="1.3em" aria-hidden />{locating ? t('locating') : t('useLocation')}</Button>}
+        </div>
+      )}
     </div>
   )
 }
@@ -245,7 +298,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 }
 
 export function HomePage(p: {
-  layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
+  layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   limit: number; onMoreRows: () => void; locked: boolean; onPick: (id: LayerId) => void; onSettings: () => void
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
@@ -287,15 +340,18 @@ export function HomePage(p: {
       <NeedTabs layer={p.layer.id} onPick={p.onPick} />
       {!p.desktop && <HomeHeader onSettings={p.onSettings} desktop={false} />}
       <div className="shrink-0">
-        {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} locating={p.locating} onLocate={p.onLocate} onDetails={p.onDetails} onWalk={p.onWalk} />}
+        {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
+        {p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} onDetails={p.onDetails} onWalk={p.onWalk} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
         {p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
-        {!p.liveState && <div className={cn(overline, 'border-y border-line bg-surface px-4 py-2')}>{p.arr.length} {t('places')}</div>}
+        {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
+        {!p.liveState && <ListHeader count={p.arr.length} hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
+        {p.liveState === 'loading' && <Placeholders />}
         <ul ref={listRef} className="m-0 list-none p-0" data-testid="list">
-          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => p.onSelect(it.id)} />)}
+          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} counting={p.bizi.state === 'loading'} onSelect={() => p.onSelect(it.id)} />)}
         </ul>
         {p.arr.length > p.limit && <div className="flex justify-center p-3"><Button variant="secondary" onClick={p.onMoreRows}>{t('showMore')}</Button></div>}
         <Footer onAbout={p.onAbout} />
@@ -307,7 +363,7 @@ export function HomePage(p: {
 // ---------- More, Language, About, Place ----------
 function PageRow({ icon, title, description, status, onClick, testId, active }: { icon: ReactNode; title: string; description?: string; status?: string; onClick: () => void; testId: string; active?: boolean }) {
   return (
-    <BaseButton onClick={onClick} data-testid={testId} className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink hov:bg-surface', active && 'bg-brand-tint')}>
+    <BaseButton onClick={onClick} data-testid={testId} className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface', active && 'bg-brand-tint')}>
       <span className="flex size-10 shrink-0 items-center justify-center rounded-tile bg-surface text-ink">{icon}</span>
       <span className="min-w-0 flex-1"><span className="block font-bold">{title}</span>{description && <span className={cn(sub, 'block')}>{description}</span>}</span>
       {status && <span className={sub}>{status}</span>}
@@ -337,7 +393,7 @@ export function LanguagePage({ lang, setLang, onBack, locked }: { lang: Lang; se
       <Scroll locked={locked}>
         <RadioGroup value={lang} onValueChange={v => setLang(v as Lang)} aria-label={t('langTitle')}>
           {(['en', 'es'] as Lang[]).map(l => (
-            <Radio.Root key={l} value={l} data-testid={`lang-${l}`} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink hov:bg-surface">
+            <Radio.Root key={l} value={l} data-testid={`lang-${l}`} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:scale_120ms_var(--ease-out),background-color_120ms] active:scale-[.97] motion-reduce:active:scale-100 hov:bg-surface">
               <span className="flex-1">{l === 'en' ? t('langEn') : t('langEs')}</span>
               <Radio.Indicator className="text-brand-text"><Check size="1.3em" weight="bold" aria-hidden /></Radio.Indicator>
             </Radio.Root>
@@ -361,7 +417,7 @@ export function AboutPage({ onBack, locked }: { onBack: () => void; locked: bool
           <p className="m-0">{t('noGuarantee')}</p>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
-            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
+            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsBizi')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
           </ul>
           {d && <p className="m-0 font-bold" data-testid="refreshed">{t('dataRefreshed')}: {d}</p>}
           <a className="font-bold text-brand-text" href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">{t('fixOsm')}</a>

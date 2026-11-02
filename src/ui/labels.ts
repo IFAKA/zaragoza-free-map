@@ -23,3 +23,13 @@ export function fmtHours(lang: 'en' | 'es', s: string): string {
   const map = lang === 'es' ? DAYS_ES : DAYS_EN
   return s.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\b|24\/7/g, m => map[m] ?? m)
 }
+
+const plural = (t: TF, n: number, one: Key, many: Key) => `${n} ${t(n === 1 ? one : many)}`
+/** "5 bikes · 12 free docks"; with `electric`, "5 bikes (2 electric) · 12 free docks". Empty when the station has no live counts. */
+export function biziLine(t: TF, it: Pick<Item, 'bikes' | 'docks' | 'ebikes'>, electric = false): string {
+  if (it.bikes === undefined || it.docks === undefined) return ''
+  const e = electric && it.ebikes ? ` (${t('ebikesN').replace('{n}', String(it.ebikes))})` : ''
+  return `${plural(t, it.bikes, 'bikeOne', 'bikeMany')}${e} · ${plural(t, it.docks, 'dockOne', 'dockMany')}`
+}
+/** Madrid clock time of a moment, "14:32". */
+export const clockMadrid = (ms: number) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }).format(ms)
