@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { Button as BaseButton } from '@base-ui/react/button'
 import { Drawer, DrawerContent } from './ui/drawer'
 
 /**
@@ -64,8 +65,8 @@ export function PagedDrawer({ snapPoints, snap, onSnap, onEscape, onFlickDown, t
 function HandleButton({ label, onTap }: { label: string; onTap: () => void }) {
   const down = useRef<number | null>(null)
   return (
-    <button
-      type="button" aria-label={label} data-testid="handle"
+    <BaseButton
+      aria-label={label} data-testid="handle"
       onPointerDown={e => { down.current = e.clientY }}
       onClick={e => { const moved = down.current != null && Math.abs(e.clientY - down.current) > 6; down.current = null; if (!moved) onTap() }}
       className="absolute left-1/2 top-0 z-20 h-7 w-24 -translate-x-1/2 cursor-grab border-0 bg-transparent p-0"

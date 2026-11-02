@@ -57,6 +57,11 @@ Button radius 0.46em, tiles 0.467em, cards 0.26em, modal sheet 0.73em. Touch tar
 - The selected-place card shows only name, distance and walk time, one-word open status if known, and the two buttons (walk, Details). Type, source and date, hours, notes, WiFi range, report link and the rest live on the Details page.
 - Pages (Settings, Language, About, Details) are pages inside the same drawer. Back, Escape and swipe go up a page.
 
+## Interaction rules
+- Every enabled control shows the pointer cursor (global rule in `src/styles.css`, base layer; Tailwind v4 resets it). Disabled controls show not-allowed.
+- Every interactive element is a Base UI component through `src/ui/ui/`. External links are plain `<a href>`; Leaflet's own DOM is exempt.
+- Tab row chevrons are columns beside the row, shown only while that side can scroll (hysteresis: show at 8px, hide at 2px). They never overlay a tab, so the first and last tab are always fully clickable.
+
 ## Drawer behaviour
 - Four levels: closed (only the tab bar, safe-area aware, map fully visible), peek, half, full.
 - Drag the handle or the header to move between levels. A fast flick moves one level. A drag ends on the nearest level.

@@ -84,6 +84,11 @@ html,body,#root{height:100%;margin:0}
 body{font-family:var(--font-sans);font-weight:400;background:var(--color-paper);color:var(--color-ink);-webkit-text-size-adjust:100%;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:var(--font-title);font-weight:600;margin:0}
 button{font-family:inherit}
+/* Tailwind v4 preflight resets cursor to default; give every enabled control the pointer back. Disabled keeps not-allowed. In the base layer so utilities (cursor-grab) and Leaflet's own CSS still win. */
+@layer base{
+button:not(:disabled),[role=button]:not([aria-disabled=true]),[role=tab]:not([aria-disabled=true]),[role=switch],[role=radio],a[href],summary,label[for],select{cursor:pointer}
+button:disabled,[aria-disabled=true]{cursor:not-allowed}
+}
 :focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
 
 /* Page turn inside the drawer: the new page fades in over 300ms (same as the card game's menu). */

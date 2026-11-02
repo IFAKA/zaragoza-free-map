@@ -65,7 +65,10 @@ export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick
   const [edge, setEdge] = useState({ left: false, right: false })
   const measure = useCallback(() => {
     const e = list.current
-    if (e) setEdge({ left: e.scrollLeft > 4, right: e.scrollLeft + e.clientWidth < e.scrollWidth - 4 })
+    if (!e) return
+    // hysteresis: a chevron column changes the row width, so show and hide use different thresholds (no flicker, no sub-pixel left chevron)
+    const sl = e.scrollLeft, rest = e.scrollWidth - sl - e.clientWidth
+    setEdge(p => ({ left: p.left ? sl > 2 : sl > 8, right: p.right ? rest > 4 : rest > 8 }))
   }, [])
   useEffect(() => {
     const e = list.current
@@ -78,7 +81,8 @@ export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick
   useEffect(() => {
     const e = list.current, a = e?.querySelector<HTMLElement>('[data-active]')
     if (!e || !a) return
-    const left = Math.max(0, Math.min(e.scrollWidth - e.clientWidth, a.offsetLeft - (e.clientWidth - a.offsetWidth) / 2))
+    let left = Math.max(0, Math.min(e.scrollWidth - e.clientWidth, a.offsetLeft - (e.clientWidth - a.offsetWidth) / 2))
+    if (left < 48) left = 0 // never leave the first tab half-hidden next to the left chevron
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
     e.scrollTo({ left, behavior: first.current || reduced ? 'auto' : 'smooth' })
     first.current = false
@@ -104,11 +108,12 @@ export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick
   }
   const tab = 'group relative flex min-h-14 w-[4.8rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 text-ink [transition:transform_120ms_var(--ease-out)] active:scale-[.95] data-[active]:text-brand-text'
   const label = 'max-w-full truncate border-b-2 border-transparent pb-px text-[0.8em] font-semibold leading-tight group-data-[active]:border-brand'
-  const fade = 'pointer-events-none absolute inset-y-0 w-[44px] from-paper via-paper/80 to-transparent transition-opacity duration-150'
-  const chev = 'absolute inset-y-0 z-10 flex w-[44px] items-center border-0 bg-transparent p-0 text-brand-text transition-opacity duration-150 active:opacity-60'
+  const chev = 'flex w-11 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-brand-text active:opacity-60'
+  // The chevrons are columns beside the row (only while they show), so they never cover a tab.
   return (
-    <Tabs.Root value={layer} className="relative shrink-0 border-b border-line">
-      <Tabs.List ref={list} onScroll={measure} className="flex snap-x snap-proximity overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
+    <Tabs.Root value={layer} className="flex shrink-0 border-b border-line">
+      {edge.left && <BaseButton onClick={() => step(-1)} aria-label={t('tabsPrev')} data-testid="tabs-prev" className={chev}><CaretLeft size="1.4em" weight="bold" aria-hidden /></BaseButton>}
+      <Tabs.List ref={list} onScroll={measure} className="flex min-w-0 flex-1 snap-x snap-proximity overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={t('tabsLabel')}>
         {ORDER.map(id => {
           const I = ICONS[LAYERS[id].icon]
           return (
@@ -121,10 +126,7 @@ export function NeedTabs({ layer, onPick, onSettings }: { layer: LayerId; onPick
           <GearSix size="1.6em" aria-hidden /><span className={label}>{t('settings')}</span>
         </Tabs.Tab>
       </Tabs.List>
-      <div aria-hidden className={cn(fade, 'left-0 bg-linear-to-r', edge.left ? 'opacity-100' : 'opacity-0')} />
-      <div aria-hidden className={cn(fade, 'right-0 bg-linear-to-l', edge.right ? 'opacity-100' : 'opacity-0')} />
-      {edge.left && <BaseButton onClick={() => step(-1)} aria-label={t('tabsPrev')} data-testid="tabs-prev" className={cn(chev, 'left-0 justify-start pl-1')}><CaretLeft size="1.4em" weight="bold" aria-hidden /></BaseButton>}
-      {edge.right && <BaseButton onClick={() => step(1)} aria-label={t('tabsNext')} data-testid="tabs-next" className={cn(chev, 'right-0 justify-end pr-1')}><CaretRight size="1.4em" weight="bold" aria-hidden /></BaseButton>}
+      {edge.right && <BaseButton onClick={() => step(1)} aria-label={t('tabsNext')} data-testid="tabs-next" className={chev}><CaretRight size="1.4em" weight="bold" aria-hidden /></BaseButton>}
     </Tabs.Root>
   )
 }
