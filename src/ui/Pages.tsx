@@ -3,8 +3,9 @@ import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { Tabs } from '@base-ui/react/tabs'
 import { ArrowUpRight, CaretLeft, CaretRight, Check, Crosshair, GearSix, Translate, Info as InfoIcon } from '@phosphor-icons/react'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { dataRefreshed } from '../data'
+import { anchoredScrollTop } from '../lib/anchor'
 import { lsGet, lsSet } from '../lib/cache'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import type { Key, Lang } from '../lib/i18n'
@@ -157,7 +158,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, locating, onLoca
 function Row({ item, layer, selected, onSelect }: { item: RankedItem; layer: LayerConfig; selected: boolean; onSelect: () => void }) {
   const { type } = useT()
   return (
-    <li className={cn('border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
+    <li className={cn('scroll-mt-2 scroll-mb-2 border-b border-line', selected && 'bg-brand-tint')} data-id={item.id}>
       <BaseButton onClick={onSelect} className="grid min-h-14 w-full grid-cols-[1fr_auto] items-center gap-x-3 border-0 bg-transparent px-4 py-2 text-left text-ink hov:bg-surface">
         <span className="min-w-0">
           <span className="block truncate font-bold">{item.name || type(item.type)}</span>
@@ -205,6 +206,39 @@ export function HomePage(p: {
   viewportRef?: React.Ref<HTMLDivElement>; title?: ReactNode
 }) {
   const { t } = useT()
+  const listRef = useRef<HTMLUListElement>(null)
+  const anchor = useRef<{ id: string; top: number } | null>(null)
+  const clicked = useRef(false)
+  const viewportOf = () => listRef.current?.closest<HTMLElement>('[data-testid="scroll"]') ?? null
+  const rowOf = (id: string) => listRef.current ? Array.from(listRef.current.children).find(c => (c as HTMLElement).dataset.id === id) as HTMLElement | undefined : undefined
+  /** Remember where a row is (relative to the scroll viewport) so we can put it back after the card above changes height. */
+  const remember = (id?: string) => {
+    const v = viewportOf(); const ul = listRef.current
+    if (!v || !ul) return
+    const vt = v.getBoundingClientRect().top
+    const row = id ? rowOf(id) : Array.from(ul.children).find(c => c.getBoundingClientRect().bottom > vt + 1) as HTMLElement | undefined
+    if (row) anchor.current = { id: row.dataset.id!, top: row.getBoundingClientRect().top - vt }
+  }
+  useLayoutEffect(() => {
+    const v = viewportOf(); const a = anchor.current
+    const row = a ? rowOf(a.id) : undefined
+    if (v && a && row) {
+      const now = row.getBoundingClientRect().top - v.getBoundingClientRect().top
+      if (Math.abs(now - a.top) > 0.5) v.scrollTop = anchoredScrollTop(v.scrollTop, a.top, now)
+    }
+    // a pick from the map: make sure the row is visible, no movement if it already is
+    if (!clicked.current && p.selected) rowOf(p.selected)?.scrollIntoView({ block: 'nearest' })
+    clicked.current = false
+    remember()
+  }, [p.selected, p.focus?.id, p.hasPos]) // eslint-disable-line react-hooks/exhaustive-deps
+  // keep the anchor current while the user scrolls
+  useEffect(() => {
+    const v = viewportOf()
+    if (!v) return
+    const on = () => remember()
+    v.addEventListener('scroll', on, { passive: true })
+    return () => v.removeEventListener('scroll', on)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       {p.title}
@@ -214,8 +248,8 @@ export function HomePage(p: {
         <Separator />
         <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />
         <div className={cn(overline, 'border-y border-line bg-surface px-4 py-2')}>{p.arr.length} {t('places')}</div>
-        <ul className="m-0 list-none p-0" data-testid="list">
-          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => p.onSelect(it.id)} />)}
+        <ul ref={listRef} className="m-0 list-none p-0" data-testid="list">
+          {p.arr.slice(0, p.limit).map(it => <Row key={it.id} item={it} layer={p.layer} selected={it.id === (p.selected ?? p.focus?.id)} onSelect={() => { if (it.id !== (p.selected ?? p.focus?.id)) clicked.current = true; remember(it.id); p.onSelect(it.id) }} />)}
         </ul>
         {p.arr.length > p.limit && <div className="flex justify-center p-3"><Button variant="secondary" onClick={p.onMoreRows}>{t('showMore')}</Button></div>}
         <Footer onAbout={p.onAbout} />
