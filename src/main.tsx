@@ -5,4 +5,14 @@ import { initAnalytics } from './lib/analytics'
 import './styles.css'
 
 initAnalytics()
+
+// A new version takes over the page (autoUpdate): reload once so people never stay on the old screens. Not on the very first install.
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  let reloaded = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return
+    reloaded = true
+    location.reload()
+  })
+}
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
