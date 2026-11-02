@@ -115,9 +115,9 @@ export function App() {
 
   const raise = (min: number = HALF) => setLevel(l => Math.max(l, min))
   const pickLayer = (id: LayerId) => {
-    track('tab', id)
     // the tab of the layer you are already on: opens a closed sheet, folds an open one one step down
     if (id === layerId && page === 'home' && !desktop) { setLevel(l => (l === CLOSED ? HALF : l - 1)); return }
+    track('tab', id)
     setLayerId(id); lsSet('layer', id); setSelected(null); setCat('all'); setLimit(30)
     reset()
     if (level === CLOSED) setLevel(HALF)
