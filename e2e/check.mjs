@@ -10,6 +10,8 @@ const b = await chromium.launch()
 async function open(vp, mobile, extra = {}, lang = 'en') {
   const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: mobile, isMobile: mobile, locale: 'en-US', timezoneId: 'Europe/Madrid', ...extra })
   if (lang) await ctx.addInitScript(l => { if (!localStorage.getItem('zgz:v2:lang')) localStorage.setItem('zgz:v2:lang', l) }, lang)
+  // the app opens on the seasonal default layer (Calor in the cold months, often empty at night); these checks start on toilets
+  await ctx.addInitScript(() => { if (!localStorage.getItem('zgz:v2:layer')) localStorage.setItem('zgz:v2:layer', 'toilets') })
   const p = await ctx.newPage()
   const blocked = []
   p.on('pageerror', e => { fails++; console.log('FAIL pageerror', e.message) })
@@ -197,7 +199,9 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
     await row.tap(); await p.waitForTimeout(1200)
     ok(await lvl(p) === 'half', 'row tap at full -> half')
     ok(await p.getByTestId('nearest-name').innerText() === rowName, `card shows the tapped row (${rowName})`)
-    ok(await scrollTop(p) === 0, 'card is scrolled into view')
+    // the card sits above the list (not inside it); the list scrolls the minimum so the tapped row is fully visible
+    const vis = await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]').getBoundingClientRect(); const r = document.querySelector('[data-testid=list] li.bg-brand-tint')?.getBoundingClientRect(); return r ? { top: Math.round(r.top - v.top), bottom: Math.round(v.bottom - r.bottom) } : null })
+    ok(!!vis && vis.top >= -1 && vis.bottom >= -1, `tapped row is fully visible in the list (${JSON.stringify(vis)})`)
     const sel2 = await p.evaluate(() => { const r = document.querySelector('.mk.sel').getBoundingClientRect(); return { bottom: r.bottom, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top } })
     ok(sel2.bottom < sel2.sheet - 10, 'row: its marker sits above the sheet')
     await ctx.close()
@@ -234,12 +238,12 @@ const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-s
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && /gratis/.test(man.name), `manifest lang es (${man.lang}, ${man.name})`)
   const labels = await p.locator('[role=tab]').allInnerTexts()
-  ok(JSON.stringify(labels) === JSON.stringify(['Aseos', 'Biblio.', 'Bizi', 'WiFi', 'Cargar', 'Agua', 'Aparcab.']), 'tab row: ' + labels.join(' | '))
-  // all 7 tabs visible in one row: no scrolling, equal width, each at least 44px tall, inside the screen
+  ok(JSON.stringify(labels) === JSON.stringify(['Calor', 'Aseos', 'Biblio.', 'Bizi', 'WiFi', 'Cargar', 'Agua', 'Aparcab.']), 'tab row: ' + labels.join(' | '))
+  // all 8 tabs visible in one row: no scrolling, equal width, each at least 44px tall, inside the screen
   const cells = await p.locator('[role=tab]').evaluateAll(es => es.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, w: r.width, h: r.height, clipped: e.scrollWidth > e.clientWidth + 1 } }))
   const list = await p.evaluate(() => { const e = document.querySelector('[role=tablist]'); return { sw: e.scrollWidth, cw: e.clientWidth } })
   ok(list.sw <= list.cw + 1, `tab row does not scroll (content ${list.sw}, width ${list.cw})`)
-  ok(cells.length === 7 && cells.every(c => c.x >= -0.5 && c.x + c.w <= 390.5 && c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), 'all 6 tabs visible, equal width, at least 44px, not clipped at 390px')
+  ok(cells.length === 8 && cells.every(c => c.x >= -0.5 && c.x + c.w <= 390.5 && c.h >= 44 && c.w >= 44 && !c.clipped && Math.abs(c.w - cells[0].w) < 1.5), 'all 8 tabs visible, equal width, at least 44px, not clipped at 390px')
   ok(await p.getByTestId('tabs-prev').count() === 0 && await p.getByTestId('tabs-next').count() === 0, 'no chevrons')
   await p.screenshot({ path: out + '/t-start.png' })
   const cdp = await ctx.newCDPSession(p)
