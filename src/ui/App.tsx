@@ -16,7 +16,7 @@ import type { LatLon, LayerId } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
 import { dutyItems } from '../layers/build'
 import { LangCtx } from './lang'
-import { SheetClosedCtx } from './sheet'
+import { LocatingCtx, SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest, type RouteView } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { HomePage, PlacePage, type LineView } from './Pages'
@@ -216,7 +216,8 @@ export function App() {
   }, [layerId, first, !!pos])
 
   // locate silently when the browser already allows it
-  useEffect(() => { alreadyGranted().then(ok => { if (ok) locate() }) }, [alreadyGranted, locate])
+  const [permPending, setPermPending] = useState(true) // until we know whether the browser already allows location
+  useEffect(() => { alreadyGranted().then(ok => { if (ok) locate(); setPermPending(false) }) }, [alreadyGranted, locate])
 
   const raise = (min: number = FULL) => setLevel(l => Math.max(l, min))
   const askLocation = () => {
@@ -316,6 +317,7 @@ export function App() {
 
   return (
     <LangCtx.Provider value={lang}>
+      <LocatingCtx.Provider value={permPending || locating}>
       <VehicleCtx.Provider value={setVehicles}>
       <MotionConfig reducedMotion="user"><LazyMotion features={domAnimation} strict>
       <ToastHost>
@@ -343,6 +345,7 @@ export function App() {
       </ToastHost>
       </LazyMotion></MotionConfig>
       </VehicleCtx.Provider>
+      </LocatingCtx.Provider>
     </LangCtx.Provider>
   )
 }

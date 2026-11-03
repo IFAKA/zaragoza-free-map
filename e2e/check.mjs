@@ -532,6 +532,22 @@ todo.push(async () => {
   ok(await p.locator('.veh').count() === 0, 'cercanias: markers are gone on another tab')
   await ctx.close()
 })
+// live times ask the city once per stop: with location already allowed, the card waits for the position (no request for the centre stop that is replaced), then 1 request per stop; a refresh adds exactly 1 more
+todo.push(async () => {
+  for (const layer of ['bus', 'tram']) {
+    const { ctx, p, mock } = await open({ width: 375, height: 721 }, true, { geolocation: { latitude: 41.6488, longitude: -0.8891 }, permissions: ['geolocation'] }, 'es', { layer, clock: true })
+    const hits = {}
+    mock.city = u => { hits[u] = (hits[u] || 0) + 1; return { destinos: [{ linea: 'T1', destino: 'CENTRO', primero: '3 minutos.', segundo: '9 minutos.', minutos: '3 minutos.' }] } }
+    await p.reload(); await ready(p); await p.waitForSelector('[data-testid=live-row]'); await settle(p)
+    const urls = Object.keys(hits)
+    ok(urls.length === (layer === 'bus' ? 1 : 2) && urls.every(u => hits[u] === 1), `${layer}: live times ask each stop once at mount (${urls.map(u => u.split('/').pop() + 'x' + hits[u]).join(', ')})`)
+    await p.clock.runFor(30_500)
+    for (let i = 0; i < 100 && !urls.every(u => hits[u] === 2); i++) await p.waitForTimeout(50)
+    await p.waitForTimeout(300) // room for a wrongly doubled request to show
+    ok(urls.every(u => hits[u] === 2) && Object.keys(hits).length === urls.length, `${layer}: one refresh adds exactly one request per stop (${urls.map(u => u.split('/').pop() + 'x' + hits[u]).join(', ')})`)
+    await ctx.close()
+  }
+})
 // the bus route view: live times of THIS line at this stop; the other direction button keeps working
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
