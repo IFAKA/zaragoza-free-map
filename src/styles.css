@@ -133,7 +133,7 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .mk:active{transform:scale(.97)}
 .rail.far .mk:not(.sel){transform:scale(.55)}
 .mk.sel{box-shadow:0 0 0 2px var(--color-on-brand),0 0 0 4px var(--c),0 2px 8px rgb(0 0 0 / .45)}
-.mk.sel:active{transform:scale(1.62)}
+.mk.sel:active{transform:scale(.97)}
 /* the "you picked this place" moment: the marker swells once and a soft ring fades out (user picks only; MapView adds .pulse) */
 .mk{position:relative}
 .mk.pulse{animation:mkpop var(--dur-pick) var(--ease-out)}
