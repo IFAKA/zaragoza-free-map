@@ -73,12 +73,11 @@ const fits = (p, sel) => p.evaluate(s => {
   return es.every((e, i) => r[i].height >= 43.5 && e.scrollWidth <= e.clientWidth + 1 && r[i].left >= -0.5 && r[i].right <= innerWidth + 0.5 && Math.abs(r[i].width - r[0].width) < 1.5) && document.documentElement.scrollWidth <= innerWidth
 }, sel)
 const markers = p => p.locator('.mk').count()
-// A service chip only shows for the active goal: open its goal first if the chip is hidden (at most 2 taps), then the chip.
-const GOAL_OF = { toilets: 'now', water: 'now', pharmacy: 'now', shelter: 'now', bus: 'move', tram: 'move', cercanias: 'move', bizi: 'move', wifi: 'connect', charge: 'connect', libraries: 'connect' }
-const go = async (p, id, how = 'click') => {
-  if (!(await p.getByTestId('tab-' + id).isVisible())) { await p.getByTestId('goal-' + GOAL_OF[id])[how](); await settle(p) }
-  await p.getByTestId('tab-' + id)[how]()
-}
+// Every service is one chip in one scrolling row (tap scrolls it into view). LAYER_IDS is the default order.
+const LAYER_IDS = ['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries']
+const go = async (p, id, how = 'click') => { await p.getByTestId('tab-' + id)[how]() }
+// the handle cycles the sheet: from peek one tap opens it to full height (where the line chips, links and nearby places are)
+const full = async p => { await p.getByTestId('handle').tap(); await settle(p) }
 const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top))
 
 // ---- mobile ----
@@ -154,7 +153,7 @@ todo.push(async () => {
 
 // ---- drawer behaviour: real touch drags (CDP) at 390x844 ----
 {
-  const LEVEL = { closed: [700, 844], peek: [300, 660], full: [70, 110] }
+  const LEVEL = { closed: [760, 844], peek: [300, 750], full: [70, 110] }
   const lvl = async p => { const t = await snapTop(p); return Object.entries(LEVEL).find(([, [a, z]]) => t >= a && t <= z)?.[0] ?? 'top=' + t }
   const sess = async (h = 844) => {
     const o = await open({ width: 390, height: h }, true)
@@ -189,33 +188,34 @@ todo.push(async () => {
   // down to closed and back
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 500, 150); ok(await lvl(p) === 'full', 'to full')
+    await drag(195, 690, 150); ok(await lvl(p) === 'full', 'to full')
     await drag(195, 150, 600, 300); ok(await lvl(p) === 'peek', 'full -> peek by dragging down')
-    await drag(195, 520, 780, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
+    await drag(195, 690, 800, 300); ok(await lvl(p) === 'closed', 'peek -> closed by dragging down')
     await p.screenshot({ path: out + '/g-closed.png' })
-    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('goal-now').bottom, more: r('goal-connect').bottom, h: innerHeight, handle: r('handle') } })
-    ok(vis.tab <= vis.h && vis.more <= vis.h, `closed: all goal tabs on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
+    const vis = await p.evaluate(() => { const r = n => document.querySelector(`[data-testid=${n}]`).getBoundingClientRect(); return { tab: r('services').bottom, h: innerHeight, handle: r('handle') } })
+    ok(vis.tab <= vis.h, `closed: the chip row is on screen (bottom ${Math.round(vis.tab)} of ${vis.h})`)
     ok(vis.handle.bottom <= vis.h && vis.handle.height >= 24 && vis.handle.width >= 44, 'closed: handle visible, at least 44 wide and 24 tall')
     ok(await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), 'closed: page body is inert (no focus off-screen)')
     ok(await p.locator('.mk').count() > 0 && (await p.getByTestId('map').boundingBox()).height === 844, 'closed: map fully visible')
-    await p.getByTestId('goal-now').tap(); await settle(p)
-    ok(await lvl(p) === 'peek', 'closed: tapping the goal tab opens to peek')
+    await p.getByTestId('tab-toilets').tap(); await settle(p)
+    ok(await lvl(p) === 'peek', 'closed: tapping the chip of the service on show opens to peek')
     ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'and selects that layer')
-    await p.getByTestId('goal-now').tap(); await settle(p); ok(await lvl(p) === 'closed', 'tapping the active goal tab at peek folds to closed')
+    await p.getByTestId('tab-toilets').tap(); await settle(p); ok(await lvl(p) === 'peek', 'tapping the chip of the service on show at peek keeps peek')
+    await drag(195, 690, 800, 300); ok(await lvl(p) === 'closed', 'peek -> closed again by dragging down')
     await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'peek', 'closed: handle tap opens the sheet')
     await ctx.close()
   })
   // flicks (velocity)
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 520, 380, 70); ok(await lvl(p) === 'full', `fast flick up from peek opens (${await lvl(p)})`)
+    await drag(195, 690, 380, 70); ok(await lvl(p) === 'full', `fast flick up from peek opens (${await lvl(p)})`)
     await drag(195, 200, 420, 70); ok(['peek', 'closed'].includes(await lvl(p)), `fast flick down from full lowers (${await lvl(p)})`)
     await ctx.close()
   })
   // map tap lowers the sheet
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 500, 150)
+    await drag(195, 690, 150)
     ok(await lvl(p) === 'full', 'at full')
     await p.mouse.click(195, 40); await settle(p); ok(await lvl(p) === 'peek', 'map tap at full -> peek')
     await p.waitForTimeout(500)
@@ -244,10 +244,11 @@ todo.push(async () => {
     await p.screenshot({ path: out + '/g-marker.png' })
     await ctx.close()
   })
-  // the next two nearest places are chips under the card; a tap selects
+  // the next two nearest places are chips at the top of the full-height area; a tap selects
   todo.push(async () => {
     const { ctx, p } = await sess()
-    ok(await p.getByTestId('nearby-item').count() === 2, 'two nearby chips under the card')
+    await full(p)
+    ok(await p.getByTestId('nearby-item').count() === 2, 'two nearby chips in the full-height area')
     ok(await p.getByTestId('list').count() === 0, 'no places list')
     const name = await p.getByTestId('nearby-item').first().innerText()
     await p.getByTestId('nearby-item').first().tap(); await settle(p)
@@ -258,7 +259,7 @@ todo.push(async () => {
   // page stack: About from the footer goes Back to the home page; Escape: page, then lower
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
-    await drag(195, 500, 150)
+    await drag(195, 690, 150)
     await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]'); v.scrollTop = v.scrollHeight })
     await p.getByRole('button', { name: 'About' }).tap(); await settle(p)
     ok(await p.getByTestId('close').count() === 1 && await p.getByTestId('back').count() === 0, 'About opens from the footer (a cross, no chevron: it is the first page)')
@@ -319,63 +320,62 @@ todo.push(async () => { // the keyboard: focus is inside the view; Escape goes u
   await ctx.close()
 })
 
-// ---- goal tabs: fit, memory, order, reach ----
+// ---- service chips: fit, order, reach ----
+// 40 px chips with a 48 px tap area, labels not clipped, the row scrolls sideways but the page does not
+const chipsFit = p => p.evaluate(() => {
+  const es = [...document.querySelectorAll('[data-testid=services] [role=tab]')]
+  const r = es.map(e => e.getBoundingClientRect()), row = document.querySelector('[data-testid=services]').getBoundingClientRect()
+  return es.length === 11 && es.every((e, i) => r[i].height >= 39.5 && r[i].height <= 41 && e.scrollWidth <= e.clientWidth + 1) && row.height >= 47.5 && document.documentElement.scrollWidth <= innerWidth
+})
 for (const [w, h, lang] of [[360, 740, 'es'], [360, 740, 'en'], [390, 844, 'es'], [390, 844, 'en']]) todo.push(async () => {
   const { ctx, p } = await open({ width: w, height: h }, true, {}, lang)
-  for (const g of ['now', 'move', 'connect']) {
-    await p.getByTestId('goal-' + g).tap(); await settle(p)
-    ok(await fits(p, '[data-testid^=goal-]') && await fits(p, '[data-testid=services] [role=tab]'), `${w}px ${lang} goal ${g}: tabs and chips fit, equal columns, no sideways scroll`)
-  }
+  ok(await chipsFit(p), `${w}px ${lang}: 11 chips, 40 tall in a 48 tall row, labels not clipped, no sideways page scroll`)
   await ctx.close()
 })
 const reload = async p => { await p.reload(); await ready(p) }
 for (const lang of ['en', 'es']) todo.push(async () => { // at peek the whole nearest-place card is on screen, for every service, in both languages (Spanish is longer)
   const { ctx, p } = await open({ width: 360, height: 740 }, true, {}, lang)
-  for (const id of Object.keys(GOAL_OF)) {
+  for (const id of LAYER_IDS) {
     await p.evaluate(i => localStorage.setItem('zgz:v2:layer', i), id); await p.reload(); await p.waitForSelector('[data-testid=nearest],[data-testid=duty-loading],[data-testid=duty-failed]'); await settle(p)
     const gap = await p.evaluate(() => { const n = document.querySelector('[data-testid=nearest],[data-testid=duty-loading],[data-testid=duty-failed]'); return n ? Math.round(n.getBoundingClientRect().bottom - innerHeight) : 'none' })
     ok(gap !== 'none' && gap <= 0, `peek shows the whole nearest card on ${id} (${lang}, ${gap} px past the screen)`)
   }
   await ctx.close()
 })
-todo.push(async () => { // every service is reachable in at most 2 taps, from any other service
+todo.push(async () => { // every service is one tap away, from any other service
   const { ctx, p } = await open({ width: 390, height: 844 }, true)
-  for (const id of Object.keys(GOAL_OF)) {
-    const before = await p.getByTestId('tab-' + id).isVisible() ? 1 : 2
+  for (const id of LAYER_IDS) {
     await go(p, id, 'tap'); await settle(p)
-    ok(before <= 2 && await p.getByTestId('tab-' + id).getAttribute('aria-selected') === 'true', `${id}: selected in ${before} tap(s)`)
+    ok(await p.getByTestId('tab-' + id).getAttribute('aria-selected') === 'true', `${id}: selected in 1 tap`)
   }
-  ok(await p.locator('[data-testid=services] [role=tab]').count() <= 4, 'a goal shows at most 4 chips')
   await ctx.close()
 })
-todo.push(async () => { // each goal remembers its last service
+todo.push(async () => { // the service on show survives a reload
   const { ctx, p } = await open({ width: 390, height: 844 }, true)
   await go(p, 'charge', 'tap'); await settle(p)
-  await p.getByTestId('goal-now').tap(); await settle(p)
-  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'Now keeps its own last service (Toilets)')
-  await p.getByTestId('goal-connect').tap(); await settle(p)
-  ok(await p.getByTestId('tab-charge').getAttribute('aria-selected') === 'true', 'Connect comes back on Charge, not WiFi')
   await reload(p)
   ok(await p.getByTestId('tab-charge').getAttribute('aria-selected') === 'true', 'the last service survives a reload')
   await ctx.close()
 })
-todo.push(async () => { // goal order comes from tap counts, decided when the app opens; it never moves during a session
+todo.push(async () => { // chip order comes from tap counts per service, decided when the app opens; it never moves during a session
   const { ctx, p } = await open({ width: 390, height: 844 }, true)
-  const order = () => p.locator('[data-testid^=goal-]').evaluateAll(es => es.map(e => e.getAttribute('data-testid').slice(5)))
-  ok(JSON.stringify(await order()) === JSON.stringify(['now', 'move', 'connect']), 'new visitor: Now, Getting around, Connect')
-  for (let i = 0; i < 4; i++) { await p.getByTestId('goal-connect').tap(); await settle(p); await p.getByTestId('goal-move').tap(); await settle(p) }
-  await p.getByTestId('goal-connect').tap(); await settle(p)
-  ok(JSON.stringify(await order()) === JSON.stringify(['now', 'move', 'connect']), 'the order does not change during the session')
+  const order = () => p.locator('[data-testid^=tab-]').evaluateAll(es => es.map(e => e.getAttribute('data-testid').slice(4)))
+  const first = JSON.stringify(await order())
+  const warm = [10, 11, 0, 1, 2].includes(new Date().getMonth())
+  ok(first === JSON.stringify(warm ? ['toilets', 'water', 'shelter', 'pharmacy', ...LAYER_IDS.slice(4)] : LAYER_IDS), 'new visitor: the default order ' + first)
+  for (let i = 0; i < 4; i++) { await go(p, 'wifi', 'tap'); await settle(p); await go(p, 'tram', 'tap'); await settle(p) }
+  await go(p, 'wifi', 'tap'); await settle(p)
+  ok(JSON.stringify(await order()) === first, 'the order does not change during the session')
   await reload(p)
-  ok(JSON.stringify(await order()) === JSON.stringify(['connect', 'move', 'now']), 'after a reload the most tapped goals come first: ' + JSON.stringify(await order()))
-  ok(await p.getByTestId('goal-connect').evaluate(e => e.getBoundingClientRect().left) < await p.getByTestId('goal-move').evaluate(e => e.getBoundingClientRect().left), 'and the first goal is the leftmost')
+  const after = await order()
+  ok(after[0] === 'wifi' && after[1] === 'tram', 'after a reload the most tapped services come first: ' + JSON.stringify(after))
   await ctx.close()
 })
 todo.push(async () => { // events: a real switch sends tab (with the layer id); the same tab again sends nothing
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { geo: 'blocked' })
   await go(p, 'wifi', 'tap'); await settle(p); await go(p, 'wifi', 'tap'); await settle(p)
   const ev = await p.evaluate(() => window.__ev)
-  ok(ev.filter(e => e === 'tab-wifi').length === 1 && ev.includes('goal-connect'), 'events: one tab-wifi and goal-connect ' + JSON.stringify(ev))
+  ok(ev.filter(e => e === 'tab-wifi').length === 1 && !ev.some(e => e.startsWith('goal')), 'events: one tab-wifi, no goal event ' + JSON.stringify(ev))
   await ctx.close()
 })
 todo.push(async () => { // events for Settings: open, the way it closes, and a language change
@@ -412,12 +412,11 @@ todo.push(async () => {
   ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() >= 1, 'Bus card: shows the lines and a Walk button')
   await ctx.close()
 })
-// tram: the stop card shows the line, both ends, one link to the tram company, and the track is drawn
+// tram: the stop card has one link to the tram company (full-height area) and the track is drawn
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
-  await p.waitForSelector('[data-testid=tram-info]'); await settle(p)
-  const info = await p.getByTestId('tram-info').innerText()
-  ok(/T1/.test(info) && /Parque Goya/.test(info) && /Valdespartera/.test(info), `tram card: line and both ends (${info.replace(/\n/g, ' ')})`)
+  await p.waitForSelector('[data-testid=tram-times]', { state: 'attached' }); await settle(p)
+  ok(await p.getByTestId('tram-info').count() === 0 && await p.getByTestId('nearest').getByTestId('tram-times').count() === 0, 'tram card: no explanation line, the link is in the full-height area')
   ok(/tranviasdezaragoza\.es/.test(await p.getByTestId('tram-times').getAttribute('href') || ''), 'tram card: one link to the tram company times')
   ok(await markers(p) === DATA_TRAM_STOPS, `tram: all ${DATA_TRAM_STOPS} stops are drawn`)
   ok(await p.evaluate(() => document.querySelector('[data-testid=map]').classList.contains('rail')), 'tram: rail markers shrink when zoomed out (rail class on the map)')
@@ -447,7 +446,7 @@ todo.push(async () => {
   const chips = p.getByTestId('tram-dirs').getByTestId('dir-chip')
   ok(await chips.count() === 2, 'tram: two direction chips')
   const labels = await chips.allInnerTexts()
-  ok(/Hacia Parque Goya/.test(labels[0]) && /norte/.test(labels[0]) && /Hacia Valdespartera/.test(labels[1]) && /sur/.test(labels[1]), `tram chips name the ends (${labels.join(' | ').replace(/\n/g, ' ')})`)
+  ok(/Hacia Parque Goya/.test(labels[0]) && /Hacia Valdespartera/.test(labels[1]), `tram chips name the ends (${labels.join(' | ').replace(/\n/g, ' ')})`)
   for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `tram chip ${i} is touch sized (${r.height})`) }
   ok(await chips.nth(1).getAttribute('aria-pressed') === 'true', 'tram: the soonest tram (south, 4 min) is chosen first')
   let rows = await p.getByTestId('live-row').allInnerTexts()
@@ -551,7 +550,7 @@ todo.push(async () => {
 // the bus route view: live times of THIS line at this stop; the other direction button keeps working
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
-  await p.waitForSelector('[data-testid=bus-line-chip]'); await settle(p)
+  await p.waitForSelector('[data-testid=bus-line-chip]', { state: 'attached' }); await settle(p); await full(p)
   const chip = p.getByTestId('bus-line-chip').first(), line = await chip.getAttribute('data-line')
   mock.city = () => ({ destinos: [{ linea: line, destino: 'CENTRO', primero: '3 minutos.', segundo: '11 minutos.' }, { linea: 'ZZ', destino: 'OTRA', primero: '1 minuto.', segundo: '' }] })
   await chip.tap(); await p.waitForSelector('[data-testid=live-times] [data-testid=live-row]'); await settle(p)
@@ -566,7 +565,7 @@ todo.push(async () => {
 // a bus line: tap a line chip on the stop card, the route replaces the markers, the sheet shows the stepper; back returns
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
-  await p.waitForSelector('[data-testid=bus-line-chip]'); await settle(p)
+  await p.waitForSelector('[data-testid=bus-line-chip]', { state: 'attached' }); await settle(p); await full(p)
   const rows = await p.getByTestId('bus-lines').evaluate(e => new Set([...e.querySelectorAll('li')].map(l => Math.round(l.getBoundingClientRect().top))).size)
   ok(rows <= 2, `bus card: the line chips take at most 2 rows (${rows})`)
   { const r = await p.getByTestId('bus-line-chip').first().boundingBox(); ok(r.height >= 43.5 && r.width >= 40, `bus line chips are touch sized (${r.width}x${r.height})`) }
@@ -621,13 +620,12 @@ todo.push(async () => {
   ok(await p.title() === 'Zaragoza a mano · Lo que necesitas, cerca de ti', 'page title in Spanish')
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && man.name === 'Zaragoza a mano', `manifest lang es (${man.lang}, ${man.name})`)
-  // goal tabs: 3 equal columns, no scrolling; chips: the goal's services, equal columns, no scrolling (Spanish labels are the longest)
-  const goals = await p.locator('[data-testid^=goal-]').allInnerTexts()
-  ok(JSON.stringify(goals) === JSON.stringify(['Ahora', 'Moverse', 'Conectar']), 'goal tabs (no taps yet, default order): ' + goals.join(' | '))
+  // one row of chips (Spanish labels are the longest), default order, Toilets selected
   const chips = await p.locator('[data-testid=services] [role=tab]').allInnerTexts()
-  ok(JSON.stringify(chips.filter(l => l !== 'Calor')) === JSON.stringify(['Aseos', 'Agua', 'Farmacia']) && chips.length === 4, 'Ahora chips (Calor 3rd in its season, else last): ' + chips.join(' | '))
-  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'first visit: Ahora > Toilets is selected')
-  ok(await fits(p, '[data-testid^=goal-]') && await fits(p, '[data-testid=services] [role=tab]'), 'goal tabs and chips: equal columns, at least 44 tall, labels not clipped, no sideways scroll')
+  ok(await p.locator('[data-testid^=goal-]').count() === 0 && chips.length === 11, 'no goal tabs, 11 chips: ' + chips.join(' | '))
+  ok(JSON.stringify(chips.slice(0, 2)) === JSON.stringify(['Aseos', 'Agua']) && chips.slice(2, 4).sort().join() === 'Calor,Farmacia', 'default order starts Aseos, Agua, then Farmacia and Calor (Calor 3rd in its season): ' + chips.join(' | '))
+  ok(await p.getByTestId('tab-toilets').getAttribute('aria-selected') === 'true', 'first visit: Toilets is selected')
+  ok(await chipsFit(p), 'chips: 40 tall in a 48 tall row, labels not clipped, no sideways scroll')
   ok(await p.locator('[role=tab]').count() >= 6 && await p.getByTestId('tabs-prev').count() === 0, 'no chevrons')
   await p.screenshot({ path: out + '/t-start.png' })
   const cdp = await ctx.newCDPSession(p)
@@ -635,14 +633,14 @@ todo.push(async () => {
   const ty = await p.getByTestId('tab-water').evaluate(e => Math.round(e.getBoundingClientRect().top + 25))
   // vertical drag that starts on the tab row still moves the sheet
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 200, y: ty }] })
-  for (let i = 1; i <= 14; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y: ty - 18 * i }] }); await p.waitForTimeout(16) }
+  for (let i = 1; i <= 19; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y: ty - 28 * i }] }); await p.waitForTimeout(16) }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await settle(p)
   ok(await snapTop(p) < top0 - 100, 'vertical drag starting on the tab row moves the sheet')
-  // selecting a service: the goal tab, then the chip
+  // selecting a service: one tap on its chip
   await go(p, 'bizi', 'tap'); await settle(p)
-  ok(await p.getByTestId('tab-bizi').getAttribute('aria-selected') === 'true' && await p.locator('.mk').count() > 0, 'Bizi: goal tab then chip draws its markers')
+  ok(await p.getByTestId('tab-bizi').getAttribute('aria-selected') === 'true' && await p.locator('.mk').count() > 0, 'Bizi: one tap on its chip draws its markers')
   await go(p, 'libraries', 'tap'); await settle(p)
-  ok(await p.getByTestId('tab-libraries').getAttribute('aria-selected') === 'true' && await p.getByTestId('nearby-item').count() === 2, 'Libraries is a normal tab with its nearest card and two nearby chips')
+  ok(await p.getByTestId('tab-libraries').getAttribute('aria-selected') === 'true' && await p.getByTestId('nearby-item').count() === 2, 'Libraries is a normal tab with its nearest card and two nearby chips (in the full-height area)')
   await go(p, 'water', 'tap'); await settle(p)
   // Settings page in Spanish
   await p.getByTestId('open-settings').tap(); await settle(p)
@@ -675,7 +673,7 @@ todo.push(async () => {
 todo.push(async () => {
   const { ctx, p } = await open({ width: 600, height: 800 }, false)
   const t0 = await snapTop(p)
-  await p.mouse.move(300, t0 + 12); await p.mouse.down(); await p.mouse.move(300, t0 + 200, { steps: 12 }); await p.mouse.up(); await settle(p)
+  await p.mouse.move(300, t0 + 12); await p.mouse.down(); for (let i = 1; i <= 20; i++) { await p.mouse.move(300, t0 + 12 + 10 * i); await p.waitForTimeout(16) } await p.mouse.up(); await settle(p)
   ok(await snapTop(p) > t0 + 100, `600x800 mouse drag down from the handle lowers the sheet (${t0} -> ${await snapTop(p)})`)
   await p.getByTestId('handle').click(); await settle(p)
   ok(await snapTop(p) < await p.evaluate(() => innerHeight) - 60, 'handle click opens it again')
@@ -695,7 +693,7 @@ late.push(async () => {
     return r
   })
   console.log('drawer transition (computed):', JSON.stringify(t))
-  ok(t.transform && t.transform.startsWith('0.45s') && t.transform.includes('cubic-bezier(0.22, 1, 0.36, 1)'), 'drawer transform 450ms cubic-bezier(.22,1,.36,1)')
+  ok(t.transform && t.transform.startsWith('0.3s') && t.transform.includes('cubic-bezier(0.22, 1, 0.36, 1)'), 'drawer transform 300ms cubic-bezier(.22,1,.36,1)')
   // measured: time from tap to transform settling, and the page fade
   const m = await p.evaluate(() => new Promise(res => {
     const pop = document.querySelector('[data-slot=drawer-popup]')
@@ -706,7 +704,7 @@ late.push(async () => {
     document.querySelector('[data-testid=handle]').click()
   }))
   console.log('measured snap peek->full:', JSON.stringify(m))
-  ok(Math.abs(m.transformMs - 450) < 60, `measured transform ${m.transformMs}ms ~ 450ms`)
+  ok(Math.abs(m.transformMs - 300) < 60, `measured transform ${m.transformMs}ms ~ 300ms`)
   await settle(p)
   await ctx.close()
 })
@@ -924,7 +922,7 @@ todo.push(async () => { // a filter changes only what it must: the other markers
   ok(await p.getByTestId('off-card').count() === 1, 'tapping a greyed-out place shows its card')
   ok((await p.getByTestId('off-reason').textContent()).includes('Closed'), 'the card says why it is greyed out')
   ok((await p.getByTestId('off-source').textContent()).includes('Source'), 'the card names the source')
-  await p.getByTestId('handle').click(); await settle(p); await p.getByTestId('handle').click(); await settle(p) // full: the switch is below the card
+  await p.getByTestId('handle').click(); await settle(p) // full: the switch is below the card
   const tagged = await p.evaluate(() => { const all = [...document.querySelectorAll('.mk')]; all.forEach(e => { e.dataset.keep = '1' }); return all.length })
   await p.getByTestId('switch-open').click(); await settle(p)
   const kept = await p.locator('.mk[data-keep="1"]').count()
