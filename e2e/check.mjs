@@ -484,6 +484,54 @@ todo.push(async () => {
   } else ok(/Sin más trenes hoy/.test(labels[other]), 'cercanias: the empty way says "Sin más trenes hoy"')
   await ctx.close()
 })
+// approximate vehicle markers: tram (city API scripted), Cercanias (planned times, clock fixed on a Wednesday 08:00); small, faded, never in place of a stop; gone on tab change
+todo.push(async () => {
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
+  mock.city = u => { const id = /(\d+)\.json/.exec(u)?.[1] || ''; return id.endsWith('1') ? { destinos: [{ linea: 'T1', destino: 'AVENIDA ACADEMIA', minutos: '9 minutos.' }, { linea: 'T1', destino: 'AVENIDA ACADEMIA', minutos: '20 minutos.' }] } : { destinos: [{ linea: 'T1', destino: 'MAGO DE OZ', minutos: '0 minutos.' }, { linea: 'T1', destino: 'MAGO DE OZ', minutos: '6 minutos.' }, { linea: 'T1', destino: 'MAGO DE OZ', minutos: '12 minutos.' }] } }
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=tram-dirs]'); await settle(p)
+  const veh = () => p.locator('.veh').count()
+  const south = await p.getByTestId('tram-dirs').getByTestId('dir-chip').nth(1).getAttribute('aria-pressed') === 'true'
+  ok(south && await veh() === 1, `tram: 0 min is the stop itself, so one estimated marker for the 6 min tram (${await veh()})`)
+  ok(/Posición aproximada/.test(await p.getByTestId('veh-note').innerText()), 'tram: the card says the position is approximate')
+  const box = await p.locator('.veh').first().boundingBox(), stop = await p.locator('.mk').first().boundingBox()
+  ok(box.width <= 22 && box.width < stop.width && /aprox\./.test(await p.locator('.veh').first().innerText()), `tram: marker is small (${box.width}px) and badged "aprox."`)
+  ok(await markers(p) === DATA_TRAM_STOPS, 'tram: the stop markers are all still there')
+  ok(await p.locator('.veh').first().evaluate(e => getComputedStyle(e).pointerEvents === 'none' && +getComputedStyle(e).opacity < 1), 'tram: marker is faded and not tappable')
+  await p.screenshot({ path: out + '/tram-veh-es.png' })
+  await p.getByTestId('tram-dirs').getByTestId('dir-chip').nth(0).tap(); await settle(p)
+  ok(await veh() === 2, `tram: the north way has two markers (${await veh()})`)
+  mock.city = () => null
+  await p.waitForTimeout(100)
+  await go(p, 'wifi', 'tap'); await settle(p)
+  ok(await veh() === 0, 'tram: markers are gone on another tab')
+  await ctx.close()
+})
+todo.push(async () => {
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
+  mock.city = () => null // the city does not answer
+  await p.reload(); await ready(p); await settle(p)
+  ok(await p.locator('.veh').count() === 0, 'tram: no live data, no marker')
+  await ctx.close()
+})
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'cercanias' })
+  await ctx.clock.setFixedTime(new Date('2026-11-04T08:00:00+01:00'))
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=train-dirs]'); await settle(p)
+  const n = await p.locator('.veh').count()
+  ok(n >= 1 && n <= 2, `cercanias: ${n} estimated train markers`)
+  ok(/Posición aproximada/.test(await p.getByTestId('veh-note').innerText()) && /Horario programado \(no es tiempo real\)/.test(await p.getByTestId('train-planned').innerText()), 'cercanias: approximate note and the planned label')
+  ok(await p.locator('.veh').first().evaluate(e => e.style.getPropertyValue('--c').includes('train')), 'cercanias: green mode colour')
+  await p.screenshot({ path: out + '/cercanias-veh-es.png' })
+  const chips = p.getByTestId('train-dirs').getByTestId('dir-chip')
+  const before = await p.locator('.veh').first().boundingBox()
+  const other = await chips.evaluateAll(cs => cs.findIndex(c => c.getAttribute('aria-pressed') !== 'true'))
+  await chips.nth(other).tap(); await settle(p); await p.waitForTimeout(1800)
+  const after = await p.locator('.veh').first().boundingBox()
+  ok(Math.abs(before.x - after.x) + Math.abs(before.y - after.y) > 5, 'cercanias: the other way puts the marker on the other side of the station')
+  await go(p, 'wifi', 'tap'); await settle(p)
+  ok(await p.locator('.veh').count() === 0, 'cercanias: markers are gone on another tab')
+  await ctx.close()
+})
 // the bus route view: live times of THIS line at this stop; the other direction button keeps working
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })

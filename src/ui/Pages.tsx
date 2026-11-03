@@ -29,6 +29,8 @@ import { decodePolyline } from '../lib/transit'
 import { DirPicker } from './DirPicker'
 import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
+import { usePublishVehicles } from './vehicles'
+import { nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
 
@@ -121,6 +123,17 @@ const tramEnds = (): { id: 'n' | 's'; at: LatLon }[] => {
   return [{ id: 'n', at: [n[2], n[3]] }, { id: 's', at: [s[2], s[3]] }]
 }
 
+// the tracks as one ordered line each (built once): the tram's ~60 pieces joined south to north, the Cercanías line west to east
+let tramPath: LatLon[] | null = null, railPath: LatLon[] | null = null
+const tramLine = () => (tramPath ??= stitch(DATA.tram.line.map(decodePolyline)))
+const railLine = () => (railPath ??= decodePolyline(DATA.cercanias.line[0]))
+const vehicleOf = (pos: LatLon, i: number, icon: Vehicle['icon'], stop: LatLon, fit: string): Vehicle => ({ id: 'veh' + i, pos, icon, stop, fit, color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' })
+/** One short line under the times: the map markers are estimates. */
+function VehNote({ show }: { show: boolean }) {
+  const { t } = useT()
+  return show ? <p className={cn(sub, 'm-0 text-[0.8em] leading-tight')} data-testid="veh-note">{t('vehNote')}</p> : null
+}
+
 /**
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
@@ -138,6 +151,10 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const opts: DirOpt[] = hasDirs ? (['n', 's'] as const).map(id => ({ id, soon: tram.filter(x => x.dir === id).reduce<number | null>((m0, x) => (m0 === null ? x.r.mins[0] : Math.min(m0, x.r.mins[0])), null) })) : []
   const centre = hasDirs && at && outsideCentre(origin ?? at) ? towardCentre(at, tramEnds()) : null
   const { dir, pickDir } = useDirChoice('tram:' + stopKey, opts, centre)
+  // tram: the next 2 trams of the shown direction, placed on the track upstream of the stop (approximate; none without live minutes)
+  const tramVeh: Vehicle[] = kind === 'tram' && state === 'live' && hasDirs && at
+    ? upstream(tramLine(), at, dir === 'n', nextTwo(tram.filter(x => x.dir === dir).flatMap(x => x.r.mins)), TRAM_KMH).map((p, i) => vehicleOf(p, i, 'tram', at, stopKey + dir)) : []
+  usePublishVehicles(tramVeh)
   if (state === 'failed' && !live) return null
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, hasDirs ? 3 : 4)
   const [north, south] = DATA.tram.ends
@@ -173,6 +190,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
             </ul>
           )}
           <div className={cn(sub, 'mt-1 text-[0.8em]')}>{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
+          <VehNote show={tramVeh.length > 0} />
         </>
       )}
     </div>
@@ -244,6 +262,11 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
   const { dir, pickDir } = useDirChoice('train:' + (item.code ?? ''), two ? opts : [], centre)
   const empty = per.every(x => x.soon === null) ? new Set<string>() : new Set(per.filter(x => x.soon === null).map(x => x.g.id)) // nothing left on either side: no chip is greyed
   const next = two ? per.find(x => x.g.id === dir)?.deps ?? [] : tt ? nextDepartures(tt, now, 3) : []
+  // the next 2 planned trains of the shown direction, placed upstream of the station (planned time, not real time; the timetable has no stop times of one trip at several stations)
+  const way = two ? dir : groups.length === 1 ? groups[0].id : null
+  const trainVeh: Vehicle[] = way && times
+    ? upstream(railLine(), here, way === 'hi', nextTwo(next.filter(n => !n.tomorrow && n.inMin <= TRAIN_MAX_MIN).map(n => n.inMin)), TRAIN_KMH).map((p, i) => vehicleOf(p, i, 'train', here, (item.code ?? '') + way)) : []
+  usePublishVehicles(trainVeh)
   const [y, mo, d] = DATA.cercanias.updated?.split('-') ?? []
   return (
     <>
@@ -262,8 +285,9 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
           </ul>
         )}
         <p className={cn(sub, 'm-0 mt-0.5')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
+        <VehNote show={trainVeh.length > 0} />
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-2">
         <Button {...linkProps(RENFE_URL)} onClick={() => track('times', 'cercanias')} data-testid="train-times">{t('trainTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
         <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       </div>

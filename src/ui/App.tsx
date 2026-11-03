@@ -20,6 +20,8 @@ import { SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest, type RouteView } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { HomePage, PlacePage, type LineView } from './Pages'
+import { VehicleCtx } from './vehicles'
+import type { Vehicle } from '../lib/vehicles'
 import { SettingsView, useSettingsView } from './SettingsView'
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
 import { GOAL_IDS, goalById, goalOf, serviceFor, type GoalId } from '../layers/goals'
@@ -117,6 +119,7 @@ export function App() {
   const [routes, setRoutes] = useState<BusRoutes | null>(null)
   const [times, setTimes] = useState<CercaniasTimes | null>(null)
   const [fitN, setFitN] = useState(0)
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]) // estimated tram / Cercanías positions, published by the stop card
   const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
   const askedLocation = useRef(false)
   const flyN = useRef(0)
@@ -313,13 +316,14 @@ export function App() {
 
   return (
     <LangCtx.Provider value={lang}>
+      <VehicleCtx.Provider value={setVehicles}>
       <MotionConfig reducedMotion="user"><LazyMotion features={domAnimation} strict>
       <ToastHost>
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
               layer={layer} items={lineData ? [] : arr} pick={pick} selected={lineData ? null : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
-              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
           {desktop ? (
@@ -338,6 +342,7 @@ export function App() {
         <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>
       </LazyMotion></MotionConfig>
+      </VehicleCtx.Provider>
     </LangCtx.Provider>
   )
 }

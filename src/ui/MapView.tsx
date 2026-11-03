@@ -6,6 +6,7 @@ import { CENTER } from '../lib/geo'
 import { pointAt } from '../lib/transit'
 import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
 import { iconHtml } from './icons'
+import type { Vehicle } from '../lib/vehicles'
 
 export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon; instant?: boolean }
 /** A bus line to draw in place of the markers: its route pieces, its stops in order, and which stop is the current one (-1 = none). */
@@ -29,6 +30,9 @@ interface Props {
   /** A rail line drawn thin under the stops (tram, Cercanías). */
   track?: LatLon[][] | null
   fitN?: number
+  /** Estimated vehicles (tram, Cercanías), drawn small and faded under the stop markers. They slide to a new place on a refresh. */
+  vehicles?: Vehicle[]
+  vehBadge?: string
   onRouteStop?: (post: string) => void
   label: string
   zoomTitles: { in: string; out: string }
@@ -43,7 +47,7 @@ const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Ligh
 const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, onRouteStop, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
@@ -51,11 +55,13 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const markers = useRef(new Map<string, L.Marker>())
   const sig = useRef('')
   const me = useRef<L.Marker | null>(null)
+  const vehGroup = useRef<L.LayerGroup | null>(null)
+  const vehs = useRef(new Map<string, { mk: L.Marker; raf: number }>())
   const routeGroup = useRef<L.LayerGroup | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
   cb.current = { onSelect, onBackgroundClick, inset, onRouteStop, desktop }
-  const live = useRef({ layer, items, selected, showRange })
-  live.current = { layer, items, selected, showRange }
+  const live = useRef({ layer, items, selected, showRange, vehicles })
+  live.current = { layer, items, selected, showRange, vehicles }
 
   // the zoom buttons are made once by Leaflet: follow a language change here
   useEffect(() => {
@@ -96,6 +102,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     mq.addEventListener('change', onScheme)
     rings.current = L.layerGroup().addTo(m)
     routeGroup.current = L.layerGroup().addTo(m)
+    vehGroup.current = L.layerGroup().addTo(m)
     group.current = L.layerGroup().addTo(m)
     map.current = m
     m.on('moveend zoomend', drawRings)
@@ -103,7 +110,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     m.on('zoomend', far); far()
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
-    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
+    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); vehs.current.forEach(v => cancelAnimationFrame(v.raf)); vehs.current.clear(); vehGroup.current = null; m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -179,6 +186,48 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const cur = route.stops[route.cur]
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
   }, [route, track, layer.color])
+  // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
+  const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',')).join('|') + '|' + vehBadge
+  useEffect(() => {
+    const g = vehGroup.current
+    if (!g) return
+    const keep = new Set(vehicles.map(v => v.id))
+    vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
+    for (const v of vehicles) {
+      const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${vehBadge ? `<i>${vehBadge}</i>` : ''}</div>`
+      const icon = L.divIcon({ className: 'mkw', html, iconSize: [20, 20], iconAnchor: [10, 10] })
+      const cur = vehs.current.get(v.id)
+      if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, zIndexOffset: -500 }).addTo(g); vehs.current.set(v.id, { mk, raf: 0 }); continue }
+      cur.mk.setIcon(icon)
+      cancelAnimationFrame(cur.raf)
+      const from = cur.mk.getLatLng(), to = L.latLng(v.pos)
+      if (reduced()) { cur.mk.setLatLng(to); continue }
+      const t0 = performance.now(), D = 1500
+      const step = (now: number) => {
+        const k = Math.min(1, (now - t0) / D), e = 1 - (1 - k) * (1 - k)
+        cur.mk.setLatLng([from.lat + (to.lat - from.lat) * e, from.lng + (to.lng - from.lng) * e])
+        if (k < 1) cur.raf = requestAnimationFrame(step)
+      }
+      cur.raf = requestAnimationFrame(step)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vsig])
+  // when the stop or direction changes, frame the stop and its vehicles together if one is out of view (after the fly to the stop has ended)
+  const fitKey = vehicles[0]?.fit ?? ''
+  useEffect(() => {
+    const m = map.current
+    const vs = live.current.vehicles
+    if (!m || !fitKey || !vs.length) return
+    const id = setTimeout(() => {
+      const pad = L.point(cb.current.desktop ? 440 : 40, 70), padB = L.point(40, cb.current.inset() + 30)
+      const view = m.getBounds()
+      const inner = L.latLngBounds(m.containerPointToLatLng(pad), m.containerPointToLatLng(m.getSize().subtract(padB)))
+      const pts = [vs[0].stop, ...vs.map(v => v.pos)]
+      if (pts.every(q => inner.contains(q)) && view.isValid()) return
+      m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: pad, paddingBottomRight: padB, maxZoom: 16, animate: !reduced(), duration: MS.fly / 1000 })
+    }, MS.fly + 150)
+    return () => clearTimeout(id)
+  }, [fitKey])
   useEffect(() => {
     const m = map.current
     if (!m || !route) return
