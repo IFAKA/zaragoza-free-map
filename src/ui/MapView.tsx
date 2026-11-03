@@ -69,7 +69,7 @@ function nearBus(route: RouteView): { pt: [number, number]; bearing: number } | 
 /** An arrow above the closest place (the stop), turned the way the vehicle arrives (prev to the stop), clear of the stop and the lines. */
 function lineArrow(prev: LatLon, to: LatLon, color: string): L.Marker {
   const html = `<b class="vdir mid" style="--c:${color};transform:rotate(${Math.round(bearingTo(prev, to))}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
-  return L.marker(to, { icon: L.divIcon({ className: 'mkw', html, iconSize: [14, 14], iconAnchor: [7, 40] }), interactive: false, keyboard: false, pane: 'vehPane' })
+  return L.marker(to, { icon: L.divIcon({ className: 'mkw', html, iconSize: [14, 14], iconAnchor: [7, 33] }), interactive: false, keyboard: false, pane: 'vehPane' })
 }
 
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
