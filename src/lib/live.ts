@@ -74,11 +74,28 @@ export function parseTram(js: unknown[], now: number): Live | null {
   return any ? { arrivals: group(rows), notice, at: now } : null
 }
 
-async function defaultGet(url: string, signal?: AbortSignal): Promise<unknown> {
-  const timeout = AbortSignal.timeout(LIVE_TIMEOUT_MS)
-  const r = await fetch(url, { cache: 'no-store', signal: signal ? AbortSignal.any([signal, timeout]) : timeout })
-  if (!r.ok) throw new Error('HTTP ' + r.status)
-  return r.json()
+// One shared request per URL for 3 s, so the card and the route view do not ask the city twice. Each caller can still abort on its own.
+const recent = new Map<string, { at: number; p: Promise<unknown> }>()
+const SHARE_MS = 3_000
+
+function defaultGet(url: string, signal?: AbortSignal): Promise<unknown> {
+  const t = Date.now()
+  let hit = recent.get(url)
+  if (!hit || t - hit.at >= SHARE_MS) {
+    const p = fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(LIVE_TIMEOUT_MS) }).then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      return r.json()
+    })
+    hit = { at: t, p }
+    recent.set(url, hit)
+    p.catch(() => { if (recent.get(url) === hit) recent.delete(url) })
+  }
+  if (!signal) return hit.p
+  if (signal.aborted) return Promise.reject(signal.reason)
+  return new Promise((res, rej) => {
+    signal.addEventListener('abort', () => rej(signal.reason), { once: true })
+    hit!.p.then(res, rej)
+  })
 }
 
 // Stops the city server answers with HTTP 400 "(500)Internal Server Error" (about 10%, a known city bug) are remembered for 10 minutes, so a refresh does not ask them again.
