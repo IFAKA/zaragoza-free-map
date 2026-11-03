@@ -159,6 +159,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     }
     const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
+    const busCol = getComputedStyle(document.documentElement).getPropertyValue('--color-bus').trim() // the arrows: red on the red line cannot be seen, so white with a bus-blue edge
     for (const path of route.paths) {
       L.polyline(path, { color: white, weight: 8, opacity: 0.9, interactive: false }).addTo(g)
       L.polyline(path, { color: brand, weight: 4.5, interactive: false }).addTo(g)
@@ -167,7 +168,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       for (const f of [0.2, 0.4, 0.6, 0.8]) {
         const a = pointAt(path, f)
         if (!a) continue
-        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="rarrow" style="transform:rotate(${Math.round(a.bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="${white}" stroke="${brand}" stroke-width="1.4" stroke-linejoin="round"/></svg></div>`, iconSize: [14, 14], iconAnchor: [7, 7] }), interactive: false, keyboard: false }).addTo(g)
+        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="rarrow" style="transform:rotate(${Math.round(a.bearing)}deg)"><svg viewBox="0 0 12 12" width="16" height="16" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="${white}" stroke="${busCol}" stroke-width="1.6" stroke-linejoin="round"/></svg></div>`, iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false, keyboard: false }).addTo(g)
       }
     }
     route.stops.forEach((s, i) => {
