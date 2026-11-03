@@ -27,6 +27,16 @@
       "until": "2026-12-31",
       "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
       "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
+    },
+    "22": {
+      "until": "2026-12-31",
+      "es": "Pasa junto a las obras de la avenida de Valencia: el recorrido puede ser distinto al dibujado. Mira el cartel en la parada.",
+      "en": "Runs next to the Avenida de Valencia roadworks: the real route may differ from the drawing. Check the sign at the stop."
+    },
+    "Ci3": {
+      "until": "2026-12-31",
+      "es": "Pasa junto a las obras de la avenida de Valencia: el recorrido puede ser distinto al dibujado. Mira el cartel en la parada.",
+      "en": "Runs next to the Avenida de Valencia roadworks: the real route may differ from the drawing. Check the sign at the stop."
     }
   },
   "closedStops": {
@@ -36,7 +46,8 @@
       "262",
       "263",
       "264",
-      "265"
+      "265",
+      "3040"
     ],
     "way": [
       [
