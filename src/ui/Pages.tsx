@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
+import { loadRailAlerts, type RailAlert } from '../lib/alerts'
 import detours from '../data/detours.json'
 import { chipSplit, nextDepartures, type BusRoutes } from '../lib/transit'
 import { nowMadrid } from '../lib/hours'
@@ -280,6 +281,9 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
   const trainShown: Vehicle[] = trainVeh.length || !way || !times ? trainVeh : [startOf(railLine(), way === 'hi', here, (item.code ?? '') + way, 'train')]
   usePublishVehicles(trainShown)
   const [y, mo, d] = DATA.cercanias.updated?.split('-') ?? []
+  const [alerts, setAlerts] = useState<RailAlert[]>([])
+  useEffect(() => { let on = true; loadRailAlerts(new Set(DATA.cercanias.rows.map(r => r[0]))).then(a => on && setAlerts(a)); return () => { on = false } }, [])
+  const mine = alerts.filter(a => !a.stops.length || (item.code && a.stops.includes(item.code))).slice(0, 2)
   return (
     <>
       <div className="mt-2" data-testid="train-next">
@@ -297,6 +301,7 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
           </ul>
         )}
         <p className={cn(sub, 'm-0 mt-0.5')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
+        {mine.map(a => <p key={a.id} className={cn(sub, 'm-0 mt-1 font-semibold text-ink')} role="note" data-testid="train-alert">{a.text} <span className="font-normal">(Renfe)</span></p>)}
         <VehNote show={trainVeh.length > 0} />
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
