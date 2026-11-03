@@ -5,7 +5,7 @@ import { EASE, MS, PICK } from './motion'
 const css: string = (globalThis as unknown as { process: { getBuiltinModule: (n: string) => { readFileSync: (p: string, e: string) => string } } }).process.getBuiltinModule('node:fs').readFileSync('src/styles.css', 'utf8')
 const sources = import.meta.glob<string>('./**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true })
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
-// the shadcn drawer is the sheet's own physics (CSS, 450 ms); it keeps them, and docs/motion.md says so
+// the shadcn drawer is the sheet's own physics (CSS, 300 ms); it keeps them, and docs/motion.md says so
 const SHEET = './ui/drawer.tsx'
 
 describe('motion lives in src/ui/motion.ts', () => {

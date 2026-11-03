@@ -5,8 +5,8 @@ import { Drawer, DrawerContent } from './ui/drawer'
 /**
  * Pages inside ONE drawer (same mechanics as the suitkeep menu): a submenu is a page, not a second drawer.
  * - pages form a real stack: `go` pushes, `goUp` pops, so Back returns to the page you came from;
- * - a new page fades in over 300ms (keyed by turn.key);
- * - the drawer eases to the height the new page needs (snap point change, 450ms) instead of jumping.
+ * - a new page fades in over 150ms (keyed by turn.key);
+ * - the drawer eases to the height the new page needs (snap point change, 300ms) instead of jumping.
  */
 export interface Turn { key: string }
 export function usePages<P extends string>(first: P) {

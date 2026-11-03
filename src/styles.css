@@ -149,6 +149,6 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .me{width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
 @media (prefers-reduced-motion:reduce){.mk.pulse,.mk.pulse::after{animation:none}.mk,.leaflet-bar a{transition:none}.mk:active,.leaflet-bar a:active{transform:none}}
 .no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
-.mk.sel::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--c);animation:selpulse 1.6s ease-out infinite;pointer-events:none}
+.mk.sel::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--c);animation:selpulse 1.6s ease-out 2 both;pointer-events:none}
 @keyframes selpulse{from{transform:scale(1);opacity:.7}to{transform:scale(1.5);opacity:0}}
 @media (prefers-reduced-motion:reduce){.mk.sel::after{animation:none;opacity:.5}}

@@ -10,7 +10,7 @@ import type { Transition, Variants } from 'motion/react'
 export const MS = {
   /** Press feedback (scale .97) and colour changes on controls. */
   press: 120,
-  /** A small change in place: chip row, counts, a card swapping. */
+  /** A small change in place: a page fading in, a switch, a card swapping. */
   small: 150,
   /** The card of the nearest place swapping for another. */
   card: 120,
@@ -48,11 +48,4 @@ export const cardSwap = {
   initial: { opacity: 0, y: TRAVEL.card },
   animate: { opacity: 1, y: 0 },
   transition: T.card,
-} as const
-
-/** A live number changing (Bizi counts, the pharmacy list): a crossfade in place. Never a slide. */
-export const tick = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: T.small,
 } as const

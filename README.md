@@ -50,7 +50,6 @@ GoatCounter, cookieless, no personal data, no coordinates. Page views are counte
 
 | Event | When | Why |
 |---|---|---|
-| `goal-<id>` | a real switch of goal (now, move, connect) | which goals people want |
 | `tab-<layer>` | a real switch of service | which services are used (same name as before) |
 | `select-<layer>` | a list row or marker picked | engagement per service |
 | `directions-<layer>` | walking directions opened | people who go there |
@@ -82,10 +81,10 @@ The city live-times API answers HTTP 400 "(500)Internal Server Error" for about 
 Live Bizi bike and dock counts: [CityBikes](https://citybik.es) (`api.citybik.es`). The About page credits it in English and Spanish and says the counts are live. Pharmacies on duty: Ayuntamiento de Zaragoza.
 
 ## Goals and first moment
-Three goal tabs (Now, Getting around, Connect) with a row of service chips under them; see `src/layers/goals.ts`. Now: toilets, water, pharmacy, shelter. Getting around: bus, tram, Cercanías, Bizi. Connect: WiFi, charge, libraries. Each goal remembers its last service. The goal order follows how often each goal was tapped on this device (`zgz:v2:taps`), read once at app open. A first visit opens on Now > Toilets. The first tab tap asks for the location once (if the browser has not blocked it), inside the tap so browsers allow the prompt. Until then the list says "Distances from the city centre" with a big Use my location button; if blocked it shows one calm line on how to allow it. The anonymous events `locate-granted` and `locate-denied` are counted (no coordinates). The "add to home screen" hint is hidden when installed and in in-app browsers (Reddit, Instagram, Facebook, TikTok, Android WebView, iOS without Safari), see `src/lib/install.ts`.
+One scrolling row of service chips (see `src/layers/goals.ts`): toilets, water, pharmacy, shelter, bus, tram, Bizi, Cercanías, WiFi, charge, libraries. The order follows how often each service was tapped on this device (`zgz:v2:taps`), read once at app open. A first visit opens on Toilets. The first tab tap asks for the location once (if the browser has not blocked it), inside the tap so browsers allow the prompt. Until then the list says "Distances from the city centre" with a big Use my location button; if blocked it shows one calm line on how to allow it. The anonymous events `locate-granted` and `locate-denied` are counted (no coordinates). The "add to home screen" hint is hidden when installed and in in-app browsers (Reddit, Instagram, Facebook, TikTok, Android WebView, iOS without Safari), see `src/lib/install.ts`.
 
 ## Browser check
-`e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network (the CityBikes feed is mocked), taps every control, checks the Bizi counts, stale and failed states, the goal tabs and chips (fit at 360 and 390 px, memory, order, 2-tap reach), the Settings view (slide, close cross, back, Escape, focus), the analytics events, the first-tap location prompt (granted, denied, blocked), the install hint under in-app browser UAs, one Pixel 7 emulation run, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.
+`e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network (the CityBikes feed is mocked), taps every control, checks the Bizi counts, stale and failed states, the service chips (fit at 360 and 390 px, order, 1-tap reach), the Settings view (slide, close cross, back, Escape, focus), the analytics events, the first-tap location prompt (granted, denied, blocked), the install hint under in-app browser UAs, one Pixel 7 emulation run, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.
 
 ## Layout
 `src/data/*` bundled data, `src/layers/*` layer building, `src/lib/*` geo, utm, hours, cityHours, i18n, rank, bizi (live counts), duty (pharmacies), install (in-app browser check), `src/ui/*` React components (`PagedDrawer.tsx` = pages in one drawer), `scripts/build-data.mjs` data builder.
