@@ -24,8 +24,8 @@ import { VehicleCtx } from './vehicles'
 import type { Vehicle } from '../lib/vehicles'
 import { SettingsView, useSettingsView } from './SettingsView'
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
-import { GOAL_IDS, goalById, goalOf, serviceFor, type GoalId } from '../layers/goals'
-import { bumpTap, parseLast, parseTaps, rankByTaps } from '../lib/usage'
+import { serviceOrder } from '../layers/goals'
+import { bumpTap, parseTaps, rankByTaps } from '../lib/usage'
 import { SettingsFab } from './SettingsFab'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
@@ -33,7 +33,7 @@ import { useLocation } from './useLocation'
 
 type Page = 'home' | 'place'
 
-// Drawer levels. Closed shows only the tab bar; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
+// Drawer levels. Closed shows only the chip row; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 2
 const DEFAULT_CLOSED_PX = 78, DEFAULT_PEEK_PX = 360
 const MAP_SHARE = 0.28 // the sheet never covers more than 72% of the screen at peek: this much stays for the map
@@ -46,7 +46,7 @@ function safeBottom(): number {
   probe.remove()
   return inset
 }
-/** Height of the closed sheet: the handle and the tab bar, plus the phone's bottom safe area. Measured, so it follows the real layout. */
+/** Height of the closed sheet: the handle and the chip row, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
@@ -155,14 +155,14 @@ export function App() {
 
   const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
   const view = useSettingsView()
-  // the order of the goal tabs: decided once, when the app opens, from this person's own tap counts (kept on this device). It never changes while the app is open.
-  const [goalOrder] = useState<GoalId[]>(() => rankByTaps(GOAL_IDS, parseTaps(lsGet('taps'))))
+  // the order of the service chips: decided once, when the app opens, from this person's own tap counts (kept on this device). It never changes while the app is open.
+  const [chipOrder] = useState<LayerId[]>(() => rankByTaps(serviceOrder(), parseTaps(lsGet('taps'))))
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
   const peekPx = usePeekPx(peekEl)
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', 1], [closedPx, peekPx])
   const mobileClosed = !desktop && level === CLOSED
-  // a closed sheet shows only the tab bar, so it always closes onto the first page
+  // a closed sheet shows only the chip row, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
 
   const { arr, allClosed, allOut } = useMemo(
@@ -233,33 +233,20 @@ export function App() {
     // the first tap is the first moment of intent (and a user gesture): ask for the position once, unless the person already blocked it
     if (!pos && !askedLocation.current && !blocked()) { askedLocation.current = true; void locate(true) }
   }
-  /** Show a service: remember it as the last used in its goal, count the tap for the goal order (next time the app opens), reset the page. */
-  const switchTo = (id: LayerId, viaGoal: boolean) => {
-    const g = goalOf(id).id
-    if (viaGoal) track('goal', g)
+  /** A service chip: show that service, count the tap for the chip order (next time the app opens), reset the page. The chip of the service you are on opens a closed sheet, or goes back to the first page. */
+  const pickLayer = (id: LayerId) => {
+    askLocation()
+    if (id === layerId) {
+      if (page !== 'home') reset()
+      else if (level === CLOSED) setLevel(PEEK)
+      return
+    }
     track('tab', id)
-    lsSet('taps', JSON.stringify(bumpTap(parseTaps(lsGet('taps')), g)))
-    lsSet('last', JSON.stringify({ ...parseLast(lsGet('last')), [g]: id }))
+    lsSet('taps', JSON.stringify(bumpTap(parseTaps(lsGet('taps')), id)))
     setLayerId(id); lsSet('layer', id); setSelected(null); setCat(catStart(id)); setLineSel(null)
     reset()
     if (level === CLOSED) setLevel(PEEK)
     viewport.current?.scrollTo({ top: 0 })
-  }
-  /** A service chip: switches service inside the goal. The chip of the service you are on does nothing. */
-  const pickLayer = (id: LayerId) => {
-    askLocation()
-    if (id === layerId) { if (page !== 'home') reset(); return }
-    switchTo(id, false)
-  }
-  /** A goal tab: opens the service last used in that goal. The tab of the goal you are on opens a closed sheet or folds an open one one step down. */
-  const pickGoal = (g: GoalId) => {
-    askLocation()
-    if (g === goalOf(layerId).id) {
-      if (page === 'home' && !desktop) setLevel(l => (l === CLOSED ? PEEK : l - 1))
-      else reset()
-      return
-    }
-    switchTo(serviceFor(goalById(g), parseLast(lsGet('last'))), true)
   }
   // a map marker or one of the two places under the card: show its card at peek, with the place and you both framed above the sheet (only the place when your position is unknown)
   const select = (id: string) => {
@@ -317,7 +304,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onPick={pickLayer} onGoal={pickGoal} goalOrder={goalOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
+          onPick={pickLayer} chipOrder={chipOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
           desktop={desktop}
         />
       )

@@ -25,11 +25,8 @@ const s = (ms: number) => ms / 1000
 
 /** The single ease-out curve (the same as --ease-out in styles.css). */
 export const EASE = [0.23, 1, 0.32, 1] as const
-/** The single spring: critically damped (damping = 2 * sqrt(stiffness * mass) = 45.6), so it lands softly and never bounces. Used for the goal indicator. */
-export const SPRING: Transition = { type: 'spring', stiffness: 520, damping: 46, mass: 1 }
-
 /** Short travel in px. */
-export const TRAVEL = { goal: 8, card: 6 } as const
+export const TRAVEL = { card: 6 } as const
 /** Press feedback: a press shrinks the control to 97%. */
 export const PRESS_SCALE = 0.97
 /** Map marker you picked: grows to 115% once, with a soft ring that fades. */
@@ -46,13 +43,6 @@ export const viewVariants = (reduced: boolean): Variants => (reduced
   ? { out: { opacity: 0, transition: T.small }, in: { opacity: 1, transition: T.small } }
   : { out: { x: '100%', transition: T.slide }, in: { x: 0, transition: T.slide } })
 
-/** Content that changes with the goal moves a little toward the side of the new goal: `dir` is -1 (goal to the left), 1 (to the right). */
-export const goalShift = (dir: number) => ({
-  initial: { opacity: 0, x: dir * TRAVEL.goal },
-  animate: { opacity: 1, x: 0 },
-  transition: T.small,
-})
-
 /** The nearest-place card swapping for another: a quick fade and 6 px up. Never on a live refresh of the same place. */
 export const cardSwap = {
   initial: { opacity: 0, y: TRAVEL.card },
@@ -66,6 +56,3 @@ export const tick = {
   animate: { opacity: 1 },
   transition: T.small,
 } as const
-
-/** The goal indicator slides between the equal columns of the goal bar. */
-export const indicator = (index: number) => ({ animate: { x: `${index * 100}%` }, transition: SPRING })

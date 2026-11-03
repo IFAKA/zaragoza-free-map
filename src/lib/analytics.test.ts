@@ -38,8 +38,8 @@ describe('events', () => {
   it('a detail is added to the path, the title stays the event name', () => {
     const calls: { path: string; title?: string }[] = []
     ;(globalThis as unknown as { window: unknown }).window = { goatcounter: { count: (o: { path: string; title?: string }) => calls.push(o) } }
-    track('goal', 'connect'); track('settings-close', 'x'); track('lang', 'es'); track('settings-open')
-    expect(calls.map(c => c.path)).toEqual(['goal-connect', 'settings-close-x', 'lang-es', 'settings-open'])
+    track('tab', 'wifi'); track('settings-close', 'x'); track('lang', 'es'); track('settings-open')
+    expect(calls.map(c => c.path)).toEqual(['tab-wifi', 'settings-close-x', 'lang-es', 'settings-open'])
     delete (globalThis as unknown as { window?: unknown }).window
   })
   it('page views are counted under one name in every language', () => {

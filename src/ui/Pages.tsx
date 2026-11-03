@@ -15,8 +15,7 @@ import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS } from '../layers'
-import type { GoalId } from '../layers/goals'
-import { GoalTabs, ServiceChips } from './GoalBar'
+import { ServiceChips } from './ServiceBar'
 import { Tick } from './Tick'
 import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
@@ -568,15 +567,14 @@ export function HomePage(p: {
   nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
-  locked: boolean; onPick: (id: LayerId) => void; onGoal: (id: GoalId) => void; goalOrder: GoalId[]
+  locked: boolean; onPick: (id: LayerId) => void; chipOrder: LayerId[]
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
   return (
     <>
-      <GoalTabs layer={p.layer.id} order={p.goalOrder} onGoal={p.onGoal} />
-      <ServiceChips layer={p.layer.id} order={p.goalOrder} onService={p.onPick} />
+      <ServiceChips layer={p.layer.id} order={p.chipOrder} onService={p.onPick} />
       {/* everything down to the end of this block is what the sheet shows at peek: the card and the two places after it */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}

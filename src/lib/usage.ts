@@ -1,7 +1,6 @@
 // What this person uses most, kept on this device only (localStorage). Nothing here is sent anywhere.
-import type { GoalId } from '../layers/goals'
 
-/** Taps per goal, e.g. { now: 12, move: 3 }. */
+/** Taps per service, e.g. { toilets: 12, tram: 3 }. */
 export type Taps = Partial<Record<string, number>>
 
 /** Read the saved counts. Anything damaged or odd is ignored, never thrown. */
@@ -19,21 +18,8 @@ export const bumpTap = (taps: Taps, id: string): Taps => ({ ...taps, [id]: (taps
 
 /**
  * The default order, re-sorted by the person's own tap counts (most used first). Ties keep the default order,
- * so a new visitor (no counts) gets the default. Computed once when the app opens and never again: tabs must not jump under a thumb.
+ * so a new visitor (no counts) gets the default. Computed once when the app opens and never again: chips must not jump under a thumb.
  */
 export function rankByTaps<T extends string>(defaults: readonly T[], taps: Taps): T[] {
   return defaults.map((id, i) => ({ id, i, n: taps[id] ?? 0 })).sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.id)
-}
-
-/** The service last used in each goal, e.g. { now: 'water' }. */
-export type LastUsed = Partial<Record<GoalId, string>>
-export function parseLast(raw: string | null): LastUsed {
-  if (!raw) return {}
-  try {
-    const v: unknown = JSON.parse(raw)
-    if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
-    const out: LastUsed = {}
-    for (const [k, id] of Object.entries(v)) if (typeof id === 'string') out[k as GoalId] = id
-    return out
-  } catch { return {} }
 }
