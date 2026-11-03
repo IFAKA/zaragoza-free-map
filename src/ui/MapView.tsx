@@ -178,7 +178,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       for (const f of [0.2, 0.4, 0.6, 0.8]) {
         const a = pointAt(path, f)
         if (!a) continue
-        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(a.bearing)}</div>`, iconSize: [20, 20], iconAnchor: [10, 10] }), interactive: false, keyboard: false }).addTo(g)
+        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(a.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false }).addTo(g)
       }
     }
     route.stops.forEach((s, i) => {
