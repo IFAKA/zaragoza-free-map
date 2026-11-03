@@ -79,6 +79,19 @@ describe('arrowBearing', () => {
     }
     expect(n).toBeGreaterThan(15)
   })
+  it('same for every Cercanías station', () => {
+    const track = decodePolyline(DATA.cercanias.line[0])
+    const gap = (a: number, b: number) => { const x = Math.abs(a - b) % 360; return x > 180 ? 360 - x : x }
+    let n = 0
+    for (const r of DATA.cercanias.rows) {
+      const at: LatLon = [r[2], r[3]]
+      const [hi, lo] = [true, false].map(fwd => { const [p] = upstream(track, at, fwd, [4], TRAIN_KMH); return p && arrowBearing(between(track, p, at), p, at) })
+      if (hi === undefined || lo === undefined) continue
+      n++
+      expect(gap(hi, lo), r[1]).toBeGreaterThan(120)
+    }
+    expect(n).toBeGreaterThan(3)
+  })
   it('falls back to the straight line when the track piece is a single point', () => {
     expect(arrowBearing([[41.6, -0.9]], [41.6, -0.9], [41.61, -0.9])).toBeCloseTo(0, 0)
   })
