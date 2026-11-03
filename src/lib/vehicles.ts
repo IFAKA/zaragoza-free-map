@@ -77,6 +77,8 @@ export interface Vehicle {
   id: string; pos: LatLon; color: string; icon: 'tram' | 'train'
   /** Compass bearing the vehicle travels (degrees, 0 = north): towards its stop. */
   bearing: number
+  /** True for the start of the direction, shown when no vehicle can be placed: a fixed place, not an estimate. */
+  start?: boolean
   /** The stop they are heading for, and a key that changes with the stop or direction: the map frames both when the key changes and a vehicle is out of view. */
   stop: LatLon; fit: string
 }

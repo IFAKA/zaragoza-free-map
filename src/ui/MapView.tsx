@@ -33,6 +33,7 @@ interface Props {
   /** Estimated vehicles (tram, Cercanías), drawn small and faded under the stop markers. They slide to a new place on a refresh. */
   vehicles?: Vehicle[]
   vehBadge?: string
+  vehStart?: string
   onRouteStop?: (post: string) => void
   label: string
   zoomTitles: { in: string; out: string }
@@ -59,13 +60,13 @@ function nearBus(route: RouteView): { pt: [number, number]; bearing: number } | 
     const d = here.distanceTo(L.latLng(a.pt[0], a.pt[1]))
     if (d > 150 && d < bd) { bd = d; best = { pt: [a.pt[0], a.pt[1]], bearing: a.bearing } }
   }
-  return best
+  return best ?? (route.paths[0]?.length ? { pt: route.paths[0][0] as [number, number], bearing: pointAt(route.paths[0], 0.01)?.bearing ?? 0 } : null) // no mark: the start of the direction
 }
 
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
 const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
 
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', onRouteStop, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.LayerGroup | null>(null)
@@ -207,14 +208,14 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
   }, [route, track, layer.color])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
-  const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',')).join('|') + '|' + vehBadge
+  const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',') + (v.start ? 's' : '')).join('|') + '|' + vehBadge + vehStart
   useEffect(() => {
     const g = vehGroup.current
     if (!g) return
     const keep = new Set(vehicles.map(v => v.id))
     vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
-      const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${vehBadge ? `<i>${vehBadge}</i>` : ''}</div>`
+      const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${(v.start ? vehStart : vehBadge) ? `<i>${v.start ? vehStart : vehBadge}</i>` : ''}</div>`
       const icon = L.divIcon({ className: 'mkw', html, iconSize: [24, 24], iconAnchor: [12, 12] })
       const cur = vehs.current.get(v.id)
       if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g); vehs.current.set(v.id, { mk, raf: 0 }); continue }

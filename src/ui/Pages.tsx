@@ -128,6 +128,11 @@ let tramPath: LatLon[] | null = null, railPath: LatLon[] | null = null
 const tramLine = () => (tramPath ??= stitch(DATA.tram.line.map(decodePolyline)))
 const railLine = () => (railPath ??= decodePolyline(DATA.cercanias.line[0]))
 const vehicleOf = (pos: LatLon, i: number, icon: Vehicle['icon'], stop: LatLon, fit: string): Vehicle => ({ id: 'veh' + i, pos, icon, stop, fit, bearing: bearingTo(pos, stop), color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' })
+/** The start of a direction (where its vehicles set off): the first point of `path` when they travel towards its end, else the last. */
+const startOf = (path: LatLon[], forward: boolean, stop: LatLon, fit: string, icon: Vehicle['icon'] = 'tram'): Vehicle => {
+  const pos = forward ? path[0] : path[path.length - 1]
+  return { id: 'veh0', pos, icon, stop, fit, bearing: bearingTo(pos, stop), start: true, color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' }
+}
 /** One short line under the times: the map markers are estimates. */
 function VehNote({ show }: { show: boolean }) {
   const { t } = useT()
@@ -154,7 +159,9 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   // tram: the next 2 trams of the shown direction, placed on the track upstream of the stop (approximate; none without live minutes)
   const tramVeh: Vehicle[] = kind === 'tram' && state === 'live' && hasDirs && at
     ? upstream(tramLine(), at, dir === 'n', nextTwo(tram.filter(x => x.dir === dir).flatMap(x => x.r.mins)), TRAM_KMH).map((p, i) => vehicleOf(p, i, 'tram', at, stopKey + dir)) : []
-  usePublishVehicles(tramVeh)
+  const tramLn = tramLine()
+  const tramShown: Vehicle[] = tramVeh.length || !(kind === 'tram' && hasDirs && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
+  usePublishVehicles(tramShown)
   if (state === 'failed' && !live) return null
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, hasDirs ? 3 : 4)
   const [north, south] = DATA.tram.ends
@@ -269,7 +276,8 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
   const way = two ? dir : groups.length === 1 ? groups[0].id : null
   const trainVeh: Vehicle[] = way && times
     ? upstream(railLine(), here, way === 'hi', nextTwo(next.filter(n => !n.tomorrow && n.inMin <= TRAIN_MAX_MIN).map(n => n.inMin)), TRAIN_KMH).map((p, i) => vehicleOf(p, i, 'train', here, (item.code ?? '') + way)) : []
-  usePublishVehicles(trainVeh)
+  const trainShown: Vehicle[] = trainVeh.length || !way || !times ? trainVeh : [startOf(railLine(), way === 'hi', here, (item.code ?? '') + way, 'train')]
+  usePublishVehicles(trainShown)
   const [y, mo, d] = DATA.cercanias.updated?.split('-') ?? []
   return (
     <>

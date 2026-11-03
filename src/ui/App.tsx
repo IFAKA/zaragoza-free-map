@@ -325,7 +325,7 @@ export function App() {
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
               layer={layer} items={lineData ? [] : arr} pick={pick} selected={lineData ? null : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
-              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
+              showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
           {desktop ? (
