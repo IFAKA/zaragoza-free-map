@@ -76,6 +76,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const me = useRef<L.Marker | null>(null)
   const vehGroup = useRef<L.LayerGroup | null>(null)
   const vehLine = useRef<L.Polyline | null>(null)
+  const walkLine = useRef<L.Polyline | null>(null)
   const vehs = useRef(new Map<string, { mk: L.Marker; raf: number }>())
   const routeGroup = useRef<L.LayerGroup | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
@@ -210,14 +211,24 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const cur = route.stops[route.cur]
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
   }, [route, track, layer.color])
+  // you -> the closest place (the selected stop, or the stop of the shown bus line): a dotted line in the section colour
+  useEffect(() => {
+    const m = map.current
+    walkLine.current?.remove(); walkLine.current = null
+    if (!m || !userPos) return
+    const it = route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected)
+    if (!it) return
+    const col = getComputedStyle(document.documentElement).getPropertyValue(layer.color.replace(/^var\(|\)$/g, '')).trim()
+    walkLine.current = L.polyline([userPos, [it.lat, it.lon]], { color: col, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m)
+  }, [userPos, selected, items, route, layer.color])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
   const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',') + (v.start ? 's' : '')).join('|') + '|' + vehBadge + vehStart
   useEffect(() => {
-    const g = vehGroup.current
-    if (!g) return
+    const g = vehGroup.current, m0 = map.current
+    if (!g || !m0) return
     const keep = new Set(vehicles.map(v => v.id))
     vehLine.current?.remove(); vehLine.current = null
-    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false, pane: 'vehPane' }).addTo(g)
+    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m0)
     vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
       const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${(v.start ? vehStart : vehBadge) ? `<i>${v.start ? vehStart : vehBadge}</i>` : ''}</div>`
