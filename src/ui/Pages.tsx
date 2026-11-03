@@ -22,7 +22,7 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
-import { busAlternatives, loadBus, loadTram } from '../lib/live'
+import { busAlternatives, loadBus, loadTram, towardEnd, type Arrival } from '../lib/live'
 import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -95,16 +95,16 @@ function ShelterNote() {
 }
 
 /** Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works. */
-function LiveTimes({ kind, stopKey, load, stopName }: { kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string }) {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick }: { kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string; title?: string; pick?: (a: Arrival[]) => Arrival[] }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
   if (state === 'failed' && !live) return null
-  const rows = live?.arrivals.slice(0, 4) ?? []
+  const rows = (live ? (pick ? pick(live.arrivals) : live.arrivals) : []).slice(0, 4)
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
   return (
     <div className="mt-3 min-h-[5.5rem]" data-testid="live-times" data-state={state}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className={overline}>{kind === 'bus' ? t('nextBuses') : t('liveTrams')}</span>
+        <span className={overline}>{title ?? (kind === 'bus' ? t('nextBuses') : t('liveTrams'))}</span>
         {state === 'live' && <span className="inline-flex items-center gap-1 text-[0.8em] font-bold text-brand-text"><span className="size-1.5 rounded-full bg-current" aria-hidden />{t('liveTag')}</span>}
       </div>
       {!live ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveLoading')}</p> : (
@@ -264,7 +264,7 @@ function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => vo
 }
 
 /** What the line mode needs to show: the line, the direction on show, the stops in order and the place of the current one in them (-1 = none). */
-export interface LineView { line: string; dir: number; dirs: number; to?: string; stops: { post: string; name: string }[]; idx: number; stop?: string }
+export interface LineView { line: string; dir: number; dirs: number; to?: string; stops: { post: string; name: string; lat: number; lon: number }[]; idx: number; stop?: string }
 
 const LINE_ROWS = 2, LINE_COLS = 6 // the lines on a stop card: at most two rows of six, then a "+N" chip that opens the rest
 /** The lines a stop serves, as chips. A line with a known route is a button (draws it); the others are plain. */
@@ -293,8 +293,14 @@ function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes
 }
 
 /** A bus line chosen: "Line 38 · toward X", a way to flip direction, the stops still to come in order, and the link to the next buses. */
-export function LineBlock({ view, onBack, onDir }: { view: LineView; onBack: () => void; onDir: () => void }) {
+export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; origin: LatLon; onBack: () => void; onDir: () => void }) {
   const { t } = useT()
+  // live times of THIS line at this direction's stop (the one the person stands at, on the side of the street this direction uses)
+  const here = view.idx >= 0 ? view.stops[view.idx] : undefined
+  const post = here && /^\d+$/.test(here.post) ? here.post : undefined
+  const alts = useMemo(() => (post && here ? busAlternatives(post, view.line, [here.lat, here.lon], origin, DATA.bus.rows) : []), [post, here, view.line, origin])
+  const load = useCallback((s: AbortSignal) => loadBus(post ?? '', s, undefined, undefined, alts, view.line), [post, alts, view.line])
+  const toEnd = useCallback((a: Arrival[]) => towardEnd(a, view.to), [view.to])
   const title = [t('busLine').replace('{n}', view.line), view.to && t('toward').replace('{to}', view.to)].filter(Boolean).join(' · ')
   const from = Math.max(0, view.idx), upcoming = view.stops.slice(from, from + 4), left = view.stops.length - (from + upcoming.length)
   return (
@@ -321,8 +327,9 @@ export function LineBlock({ view, onBack, onDir }: { view: LineView; onBack: () 
         })}
         {left > 0 && <li className={cn(sub, 'py-0.5 pl-[1.15rem]')}>{t('stepMore').replace('{n}', String(left))}</li>}
       </ol>
+      {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} />}
       <div className="mt-2 flex flex-wrap gap-2">
-        {view.stop && <Button {...linkProps(busUrl(view.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
+        {view.stop && <Button variant={post ? 'secondary' : 'primary'} {...linkProps(busUrl(view.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{post ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
         {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
       </div>
     </m.section>
@@ -439,7 +446,7 @@ export function HomePage(p: {
       {/* everything down to the end of this block is what the sheet shows at peek: the card and the two places after it */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
-        {p.lineView ? <LineBlock view={p.lineView} onBack={p.onLineBack} onDir={p.onLineDir} />
+        {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}

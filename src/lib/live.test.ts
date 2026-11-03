@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { BAD_STOP_MS, busAlternatives, clearBad, loadBus, loadTram, markBad, parseBus, parseMins, parseTram, pickNotice, prettyDest } from './live'
+import { BAD_STOP_MS, busAlternatives, clearBad, loadBus, loadTram, markBad, onlyLine, parseBus, towardEnd, parseMins, parseTram, pickNotice, prettyDest } from './live'
 
 describe('parseMins', () => {
   it('reads minutes from the city text', () => {
@@ -153,5 +153,42 @@ describe('busAlternatives', () => {
     const a = busAlternatives('263', '35,38,N4,41', [41.6463, -0.897181], [41.6463, -0.897181], rows)
     expect(a.map(x => x.stop)).toEqual(['264'])
     expect(a[0].d).toBeGreaterThan(0)
+  })
+})
+
+describe('route view: one line at a stop', () => {
+  const two = { destinos: [
+    { linea: '35', destino: 'SEMINARIO', primero: '4 minutos.', segundo: '12 minutos.' },
+    { linea: '40', destino: 'CENTRO', primero: '1 minuto.', segundo: '' },
+    { linea: '35', destino: 'PLAZA ARAGON', primero: '9 minutos.', segundo: '' },
+  ] }
+  const mk = (answers: Record<string, unknown>) => { const calls: string[] = []; return { calls, get: (url: string) => { const id = /tuzsa-(\d+)/.exec(url)![1]; calls.push(id); return Promise.resolve(answers[id]) } } }
+  beforeEach(() => clearBad())
+
+  it('keeps only the arrivals of the chosen line', async () => {
+    const l = await loadBus('1', undefined, async () => two, () => 0, [], '35')
+    expect(l?.arrivals.map(a => a.line)).toEqual(['35', '35'])
+    expect(l?.arrivals[0].mins).toEqual([4, 12])
+    expect((await loadBus('1', undefined, async () => two, () => 0, []))?.arrivals).toHaveLength(3)
+  })
+  it('a stop that serves other lines but not this one counts as empty: the neighbour is asked', async () => {
+    const only40 = { destinos: [{ linea: '40', destino: 'CENTRO', primero: '1 minuto.', segundo: '' }] }
+    const { calls, get } = mk({ 1: only40, 10: two })
+    const l = await loadBus('1', undefined, get, () => 0, [{ stop: '10', name: 'Next door', d: 90 }], '35')
+    expect(calls).toEqual(['1', '10'])
+    expect(l?.via?.name).toBe('Next door')
+    expect(l?.arrivals.every(a => a.line === '35')).toBe(true)
+  })
+  it('onlyLine without a line leaves the answer alone, and null stays null', () => {
+    const l = parseBus(two, 0)
+    expect(onlyLine(l)).toBe(l)
+    expect(onlyLine(null, '35')).toBeNull()
+  })
+  it('towardEnd: the destination that names the end of the direction wins, else everything stays', () => {
+    const a = onlyLine(parseBus(two, 0), '35')!.arrivals
+    expect(towardEnd(a, 'Seminario').map(x => x.dest)).toEqual(['Seminario'])
+    expect(towardEnd(a, 'Plaza de Aragón').map(x => x.dest)).toEqual(['Plaza Aragon'])
+    expect(towardEnd(a, 'Oliver')).toHaveLength(2)
+    expect(towardEnd(a, undefined)).toHaveLength(2)
   })
 })

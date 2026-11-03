@@ -30,7 +30,7 @@ async function open(vp, mobile, extra = {}, lang = 'en', o = {}) {
     navigator.geolocation.getCurrentPosition = (ok, err) => { window.__geoCalls++; setTimeout(() => (g === 'grant' ? ok({ coords: { latitude: 41.6488, longitude: -0.8891 } }) : err({ code: 1 })), 30) }
   }, o.geo)
   const p = await ctx.newPage()
-  const mock = { mode: 'ok', hits: 0 }
+  const mock = { mode: 'ok', hits: 0, city: null }
   const blocked = []
   p.on('pageerror', e => { fails++; console.log('FAIL pageerror', e.message) })
   await p.route('**/*', r => {
@@ -42,6 +42,10 @@ async function open(vp, mobile, extra = {}, lang = 'en', o = {}) {
       if (mock.mode === 'fail') return r.fulfill({ status: 500, body: 'no' })
       const ms = Date.now() - (mock.mode === 'stale' ? 10 * 60_000 : 0)
       return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(feedAt(ms, mock.mode === 'empty' ? () => 0 : undefined)) })
+    }
+    if (u.startsWith('https://www.zaragoza.es/sede/servicio/urbanismo-infraestructuras/transporte-urbano/') && mock.city) { // the city's live API, scripted by the test (otherwise blocked like every other data API)
+      const j = mock.city(u)
+      return j ? r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(j) }) : r.fulfill({ status: 400, headers: { 'access-control-allow-origin': '*' }, body: 'no' })
     }
     blocked.push(u); return r.abort()
   })
@@ -433,6 +437,21 @@ todo.push(async () => {
   ok(/Horario programado \(no es tiempo real\)/.test(note) && /\d\d\/\d\d\/\d{4}/.test(note), `cercanias: planned label and data date (${note})`)
   ok(/renfe\.com/.test(await p.getByTestId('train-times').getAttribute('href') || ''), 'cercanias: Renfe link')
   await p.screenshot({ path: out + '/cercanias-es.png' })
+  await ctx.close()
+})
+// the bus route view: live times of THIS line at this stop; the other direction button keeps working
+todo.push(async () => {
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
+  await p.waitForSelector('[data-testid=bus-line-chip]'); await settle(p)
+  const chip = p.getByTestId('bus-line-chip').first(), line = await chip.getAttribute('data-line')
+  mock.city = () => ({ destinos: [{ linea: line, destino: 'CENTRO', primero: '3 minutos.', segundo: '11 minutos.' }, { linea: 'ZZ', destino: 'OTRA', primero: '1 minuto.', segundo: '' }] })
+  await chip.tap(); await p.waitForSelector('[data-testid=live-times] [data-testid=live-row]'); await settle(p)
+  const rows = await p.getByTestId('live-row').allInnerTexts()
+  ok(rows.length === 1 && rows[0].includes(line) && /3 min/.test(rows[0]) && !/OTRA/.test(rows[0]), `route view: live minutes of this line only (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  ok(/Esta parada/i.test(await p.getByTestId('live-times').innerText()), 'route view: the live box is titled "Esta parada"')
+  ok(await p.getByTestId('next-buses').count() === 1 && /poste=/.test(await p.getByTestId('next-buses').getAttribute('href') || ''), 'route view: the link-out stays (secondary)')
+  await p.screenshot({ path: out + '/bus-line-live-es.png' })
+  if (await p.getByTestId('line-dir').count()) { await p.getByTestId('line-dir').tap(); await settle(p); ok(await p.getByTestId('line-block').count() === 1, 'route view: direction flip keeps the sheet') }
   await ctx.close()
 })
 // a bus line: tap a line chip on the stop card, the route replaces the markers, the sheet shows the stepper; back returns

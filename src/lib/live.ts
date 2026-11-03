@@ -1,5 +1,6 @@
 import { dist } from './geo'
 import type { LatLon } from './types'
+import { tramKey } from './tramdir'
 // Live arrival times for the nearest bus or tram stop. Read straight from the city's open API (CORS *, no key, updates about every 30 s).
 // Any failure (offline, 404, timeout, odd data) gives null: the card then shows only the link-out, never an error.
 export const LIVE_BASE = 'https://www.zaragoza.es/sede/servicio/urbanismo-infraestructuras/transporte-urbano/'
@@ -85,6 +86,18 @@ export const markBad = (stop: string, at: number) => { badStops.set(stop, at) }
 export const isBad = (stop: string, at: number) => { const t = badStops.get(stop); if (t === undefined) return false; if (at - t >= BAD_STOP_MS) { badStops.delete(stop); return false } return true }
 export const clearBad = () => badStops.clear()
 
+/** Keeps only the arrivals of one line (the route view asks for "its" line). No line given: unchanged. */
+export const onlyLine = (l: Live | null, line?: string): Live | null => (l && line ? { ...l, arrivals: l.arrivals.filter(a => a.line === line) } : l)
+
+/** Same place name on both sides, ignoring case, accents and small words ("PLAZA ARAGON" and "Plaza de Aragón"); also true when one name holds the other. */
+const sameEnd = (a: string, b: string): boolean => { const x = tramKey(a), y = tramKey(b); return !!x && !!y && (x === y || x.includes(y) || y.includes(x)) }
+/** The arrivals that go towards `to` (the end of the chosen direction), when the API's destination text clearly names it. If none matches, all are kept: the API's own destination is shown. */
+export function towardEnd(arrivals: Arrival[], to?: string): Arrival[] {
+  if (!to) return arrivals
+  const hit = arrivals.filter(a => sameEnd(a.dest, to))
+  return hit.length ? hit : arrivals
+}
+
 export interface BusAlt { stop: string; name: string; d: number }
 const FALLBACK_REACH_M = 400, FALLBACK_TRIES = 2
 
@@ -105,11 +118,11 @@ export function busAlternatives(stop: string, lines: string, at: LatLon, origin:
  * When the stop fails or has no arrivals, up to 2 neighbours from `alts` are asked one after the other (so at most 3 requests, and only 1 when the stop works).
  * A stop that failed is skipped for 10 minutes. If a neighbour answers with arrivals the result carries `via`.
  */
-export async function loadBus(stop: string, signal?: AbortSignal, get: Get = defaultGet, now: () => number = Date.now, alts: BusAlt[] = []): Promise<Live | null> {
+export async function loadBus(stop: string, signal?: AbortSignal, get: Get = defaultGet, now: () => number = Date.now, alts: BusAlt[] = [], line?: string): Promise<Live | null> {
   if (!/^\d+$/.test(stop)) return null
   const ask = async (id: string): Promise<Live | null> => {
     if (signal?.aborted || isBad(id, now())) return null
-    try { return parseBus(await get(`${LIVE_BASE}poste-autobus/tuzsa-${id}.json`, signal), now()) } catch (e) { if (/^HTTP [45]\d\d/.test(String((e as Error)?.message))) markBad(id, now()); return null } // only a server answer counts as bad, not offline or a timeout
+    try { return onlyLine(parseBus(await get(`${LIVE_BASE}poste-autobus/tuzsa-${id}.json`, signal), now()), line) } catch (e) { if (/^HTTP [45]\d\d/.test(String((e as Error)?.message))) markBad(id, now()); return null } // only a server answer counts as bad, not offline or a timeout
   }
   const first = await ask(stop)
   if (first && first.arrivals.length) return first
