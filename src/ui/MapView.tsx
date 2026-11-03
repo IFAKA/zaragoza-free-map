@@ -6,6 +6,7 @@ import 'leaflet.markercluster'
 import { useEffect, useRef } from 'react'
 import { CENTER } from '../lib/geo'
 import { pointAt } from '../lib/transit'
+import { bearingAt } from '../lib/pathBearing'
 import { walkRoute } from '../lib/walkRoute'
 import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
 import { iconHtml } from './icons'
@@ -67,8 +68,8 @@ function nearBus(route: RouteView): { pt: [number, number]; bearing: number } | 
 }
 
 /** An arrow above the closest place (the stop), turned the way the vehicle arrives (prev to the stop), clear of the stop and the lines. */
-function lineArrow(prev: LatLon, to: LatLon, color: string, up = 33): L.Marker {
-  const html = `<b class="vdir mid" style="--c:${color};transform:rotate(${Math.round(bearingTo(prev, to))}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
+function lineArrow(bearing: number, to: LatLon, color: string, up = 33): L.Marker {
+  const html = `<b class="vdir mid" style="--c:${color};transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
   return L.marker(to, { icon: L.divIcon({ className: 'mkw', html, iconSize: [14, 14], iconAnchor: [7, up] }), interactive: false, keyboard: false, pane: 'vehPane' })
 }
 
@@ -219,7 +220,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     })
     const near = nearBus(route), stopAt = route.stops[route.cur]
     if (near && stopAt) {
-      lineArrow(near.pt, [stopAt.lat, stopAt.lon], brand, 27).addTo(g) // the bus stop dot is smaller than the tram and train markers
+      lineArrow(bearingAt(route.paths, [stopAt.lat, stopAt.lon]) ?? near.bearing, [stopAt.lat, stopAt.lon], brand, 27).addTo(g) // the bus stop dot is smaller than the tram and train markers
     }
     if (near) L.marker(near.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(near.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
     const cur = route.stops[route.cur]
@@ -249,7 +250,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     vehLine.current?.remove(); vehLine.current = null
     vehArrow.current?.remove(); vehArrow.current = null
     if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, lineCap: 'round', interactive: false }).addTo(m0)
-    if (vehicles[0]) { const v0 = vehicles[0]; vehArrow.current = lineArrow(v0.via?.length ? v0.via[v0.via.length - 1] : v0.pos, v0.stop, getComputedStyle(document.documentElement).getPropertyValue(v0.color.replace(/^var\(|\)$/g, '')).trim()).addTo(m0) }
+    if (vehicles[0]) { const v0 = vehicles[0]; vehArrow.current = lineArrow(bearingTo(v0.via?.length ? v0.via[v0.via.length - 1] : v0.pos, v0.stop), v0.stop, getComputedStyle(document.documentElement).getPropertyValue(v0.color.replace(/^var\(|\)$/g, '')).trim()).addTo(m0) }
     // a changed stop or direction (fit key) unmounts the marker, so it appears at its new place instead of floating there
     vehs.current.forEach((v, id) => { if (!keep.has(id) || v.fit !== vehicles.find(x => x.id === id)?.fit) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
