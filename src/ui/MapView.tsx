@@ -67,9 +67,9 @@ function nearBus(route: RouteView): { pt: [number, number]; bearing: number } | 
 }
 
 /** An arrow above the closest place (the stop), turned the way the vehicle arrives (prev to the stop), clear of the stop and the lines. */
-function lineArrow(prev: LatLon, to: LatLon, color: string): L.Marker {
+function lineArrow(prev: LatLon, to: LatLon, color: string, up = 33): L.Marker {
   const html = `<b class="vdir mid" style="--c:${color};transform:rotate(${Math.round(bearingTo(prev, to))}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
-  return L.marker(to, { icon: L.divIcon({ className: 'mkw', html, iconSize: [14, 14], iconAnchor: [7, 33] }), interactive: false, keyboard: false, pane: 'vehPane' })
+  return L.marker(to, { icon: L.divIcon({ className: 'mkw', html, iconSize: [14, 14], iconAnchor: [7, up] }), interactive: false, keyboard: false, pane: 'vehPane' })
 }
 
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
@@ -219,7 +219,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     })
     const near = nearBus(route), stopAt = route.stops[route.cur]
     if (near && stopAt) {
-      lineArrow(near.pt, [stopAt.lat, stopAt.lon], brand).addTo(g)
+      lineArrow(near.pt, [stopAt.lat, stopAt.lon], brand, 27).addTo(g) // the bus stop dot is smaller than the tram and train markers
     }
     if (near) L.marker(near.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(near.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
     const cur = route.stops[route.cur]
