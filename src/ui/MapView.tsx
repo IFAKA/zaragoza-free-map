@@ -215,12 +215,11 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const m = map.current
     walkLine.current?.remove(); walkLine.current = null
     if (!m || !userPos) return
-    const nb = route ? nearBus(route) : null
-    const it = vehicles[0] ? { lat: vehicles[0].pos[0], lon: vehicles[0].pos[1] } : nb ? { lat: nb.pt[0], lon: nb.pt[1] } : route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected) // the closest mark if there is one, else the stop
+    const it = route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected) // the closest place: the selected stop, fountain, toilet..., never a vehicle mark
     if (!it) return
     const col = getComputedStyle(document.documentElement).getPropertyValue(layer.color.replace(/^var\(|\)$/g, '')).trim()
     walkLine.current = L.polyline([userPos, [it.lat, it.lon]], { color: col, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m)
-  }, [userPos, selected, items, route, layer.color, vehicles[0]?.pos.join(',')])
+  }, [userPos, selected, items, route, layer.color])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
   const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',') + (v.start ? 's' : '')).join('|') + '|' + vehBadge + vehStart
   useEffect(() => {
