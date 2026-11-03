@@ -12,6 +12,7 @@ import shelters from './shelters.json'
 import tram from './tram.json'
 import toiletsgo from './toiletsgo.json'
 import wifi from './wifi.json'
+import detours from './detours.json'
 
 export interface Snap<T> { src: string; updated: string | null; rows: T[] }
 export type OsmSnap = { src: string; updated: string | null } & OsmRows
@@ -21,8 +22,13 @@ export interface Data {
   fountains: Snap<FountainRow>; wifi: Snap<WifiRow>; libraries: Snap<EquipRow>; civic: Snap<EquipRow>
   bizi: Snap<BiziRow>; racks: Snap<RackRow>; bus: Snap<BusRow>; toiletsgo: Snap<TgoRow>; shelters: Snap<EquipRow>; osm: OsmSnap; tram: TramSnap; cercanias: CercaniasSnap
 }
+/** Bus stops that cannot be used now (road closed by works, see detours.json). They are left out of the map, the nearest-stop pick and the route view until the end date. */
+export const closedBusStops = (now = new Date().toISOString().slice(0, 10)): Set<string> =>
+  new Set(detours.closedStops.until >= now ? detours.closedStops.ids : [])
+const closed = closedBusStops()
+const busOpen = { ...bus, rows: (bus.rows as unknown as BusRow[]).filter(r => !closed.has(String(r[0]))) }
 export const DATA: Data = {
-  fountains, wifi, libraries, civic, bizi, racks, bus, toiletsgo, shelters, osm, tram, cercanias,
+  fountains, wifi, libraries, civic, bizi, racks, bus: busOpen, toiletsgo, shelters, osm, tram, cercanias,
 } as unknown as Data
 
 /** Newest snapshot date across all files (shown as "Data refreshed" in the credits). */
