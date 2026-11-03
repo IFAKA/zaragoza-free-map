@@ -22,7 +22,7 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
-import { busAlternatives, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
+import { busAlternatives, ensureBakedBad, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
 import { chooseDir, outsideCentre, railGroups, shownDir, towardCentre, type DirOpt } from '../lib/direction'
 import { lsGet, lsSet } from '../lib/cache'
 import { decodePolyline } from '../lib/transit'
@@ -202,8 +202,11 @@ function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon
   const { t } = useT()
   const stop = item.stop
   const live = !!stop && /^\d+$/.test(stop)
-  const alts = useMemo(() => (stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : []), [stop, item.lines, item.lat, item.lon, origin])
-  const load = useCallback((s: AbortSignal) => loadBus(stop ?? '', s, undefined, undefined, alts), [stop, alts])
+  // the neighbours are picked after the list of always-failing stops is loaded, so the nearest ones that can answer are chosen (see lib/busbad.ts)
+  const load = useCallback(async (s: AbortSignal) => {
+    await ensureBakedBad()
+    return loadBus(stop ?? '', s, undefined, undefined, stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : [])
+  }, [stop, item.lines, item.lat, item.lon, origin])
   const walk = <Button variant={item.stop ? 'secondary' : 'primary'} {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
   return (
     <>
@@ -391,8 +394,10 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
   const here = view.idx >= 0 ? view.stops[view.idx] : undefined
   const post = here && /^\d+$/.test(here.post) ? here.post : undefined
   // when this stop's own data fails, other stops of the same line in this direction are asked (before this one first), see routeAlternatives
-  const alts = useMemo(() => (post ? routeAlternatives(view.stops, view.idx, origin) : []), [post, view.stops, view.idx, origin])
-  const load = useCallback((s: AbortSignal) => loadBus(post ?? '', s, undefined, undefined, alts, view.line), [post, alts, view.line])
+  const load = useCallback(async (s: AbortSignal) => {
+    await ensureBakedBad()
+    return loadBus(post ?? '', s, undefined, undefined, post ? routeAlternatives(view.stops, view.idx, origin) : [], view.line)
+  }, [post, view.stops, view.idx, origin, view.line])
   const toEnd = useCallback((a: Arrival[]) => towardEnd(a, view.to), [view.to])
   const title = [t('busLine').replace('{n}', view.line), view.to && t('toward').replace('{to}', view.to)].filter(Boolean).join(' · ')
   const from = Math.max(0, view.idx), upcoming = view.stops.slice(from, from + 4), left = view.stops.length - (from + upcoming.length)

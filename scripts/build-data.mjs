@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { writeTransit } from './transit.mjs'
+import { probeBus } from './probe-bus.mjs'
 import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data')
@@ -86,6 +87,8 @@ write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo)))
 
 // bus routes, tram and Cercanías: if a source fails, keep the committed files and say so
 if (!process.argv.includes('--no-transit')) await writeTransit(OUT).catch(e => { console.error('transit: source failed, keeping the committed files:', String(e)); process.exitCode = 1 })
+// bus stops the live-times API never answers (about 1 min; --no-busprobe skips it; also runs alone: npm run data:busprobe)
+if (!process.argv.includes('--no-busprobe')) await probeBus({ out: OUT }).catch(e => { console.error('busprobe failed, keeping the committed file:', String(e)); process.exitCode = 1 })
 
 if (skipOsm) console.log('osm: skipped (--no-osm), keeping', existsSync(`${OUT}/osm.json`) ? 'the existing file' : 'nothing (run without --no-osm somewhere Overpass works)')
 else {

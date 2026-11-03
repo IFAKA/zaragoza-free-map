@@ -1,6 +1,8 @@
 import { dist } from './geo'
 import type { LatLon } from './types'
 import { tramKey } from './tramdir'
+import { decodeBad } from './busbad'
+import { loadBusBad } from '../data/lazy'
 // Live arrival times for the nearest bus or tram stop. Read straight from the city's open API (CORS *, no key, updates about every 30 s).
 // Any failure (offline, 404, timeout, odd data) gives null: the card then shows only the link-out, never an error.
 export const LIVE_BASE = 'https://www.zaragoza.es/sede/servicio/urbanismo-infraestructuras/transporte-urbano/'
@@ -86,6 +88,14 @@ export const markBad = (stop: string, at: number) => { badStops.set(stop, at) }
 export const isBad = (stop: string, at: number) => { const t = badStops.get(stop); if (t === undefined) return false; if (at - t >= BAD_STOP_MS) { badStops.delete(stop); return false } return true }
 export const clearBad = () => badStops.clear()
 
+// Stops the build-time probe (scripts/probe-bus.mjs) found always failing: never asked at all. The list is a small lazy chunk, loaded on the first bus request.
+// It is a snapshot: rerun `npm run data:busprobe` to refresh it. The runtime memory above still catches stops that start failing later.
+let baked: ReadonlySet<string> = new Set()
+export const setBakedBad = (s: ReadonlySet<string>) => { baked = s }
+export const ensureBakedBad = (): Promise<void> => loadBusBad().then(b => { baked = decodeBad(b.bad) }, () => {})
+/** True for a stop in the baked list, or one that failed lately (10 min memory). Costs no request. */
+export const skipStop = (stop: string, at: number) => baked.has(stop) || isBad(stop, at)
+
 /** Keeps only the arrivals of one line (the route view asks for "its" line). No line given: unchanged. */
 export const onlyLine = (l: Live | null, line?: string): Live | null => (l && line ? { ...l, arrivals: l.arrivals.filter(a => a.line === line) } : l)
 
@@ -106,19 +116,22 @@ const FALLBACK_REACH_M = 400, FALLBACK_TRIES = 2, ROUTE_TRIES = 3
  * Other stops of the same line, in the chosen direction, to ask when the asked stop gives nothing (route view). `order` = the stops in route order, `idx` = the asked one.
  * Nearest along the route first, the stops before it ahead of those after it: before 1, before 2, after 1, before 3, after 2, after 3.
  */
-export function routeAlternatives(order: { post: string; name: string; lat: number; lon: number }[], idx: number, origin: LatLon, reach = 3): BusAlt[] {
+export function routeAlternatives(order: { post: string; name: string; lat: number; lon: number }[], idx: number, origin: LatLon, reach = 3, skip: (stop: string) => boolean = st => baked.has(st)): BusAlt[] {
   if (idx < 0) return []
   const mk = (k: number, side: 'before' | 'after'): BusAlt[] => { const s = order[k]; return s && /^\d+$/.test(s.post) && k !== idx ? [{ stop: s.post, name: s.name, d: dist(origin, [s.lat, s.lon]), side }] : [] }
-  const picks: [number, 'before' | 'after'][] = [[1, 'before'], [2, 'before'], [1, 'after'], [3, 'before'], [2, 'after'], [3, 'after']]
-  return picks.slice(0, reach * 2).flatMap(([k, side]) => mk(side === 'before' ? idx - k : idx + k, side))
+  // the order of tries (nearest along the route first, before the stop ahead of after), then known-bad stops are dropped and the budget is cut: it goes to stops that can answer
+  const picks: [number, 'before' | 'after'][] = [[1, 'before'], [2, 'before'], [1, 'after'], [3, 'before'], [2, 'after'], [3, 'after'], [4, 'before'], [4, 'after'], [5, 'before'], [5, 'after']]
+  const seen = new Set<string>()
+  return picks.flatMap(([k, side]) => mk(side === 'before' ? idx - k : idx + k, side))
+    .filter(a => !skip(a.stop) && !seen.has(a.stop) && !!seen.add(a.stop)).slice(0, reach * 2)
 }
 
 /** The closest city stops that share a line with this one (a neighbour on the same street), nearest first; `d` is the distance from `origin` (the person). */
-export function busAlternatives(stop: string, lines: string, at: LatLon, origin: LatLon, rows: readonly (readonly [string, string, string, number, number])[], max = 4): BusAlt[] {
+export function busAlternatives(stop: string, lines: string, at: LatLon, origin: LatLon, rows: readonly (readonly [string, string, string, number, number])[], max = 4, skip: (stop: string) => boolean = st => baked.has(st)): BusAlt[] {
   const mine = new Set(lines.split(',').map(x => x.trim()).filter(x => x && x !== 'TRA'))
   if (!mine.size) return []
   return rows
-    .filter(r => r[0] !== stop && /^\d+$/.test(r[0]) && r[2].split(',').some(l => mine.has(l.trim())))
+    .filter(r => r[0] !== stop && /^\d+$/.test(r[0]) && !skip(r[0]) && r[2].split(',').some(l => mine.has(l.trim())))
     .map(r => ({ stop: r[0], name: r[1], d: dist(origin, [r[3], r[4]]), gap: dist(at, [r[3], r[4]]) }))
     .filter(r => r.gap <= FALLBACK_REACH_M)
     .sort((a, b) => a.gap - b.gap).slice(0, max)
@@ -132,8 +145,9 @@ export function busAlternatives(stop: string, lines: string, at: LatLon, origin:
  */
 export async function loadBus(stop: string, signal?: AbortSignal, get: Get = defaultGet, now: () => number = Date.now, alts: BusAlt[] = [], line?: string): Promise<Live | null> {
   if (!/^\d+$/.test(stop)) return null
+  await ensureBakedBad()
   const ask = async (id: string): Promise<Live | null> => {
-    if (signal?.aborted || isBad(id, now())) return null
+    if (signal?.aborted || skipStop(id, now())) return null
     try { return onlyLine(parseBus(await get(`${LIVE_BASE}poste-autobus/tuzsa-${id}.json`, signal), now()), line) } catch (e) { if (/^HTTP [45]\d\d/.test(String((e as Error)?.message))) markBad(id, now()); return null } // only a server answer counts as bad, not offline or a timeout
   }
   const first = await ask(stop)
@@ -142,7 +156,7 @@ export async function loadBus(stop: string, signal?: AbortSignal, get: Get = def
   const tries = alts.some(a => a.side) ? ROUTE_TRIES : FALLBACK_TRIES
   for (const a of alts) {
     if (n >= tries || signal?.aborted) break
-    if (isBad(a.stop, now())) continue
+    if (skipStop(a.stop, now())) continue
     n++
     const r = await ask(a.stop)
     if (r && r.arrivals.length) return { ...r, via: { name: a.name, d: a.d, stop: a.stop, ...(a.side ? { side: a.side } : {}) } }

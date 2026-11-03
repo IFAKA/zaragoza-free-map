@@ -10,7 +10,8 @@
     "test": "vitest run",
     "data": "node scripts/build-data.mjs",
     "data:city": "node scripts/build-data.mjs --no-osm",
-    "data:transit": "node scripts/build-data.mjs --transit-only"
+    "data:transit": "node scripts/build-data.mjs --transit-only",
+    "data:busprobe": "nice -n 15 node scripts/probe-bus.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

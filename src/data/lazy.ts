@@ -1,5 +1,6 @@
 // Data files that only one service needs. They are separate chunks, fetched when that service opens (the service worker keeps them for offline use).
 import type { BusRoutes, Timetable } from '../lib/transit'
+import type { BusBad } from '../lib/busbad'
 
 export interface CercaniasTimes { updated: string; t: Record<string, Timetable> }
 
@@ -10,3 +11,7 @@ export const loadBusRoutes = (): Promise<BusRoutes> => (routes ??= import('./bus
 let times: Promise<CercaniasTimes> | null = null
 /** Cercanías planned departures per station (see scripts/transit.mjs). Loaded once, when the Cercanías tab opens. */
 export const loadCercaniasTimes = (): Promise<CercaniasTimes> => (times ??= import('./cercanias-times.json').then(m => m.default as unknown as CercaniasTimes))
+
+let bad: Promise<BusBad> | null = null
+/** Bus stops the city API never answers (see scripts/probe-bus.mjs). Loaded once, with the first bus request. */
+export const loadBusBad = (): Promise<BusBad> => (bad ??= import('./busbad.json').then(m => m.default as unknown as BusBad))

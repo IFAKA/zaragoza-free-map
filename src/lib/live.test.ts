@@ -1,5 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { BAD_STOP_MS, busAlternatives, clearBad, loadBus, loadTram, markBad, onlyLine, parseBus, routeAlternatives, towardEnd, parseMins, parseTram, pickNotice, prettyDest } from './live'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { decodeBad, encodeBad, probeStop } from './busbad'
+import { BAD_STOP_MS, busAlternatives, clearBad, loadBus, loadTram, markBad, onlyLine, parseBus, routeAlternatives, towardEnd, parseMins, parseTram, pickNotice, prettyDest, setBakedBad } from './live'
+
+// the real baked list holds stops these tests use (263, 1): tests set their own
+const baked = vi.hoisted(() => ({ bad: [] as (number | [number, number])[] }))
+vi.mock('../data/lazy', () => ({ loadBusBad: () => Promise.resolve({ src: 'test', updated: null, total: 0, bad: baked.bad }) }))
 
 describe('parseMins', () => {
   it('reads minutes from the city text', () => {
@@ -233,4 +238,56 @@ describe('route view: other stops of the same line', () => {
     expect(calls).toEqual(['263', '262', '261', '264'])
   })
   it('no stop of the route known: no alternatives', () => { expect(routeAlternatives(order, -1, [0, 0])).toEqual([]) })
+})
+
+describe('baked bad stops (build-time probe)', () => {
+  const ok = { destinos: [{ linea: '35', destino: 'SEMINARIO', primero: '4 minutos.', segundo: '' }] }
+  const mk = () => { const calls: string[] = []; return { calls, get: async (u: string) => { calls.push(/tuzsa-(\d+)/.exec(u)![1]); return ok } } }
+  beforeEach(() => { clearBad(); baked.bad = [] })
+
+  it('range coding round-trips', () => {
+    expect(encodeBad([9, 1, 2, 3, 7, 10, 3])).toEqual([[1, 3], 7, [9, 10]])
+    expect([...decodeBad([[1, 3], 7, [9, 10]])].sort()).toEqual(['1', '10', '2', '3', '7', '9'])
+    expect(encodeBad([])).toEqual([])
+  })
+  it('an own stop in the list makes no request to it and goes straight to the alternatives', async () => {
+    baked.bad = [[262, 264]]
+    const { calls, get } = mk()
+    const l = await loadBus('263', undefined, get, () => 0, [{ stop: '262', name: 'a', d: 1 }, { stop: '265', name: 'b', d: 2 }], '35')
+    expect(calls).toEqual(['265']); expect(l?.via?.stop).toBe('265')
+  })
+  it('busAlternatives drops listed stops before cutting to the budget', () => {
+    setBakedBad(new Set(['2', '3']))
+    const rows = ['1', '2', '3', '4', '5', '6'].map((id, i) => [id, 'S' + id, '35', 41.6 + i * 0.0001, -0.9] as const)
+    expect(busAlternatives('1', '35', [41.6, -0.9], [41.6, -0.9], rows, 2).map(a => a.stop)).toEqual(['4', '5'])
+    setBakedBad(new Set())
+  })
+  it('routeAlternatives still reaches 3 live candidates when neighbours are listed', () => {
+    const order = Array.from({ length: 12 }, (_, i) => ({ post: String(100 + i), name: 'S', lat: 41.6 + i * 0.001, lon: -0.9 }))
+    const alts = routeAlternatives(order, 5, [41.6, -0.9], 3, s => ['104', '106', '103'].includes(s))
+    expect(alts.length).toBeGreaterThanOrEqual(3)
+    expect(alts.some(a => ['104', '106', '103'].includes(a.stop))).toBe(false)
+    expect(alts.slice(0, 3).map(a => a.stop)).toEqual(['102', '107', '108'])
+  })
+  it('loadBus spends its 3 extra requests on live stops only', async () => {
+    baked.bad = [[100, 104]]
+    const calls: string[] = []
+    const get = async (u: string) => { calls.push(/tuzsa-(\d+)/.exec(u)![1]); if (/tuzsa-(105|106)/.test(u)) throw new Error('HTTP 400'); return /tuzsa-10[789]/.test(u) ? ok : { destinos: [] } }
+    const order = Array.from({ length: 12 }, (_, i) => ({ post: String(100 + i), name: 'S', lat: 41.6 + i * 0.001, lon: -0.9 }))
+    await loadBus('106', undefined, get, () => 0, routeAlternatives(order, 6, [41.6, -0.9], 3, s => ['100', '101', '102', '103', '104'].includes(s)), '35')
+    expect(calls.some(c => ['100', '101', '102', '103', '104'].includes(c))).toBe(false)
+    expect(calls.length).toBeLessThanOrEqual(4)
+  })
+})
+
+describe('probeStop (build-time classification)', () => {
+  const fast = async () => {}
+  const seq = (...st: (number | Error)[]) => { let i = 0; const f = async () => { const v = st[Math.min(i++, st.length - 1)]; if (v instanceof Error) throw v; return { status: v } }; return { f, n: () => i } }
+  it('400 three times is bad', async () => { const s = seq(400); expect(await probeStop('u', s.f, fast)).toBe('bad'); expect(s.n()).toBe(3) })
+  it('500 three times is bad', async () => { expect(await probeStop('u', seq(500).f, fast)).toBe('bad') })
+  it('404 three times is gone (listed too)', async () => { expect(await probeStop('u', seq(404).f, fast)).toBe('gone') })
+  it('a 200 on a later try is ok, with no more tries', async () => { const s = seq(400, 200); expect(await probeStop('u', s.f, fast)).toBe('ok'); expect(s.n()).toBe(2) })
+  it('a timeout or network error is unknown, not bad', async () => { expect(await probeStop('u', seq(new Error('timeout')).f, fast)).toBe('unknown'); expect(await probeStop('u', seq(400, new Error('x')).f, fast)).toBe('unknown') })
+  it('503 or 429 is unknown', async () => { expect(await probeStop('u', seq(503).f, fast)).toBe('unknown') })
+  it('waits between tries', async () => { const waits: number[] = []; await probeStop('u', seq(400).f, async ms => { waits.push(ms) }); expect(waits.length).toBe(2) })
 })
