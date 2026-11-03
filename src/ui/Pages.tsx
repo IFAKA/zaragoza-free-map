@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
+import detours from '../data/detours.json'
 import { chipSplit, nextDepartures, type BusRoutes } from '../lib/transit'
 import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
@@ -397,7 +398,9 @@ function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes
 
 /** A bus line chosen: "Line 38 · toward X", a way to flip direction, the stops still to come in order, and the link to the next buses. */
 export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; origin: LatLon; onBack: () => void; onDir: () => void }) {
-  const { t } = useT()
+  const { t, lang } = useT()
+  const det = (detours.lines as Record<string, { until: string; es: string; en: string }>)[view.line]
+  const detour = det && det.until >= new Date().toISOString().slice(0, 10) ? det[lang] : undefined
   // live times of THIS line at this direction's stop (the one the person stands at, on the side of the street this direction uses)
   const here = view.idx >= 0 ? view.stops[view.idx] : undefined
   const post = here && /^\d+$/.test(here.post) ? here.post : undefined
@@ -433,6 +436,7 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
         })}
         {left > 0 && <li className={cn(sub, 'py-0.5 pl-[1.15rem]')}>{t('stepMore').replace('{n}', String(left))}</li>}
       </ol>
+      {detour && <p className={cn(sub, 'm-0 mt-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p>}
       {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
       <div className="mt-2 flex flex-wrap gap-2">
         {view.stop && <Button variant={post ? 'secondary' : 'primary'} {...linkProps(busUrl(view.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{post ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}

@@ -1,0 +1,12 @@
+{
+  "src": "Ayuntamiento de Zaragoza (zaragoza.es/sede/servicio/noticia/346451); Avanza Zaragoza",
+  "updated": "2026-11-03",
+  "note": "Written by hand: the operator's live alerts are behind bot protection, the city has no feed. Remove a line when it goes back to its normal route.",
+  "lines": {
+    "35": { "until": "2026-12-31", "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.", "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route." },
+    "38": { "until": "2026-12-31", "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.", "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route." },
+    "41": { "until": "2026-12-31", "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.", "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route." },
+    "N4": { "until": "2026-12-31", "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.", "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route." },
+    "N6": { "until": "2026-12-31", "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.", "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route." }
+  }
+}
