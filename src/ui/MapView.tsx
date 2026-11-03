@@ -184,13 +184,26 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       return
     }
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
-    const bus = getComputedStyle(document.documentElement).getPropertyValue('--color-bus').trim()
+    const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
+    const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
+    for (const path of route.paths) {
+      L.polyline(path, { color: white, weight: 8, opacity: 0.9, interactive: false }).addTo(g)
+      L.polyline(path, { color: brand, weight: 4.5, interactive: false }).addTo(g)
+    }
+    for (const path of route.paths) {
+      for (const f of [0.2, 0.4, 0.6, 0.8]) {
+        const a = pointAt(path, f)
+        if (!a) continue
+        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(a.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false }).addTo(g)
+      }
+    }
+    route.stops.forEach((s, i) => {
+      if (i === route.cur) return
+      const dot = L.circleMarker([s.lat, s.lon], { radius: 3.5, color: brand, weight: 1.5, fillColor: white, fillOpacity: 1 }).addTo(g)
+      dot.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onRouteStop?.(s.post) })
+    })
     const cur = route.stops[route.cur]
-    // only the stop and the closest bus mark (not the whole route); you are drawn by the position effect
-    const mark = nearBus(route)
-    if (cur && mark) L.polyline([[cur.lat, cur.lon], mark.pt], { color: white, weight: 6, opacity: 0.9, interactive: false }).addTo(g), L.polyline([[cur.lat, cur.lon], mark.pt], { color: bus, weight: 3, dashArray: '2 6', interactive: false }).addTo(g)
-    if (mark) L.marker(mark.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(mark.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
-    if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: bus, fillOpacity: 1, interactive: false }).addTo(g)
+    if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
   }, [route, track, layer.color])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
   const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',')).join('|') + '|' + vehBadge
