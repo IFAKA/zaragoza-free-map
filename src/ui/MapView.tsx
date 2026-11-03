@@ -197,7 +197,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${vehBadge ? `<i>${vehBadge}</i>` : ''}</div>`
       const icon = L.divIcon({ className: 'mkw', html, iconSize: [20, 20], iconAnchor: [10, 10] })
       const cur = vehs.current.get(v.id)
-      if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, zIndexOffset: -500 }).addTo(g); vehs.current.set(v.id, { mk, raf: 0 }); continue }
+      if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, zIndexOffset: 2000 }).addTo(g); vehs.current.set(v.id, { mk, raf: 0 }); continue }
       cur.mk.setIcon(icon)
       cancelAnimationFrame(cur.raf)
       const from = cur.mk.getLatLng(), to = L.latLng(v.pos)
