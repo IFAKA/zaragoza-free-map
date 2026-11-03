@@ -186,7 +186,6 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       }
       return
     }
-    const busCol = getComputedStyle(document.documentElement).getPropertyValue('--color-bus').trim()
     const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
     for (const path of route.paths) {
@@ -206,7 +205,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       dot.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onRouteStop?.(s.post) })
     })
     const near = nearBus(route), stopAt = route.stops[route.cur]
-    if (near && stopAt) L.polyline([[stopAt.lat, stopAt.lon], near.pt], { color: busCol, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(g)
+    if (near && stopAt) L.polyline([[stopAt.lat, stopAt.lon], near.pt], { color: brand, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(g)
     if (near) L.marker(near.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(near.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
     const cur = route.stops[route.cur]
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
@@ -216,11 +215,12 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const m = map.current
     walkLine.current?.remove(); walkLine.current = null
     if (!m || !userPos) return
-    const it = route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected)
+    const nb = route ? nearBus(route) : null
+    const it = vehicles[0] ? { lat: vehicles[0].pos[0], lon: vehicles[0].pos[1] } : nb ? { lat: nb.pt[0], lon: nb.pt[1] } : route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected) // the closest mark if there is one, else the stop
     if (!it) return
     const col = getComputedStyle(document.documentElement).getPropertyValue(layer.color.replace(/^var\(|\)$/g, '')).trim()
     walkLine.current = L.polyline([userPos, [it.lat, it.lon]], { color: col, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m)
-  }, [userPos, selected, items, route, layer.color])
+  }, [userPos, selected, items, route, layer.color, vehicles[0]?.pos.join(',')])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
   const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',') + (v.start ? 's' : '')).join('|') + '|' + vehBadge + vehStart
   useEffect(() => {
