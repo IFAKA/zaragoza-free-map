@@ -6,7 +6,7 @@ import { loadDuty, madridDate, readDutyCache, todays } from '../lib/duty'
 import type { DutyRow } from '../lib/sources.ts'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
-import { canShowInstallHint, installEnv } from '../lib/install'
+import { installEnv, installWay, promptInstall } from '../lib/install'
 import { rankOrAll, unavailable } from '../lib/rank'
 import { DATA } from '../data'
 import { loadBusRoutes, loadCercaniasTimes, type CercaniasTimes } from '../data/lazy'
@@ -282,10 +282,12 @@ export function App() {
   const doLocate = () => { askedLocation.current = true; void locate(true) }
   const onWalk = () => {
     track('directions', layerId)
-    // the "add to home screen" hint: once, and only in a normal browser tab (not inside another app, not when installed)
-    if (!lsGet('hinted') && canShowInstallHint(installEnv())) {
+    // the install hint, once, right after the first "walk": the person just got what they came for, so now it makes sense
+    const way = !lsGet('hinted') ? installWay(installEnv()) : null
+    if (way) {
       lsSet('hinted', '1')
-      setTimeout(() => toasts.add({ title: t.installHint, data: { close: t.installClose } }), 1200)
+      const title = way === 'prompt' ? t.installHint : way === 'ios' ? t.installIos : way === 'browser' ? t.installBrowser : t.installMenu
+      setTimeout(() => toasts.add({ title, timeout: way === 'prompt' ? 9000 : 12000, data: { close: way === 'prompt' ? t.installClose : t.installClose, action: way === 'prompt' ? t.installBtn : undefined, onAction: () => void promptInstall() } }), 1200)
     }
   }
   const turnTo = (p: Page) => { go(p); raise() }

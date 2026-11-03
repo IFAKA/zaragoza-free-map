@@ -19,3 +19,27 @@ export function installEnv(): InstallEnv {
   const standalone = (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) || (navigator as { standalone?: boolean }).standalone === true
   return { ua: navigator.userAgent, standalone }
 }
+
+/** The browser's own install prompt (Chrome and Edge on Android and desktop). Saved so we can open it at a good moment. */
+interface InstallPrompt extends Event { prompt: () => Promise<void> }
+let deferred: InstallPrompt | null = null
+export function listenInstall(): void {
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e as InstallPrompt })
+  addEventListener('appinstalled', () => { deferred = null })
+}
+/** Open the browser install dialog. False when the browser has none ready. */
+export async function promptInstall(): Promise<boolean> {
+  if (!deferred) return false
+  const d = deferred; deferred = null
+  await d.prompt()
+  return true
+}
+export type InstallWay = 'prompt' | 'ios' | 'browser' | 'menu'
+/** How this visitor can install: the native dialog, iOS Share sheet, "open in your browser" (in-app browser), or the browser menu. */
+export function installWay(e: InstallEnv): InstallWay | null {
+  if (e.standalone) return null
+  if (inAppBrowser(e.ua)) return 'browser'
+  if (deferred) return 'prompt'
+  if (/iPhone|iPad|iPod/.test(e.ua)) return 'ios'
+  return 'menu'
+}

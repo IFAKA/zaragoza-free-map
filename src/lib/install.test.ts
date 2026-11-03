@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canShowInstallHint, inAppBrowser } from './install'
+import { canShowInstallHint, inAppBrowser, installWay } from './install'
 
 const ANDROID_CHROME = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36'
 const ANDROID_WV = 'Mozilla/5.0 (Linux; Android 14; Pixel 8; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0.0.0 Mobile Safari/537.36'
@@ -23,5 +23,14 @@ describe('install hint', () => {
   })
   it('is hidden when already installed', () => {
     expect(canShowInstallHint({ ua: ANDROID_CHROME, standalone: true })).toBe(false)
+  })
+})
+
+describe('install way', () => {
+  it('tells each visitor how to install', () => {
+    expect(installWay({ ua: IOS_SAFARI, standalone: false })).toBe('ios')
+    expect(installWay({ ua: ANDROID_CHROME, standalone: false })).toBe('menu')
+    expect(installWay({ ua: REDDIT_ANDROID, standalone: false })).toBe('browser')
+    expect(installWay({ ua: ANDROID_CHROME, standalone: true })).toBeNull()
   })
 })
