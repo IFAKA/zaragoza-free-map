@@ -2,7 +2,7 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
@@ -22,6 +22,8 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
+import { loadBus, loadTram } from '../lib/live'
+import { useLive } from './useLive'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
 
@@ -91,30 +93,72 @@ function ShelterNote() {
   )
 }
 
-/** Bus stop buttons: ONE primary "Next buses" (opens the bus company page: its times page cannot be read by a browser, so we link out), then Walk. Rural stops have no live page. */
+/** Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works. */
+function LiveTimes({ kind, stopKey, load }: { kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus> }) {
+  const { t } = useT()
+  const { live, state } = useLive(stopKey, load)
+  if (state === 'failed' && !live) return null
+  const rows = live?.arrivals.slice(0, 4) ?? []
+  const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
+  return (
+    <div className="mt-3 min-h-[5.5rem]" data-testid="live-times" data-state={state}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={overline}>{kind === 'bus' ? t('nextBuses') : t('liveTrams')}</span>
+        {state === 'live' && <span className="inline-flex items-center gap-1 text-[0.8em] font-bold text-brand-text"><span className="size-1.5 rounded-full bg-current" aria-hidden />{t('liveTag')}</span>}
+      </div>
+      {!live ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveLoading')}</p> : (
+        <>
+          {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
+          {rows.length === 0 ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
+            <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
+              {rows.map(r => (
+                <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row">
+                  <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
+                  <span className="min-w-0 flex-1 truncate">{r.dest}</span>
+                  <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className={cn(sub, 'mt-1 text-[0.8em]')}>{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Bus stop: live next buses (city stops only), then the link to the bus company page, then Walk. Rural stops have no live data and keep the link-out only. */
 function BusActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
   const { t } = useT()
+  const stop = item.stop
+  const live = !!stop && /^\d+$/.test(stop)
+  const load = useCallback((s: AbortSignal) => loadBus(stop ?? '', s), [stop])
   const walk = <Button variant={item.stop ? 'secondary' : 'primary'} {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
   return (
     <>
+      {live && <LiveTimes kind="bus" stopKey={stop} load={load} />}
       <div className="mt-3 flex flex-wrap gap-2">
-        {item.stop && <Button {...linkProps(busUrl(item.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
+        {stop && <Button variant={live ? 'secondary' : 'primary'} {...linkProps(busUrl(stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{live ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
         {walk}
       </div>
-      <p className={cn(sub, 'm-0 mt-1.5')}>{item.stop ? t('nextBusesHint') : t('noLive')}</p>
+      <p className={cn(sub, 'm-0 mt-1.5')}>{stop ? t('nextBusesHint') : t('noLive')}</p>
     </>
   )
 }
 
-/** Tram stop: the line and its two ends, then ONE primary button to the tram company's times page (a browser cannot read them), then Walk. */
+/** Tram stop: the line and its two ends, live next trams (both platforms), then the link to the tram company's times page, then Walk. */
 function TramActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
   const { t } = useT()
   const [a, b] = DATA.tram.ends
+  const ids = item.tramIds ?? []
+  const key = ids.join(',')
+  const load = useCallback((s: AbortSignal) => loadTram(key ? key.split(',') : [], s), [key])
   return (
     <>
       <p className="m-0 mt-2 text-[0.93em] leading-snug" data-testid="tram-info"><span className="mr-1.5 rounded-[0.3em] bg-[var(--color-tram)] px-1.5 py-0.5 font-bold text-on-brand">T1</span>{t('tramDirs').replace('{a}', a).replace('{b}', b)}</p>
+      {key && <LiveTimes kind="tram" stopKey={key} load={load} />}
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button {...linkProps(TRAM_URL)} onClick={() => track('times', 'tram')} data-testid="tram-times">{t('tramTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+        <Button variant={key ? 'secondary' : 'primary'} {...linkProps(TRAM_URL)} onClick={() => track('times', 'tram')} data-testid="tram-times">{t('tramTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
         <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       </div>
       <p className={cn(sub, 'm-0 mt-1.5')}>{t('tramHint')}</p>

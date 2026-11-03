@@ -15,7 +15,7 @@ import wifi from './wifi.json'
 
 export interface Snap<T> { src: string; updated: string | null; rows: T[] }
 export type OsmSnap = { src: string; updated: string | null } & OsmRows
-export interface TramSnap { src: string; updated: string | null; ends: [string, string]; line: string[]; rows: [string, string, number, number, string][] }
+export interface TramSnap { src: string; updated: string | null; ends: [string, string]; line: string[]; rows: [string, string, number, number, string, string[]][] }
 export interface CercaniasSnap { src: string; updated: string | null; valid: [string, string]; routes: string[]; dests: string[]; line: string[]; rows: [string, string, number, number][] }
 export interface Data {
   fountains: Snap<FountainRow>; wifi: Snap<WifiRow>; libraries: Snap<EquipRow>; civic: Snap<EquipRow>

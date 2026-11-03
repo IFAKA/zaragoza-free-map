@@ -415,7 +415,7 @@ todo.push(async () => {
   ok(/T1/.test(info) && /Parque Goya/.test(info) && /Valdespartera/.test(info), `tram card: line and both ends (${info.replace(/\n/g, ' ')})`)
   ok(/tranviasdezaragoza\.es/.test(await p.getByTestId('tram-times').getAttribute('href') || ''), 'tram card: one link to the tram company times')
   ok(await markers(p) >= 10, 'tram: the stops are drawn')
-  ok(await p.getByTestId('nearest').innerText().then(x => !/en vivo|tiempo real/i.test(x)), 'tram card does not claim live times')
+  ok(await p.getByTestId('nearest').innerText().then(x => !/en vivo/i.test(x) || /\d+ min|Ahora/.test(x)), 'tram card claims live only when it shows minutes')
   await p.screenshot({ path: out + '/tram-es.png' })
   await ctx.close()
 })

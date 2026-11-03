@@ -38,6 +38,8 @@ export interface Item {
   lines?: string
   /** Bus stop: number of the city stop (has a live times page). Rural stops have none. */
   stop?: string
+  /** Tram stop: ids of its platforms in the city's live-times API (one per direction). */
+  tramIds?: string[]
   /** Cercanías station: Renfe station code (key of the baked timetable). */
   code?: string
   /** Pharmacy on duty: today's duty hours (free text from the city) and sector (area of the city). */

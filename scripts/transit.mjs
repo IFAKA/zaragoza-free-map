@@ -69,7 +69,14 @@ export async function buildTram() {
     e.pts.push(...pts)
     byName.set(key, e)
   }
-  const rows = [...byName.values()].map(e => [String(e.code).toLowerCase().replace(/[^a-z0-9]+/g, '_'), e.name.replace(/^La chimenea$/, 'La Chimenea'), round(e.pts.reduce((a, p) => a + p[1], 0) / e.pts.length, 6), round(e.pts.reduce((a, p) => a + p[0], 0) / e.pts.length, 6), e.lines]).sort((a, b) => a[1].localeCompare(b[1], 'es'))
+  // live times: the city's tram-stop API has one id per platform (e.g. 101 and 102 = Avenida de la Academia); join to our stops by plain name
+  const plain = x => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+  const ids = new Map()
+  try {
+    const r = await fetch('https://www.zaragoza.es/sede/servicio/urbanismo-infraestructuras/transporte-urbano/parada-tranvia.json?rows=100&fl=id,title')
+    for (const x of (await r.json()).result ?? []) ids.set(plain(x.title), [...(ids.get(plain(x.title)) ?? []), String(x.id)])
+  } catch { /* no ids: the card keeps the link only */ }
+  const rows = [...byName.values()].map(e => [String(e.code).toLowerCase().replace(/[^a-z0-9]+/g, '_'), e.name.replace(/^La chimenea$/, 'La Chimenea'), round(e.pts.reduce((a, p) => a + p[1], 0) / e.pts.length, 6), round(e.pts.reduce((a, p) => a + p[0], 0) / e.pts.length, 6), e.lines, (ids.get(plain(e.name)) ?? []).sort()]).sort((a, b) => a[1].localeCompare(b[1], 'es'))
   const ends = first.split(/\s*→\s*/)
   return { src: 'Ayuntamiento de Zaragoza, geoserver movilidad (MU3_lineas_tranvia, MU3_paradas_tranvia)', updated: today, ends, line: track.map(enc), rows }
 }
