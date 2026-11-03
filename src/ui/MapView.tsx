@@ -219,7 +219,6 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     })
     const near = nearBus(route), stopAt = route.stops[route.cur]
     if (near && stopAt) {
-      L.polyline([[stopAt.lat, stopAt.lon], near.pt], { color: brand, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(g)
       lineArrow(near.pt, [stopAt.lat, stopAt.lon], brand).addTo(g)
     }
     if (near) L.marker(near.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(near.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
@@ -249,7 +248,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const keep = new Set(vehicles.map(v => v.id))
     vehLine.current?.remove(); vehLine.current = null
     vehArrow.current?.remove(); vehArrow.current = null
-    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m0)
+    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, lineCap: 'round', interactive: false }).addTo(m0)
     if (vehicles[0]) { const v0 = vehicles[0]; vehArrow.current = lineArrow(v0.via?.length ? v0.via[v0.via.length - 1] : v0.pos, v0.stop, getComputedStyle(document.documentElement).getPropertyValue(v0.color.replace(/^var\(|\)$/g, '')).trim()).addTo(m0) }
     // a changed stop or direction (fit key) unmounts the marker, so it appears at its new place instead of floating there
     vehs.current.forEach((v, id) => { if (!keep.has(id) || v.fit !== vehicles.find(x => x.id === id)?.fit) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
