@@ -481,6 +481,23 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   )
 }
 
+/** The card of a greyed-out place that was tapped on the map: why it is not available, the hours when closed, and where the record comes from. */
+export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }) {
+  const { t, type, lang } = useT()
+  const why = t(item.off === 'noBikes' ? 'offNoBikes' : item.off === 'noDocks' ? 'offNoDocks' : 'offClosed')
+  const hours = item.off === 'closed' && item.hours ? fmtHours(lang, item.hours) : ''
+  return (
+    <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="off-card" aria-label={t('offTitle')}>
+      <div className={overline}>{t('offTitle')}</div>
+      <h2 className={cn(h2, 'mt-1')} data-testid="off-name">{item.name || type(item.type)}</h2>
+      <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
+      <p className="m-0 mt-1" data-testid="off-reason">{why}</p>
+      {hours && <p className={cn(sub, 'm-0 mt-0.5')}>{t('hours')}: {hours}</p>}
+      <div className="flex items-start gap-1"><div className={cn(sub, 'flex-1 pt-2')} data-testid="off-source">{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
+    </m.section>
+  )
+}
+
 // ---------- the next two nearest, under the card ----------
 /** The two nearest places after the one on the card, as compact chips: one tap shows that place (card and map). */
 export function Nearby({ items, onSelect }: { items: RankedItem[]; onSelect: (id: string) => void }) {
@@ -546,6 +563,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 }
 
 export function HomePage(p: {
+  off: RankedItem | null
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
   nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
@@ -563,10 +581,10 @@ export function HomePage(p: {
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
-          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
+          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
-        {!p.liveState && !p.lineView && <Nearby items={p.nearby} onSelect={p.onSelect} />}
+        {!p.liveState && !p.lineView && !p.off && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>

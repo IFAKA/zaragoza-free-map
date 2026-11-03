@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DATA } from '../data'
 import { dist } from './geo'
 import { alongPath, decodePolyline } from './transit'
-import { nextTwo, pathLength, stitch, TRAIN_KMH, TRAM_KMH, upstream } from './vehicles'
+import { arrowBearing, between, nextTwo, pathLength, stitch, TRAIN_KMH, TRAM_KMH, upstream } from './vehicles'
 import type { LatLon } from './types'
 
 // a straight line going north: 0.01 degree of latitude is about 1105 m
@@ -64,3 +64,22 @@ describe('upstream', () => {
 })
 
 describe('nextTwo', () => { it('drops 0, sorts, keeps two', () => { expect(nextTwo([9, 0, 3, 5])).toEqual([3, 5]) }) })
+
+describe('arrowBearing', () => {
+  it('turns the arrow the opposite way when the tram direction changes, at every tram stop', () => {
+    const track = stitch(DATA.tram.line.map(decodePolyline))
+    const gap = (a: number, b: number) => { const x = Math.abs(a - b) % 360; return x > 180 ? 360 - x : x }
+    let n = 0
+    for (const r of DATA.tram.rows) {
+      const at: LatLon = [r[2], r[3]]
+      const [north, south] = [true, false].map(fwd => { const [p] = upstream(track, at, fwd, [3], TRAM_KMH); return p && arrowBearing(between(track, p, at), p, at) })
+      if (north === undefined || south === undefined) continue
+      n++
+      expect(gap(north, south), r[1]).toBeGreaterThan(120)
+    }
+    expect(n).toBeGreaterThan(15)
+  })
+  it('falls back to the straight line when the track piece is a single point', () => {
+    expect(arrowBearing([[41.6, -0.9]], [41.6, -0.9], [41.61, -0.9])).toBeCloseTo(0, 0)
+  })
+})

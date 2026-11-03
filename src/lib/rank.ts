@@ -41,6 +41,22 @@ export function rank(cfg: LayerConfig, items: Item[], o: RankOpts, now = nowMadr
 }
 
 /**
+ * The places `rank` leaves out because they are not available (closed with "Open now" on; a Bizi station with no bike or no free dock),
+ * each with its reason. The map shows them greyed out instead of hiding them. Places of other chips are not listed.
+ */
+export function unavailable(cfg: LayerConfig, items: Item[], o: RankOpts, now = nowMadrid()): RankedItem[] {
+  const ref = o.ref || CENTER
+  const out: RankedItem[] = []
+  for (const it of items) {
+    if (cfg.cats && o.cat && !inCat(it, o.cat, true)) continue
+    const open = cfg.hours ? itemOpen(it, now) : null
+    const off = cfg.hours && o.openOnly && open === false ? 'closed' : cfg.cats && o.cat && !inCat(it, o.cat) ? (o.cat === 'take' ? 'noBikes' : 'noDocks') : undefined
+    if (off) out.push({ ...it, d: dist(ref, [it.lat, it.lon]), open, off })
+  }
+  return out.sort((a, b) => a.d - b.d)
+}
+
+/**
  * Like rank, but when "Open now" is on and every place is closed, show them all by distance
  * (each row keeps its own closed state) instead of an empty map. `allClosed` tells the UI to say so.
  */

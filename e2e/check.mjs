@@ -914,6 +914,24 @@ todo.push(async () => {
   await p.screenshot({ path: out + '/android.png' })
   await ctx.close()
 })
+todo.push(async () => { // a filter changes only what it must: the other markers stay, and greyed-out places stay on the map with their reason and source
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { layer: 'libraries' })
+  await p.clock.setFixedTime(new Date('2026-11-01T11:00:00+01:00')) // a Sunday: some libraries are closed
+  await p.reload(); await ready(p)
+  const off0 = await p.locator('.mk.off').count()
+  ok(off0 > 0, `closed libraries stay on the map, greyed out (${off0})`)
+  await p.locator('.mk.off').first().click({ force: true }); await settle(p)
+  ok(await p.getByTestId('off-card').count() === 1, 'tapping a greyed-out place shows its card')
+  ok((await p.getByTestId('off-reason').textContent()).includes('Closed'), 'the card says why it is greyed out')
+  ok((await p.getByTestId('off-source').textContent()).includes('Source'), 'the card names the source')
+  await p.getByTestId('handle').click(); await settle(p); await p.getByTestId('handle').click(); await settle(p) // full: the switch is below the card
+  const tagged = await p.evaluate(() => { const all = [...document.querySelectorAll('.mk')]; all.forEach(e => { e.dataset.keep = '1' }); return all.length })
+  await p.getByTestId('switch-open').click(); await settle(p)
+  const kept = await p.locator('.mk[data-keep="1"]').count()
+  ok(kept >= tagged * 0.5, `a filter change does not rebuild the markers (${kept} of ${tagged} map elements survived)`) // a rebuild would leave none; the map only drops the few that leave the view
+  ok(await p.locator('.mk.off').count() > 0, 'closed places keep their grey look after the filter change')
+  await ctx.close()
+})
 // run the blocks in a pool (half the cores), then the timing-sensitive ones alone
 const pool = async (jobs, n) => { const q = [...jobs]; await Promise.all(Array.from({ length: n }, async () => { for (let j; (j = q.shift());) await j() })) }
 const t0 = Date.now()

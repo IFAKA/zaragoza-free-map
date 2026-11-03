@@ -57,6 +57,8 @@ export interface RankedItem extends Item {
   d: number
   /** true = open now, false = closed now, null = unknown (or not applicable). */
   open: boolean | null
+  /** Why the place is greyed out on the map (set only by `unavailable`): closed now, or a Bizi station with no bike / no free dock. */
+  off?: 'closed' | 'noBikes' | 'noDocks'
 }
 export interface Bilingual { en: string; es: string }
 export interface LayerConfig {

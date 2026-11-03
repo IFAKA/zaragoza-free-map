@@ -10,7 +10,7 @@ import { bearingAt } from '../lib/pathBearing'
 import { walkRoute } from '../lib/walkRoute'
 import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
 import { iconHtml } from './icons'
-import { bearingTo, type Vehicle } from '../lib/vehicles'
+import { arrowBearing, type Vehicle } from '../lib/vehicles'
 
 export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon; instant?: boolean }
 /** A bus line to draw in place of the markers: its route pieces, its stops in order, and which stop is the current one (-1 = none). */
@@ -81,7 +81,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.MarkerClusterGroup | null>(null)
   const rings = useRef<L.LayerGroup | null>(null)
-  const markers = useRef(new Map<string, L.Marker>())
+  const markers = useRef(new Map<string, { mk: L.Marker; kind: number }>())
   const sig = useRef('')
   const me = useRef<L.Marker | null>(null)
   const vehGroup = useRef<L.LayerGroup | null>(null)
@@ -148,26 +148,29 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // markers: rebuilt only when the set of visible items changes; selection just toggles a class
+  // markers: kept between renders and matched by id. A new layer rebuilds them; a filter only adds the new places,
+  // removes the gone ones and re-icons the ones whose greyed-out state changed. Selection just toggles a class.
   useEffect(() => {
     const g = group.current
     if (!g) return
-    const s = layer.id + '|' + items.map(i => i.id + (i.open === false ? 'x' : '')).join(',')
-    if (s !== sig.current) {
-      sig.current = s
-      g.clearLayers(); markers.current.clear()
-      const batch: L.Marker[] = []
-      const mkIcon = (closed: boolean, rack: boolean) => L.divIcon({ className: 'mkw', html: `<div class="mk${closed ? ' off' : ''}" style="--c:${rack ? 'var(--color-rack)' : layer.color}">${iconHtml(rack ? 'lock' : layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
-      const icons = [mkIcon(false, false), mkIcon(true, false), mkIcon(false, true)]
-      for (const it of items) {
-        const icon = icons[it.cat === 'mine' ? 2 : layer.hours && it.open === false ? 1 : 0] // Bizi tab: street racks keep their own colour and lock icon
-        const mk = L.marker([it.lat, it.lon], { icon, keyboard: false, riseOnHover: false, title: it.name || undefined })
-        mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
-        markers.current.set(it.id, mk); batch.push(mk)
-      }
-      g.addLayers(batch)
+    if (layer.id !== sig.current) { sig.current = layer.id; g.clearLayers(); markers.current.clear() }
+    const mkIcon = (closed: boolean, rack: boolean) => L.divIcon({ className: 'mkw', html: `<div class="mk${closed ? ' off' : ''}" style="--c:${rack ? 'var(--color-rack)' : layer.color}">${iconHtml(rack ? 'lock' : layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
+    const icons = [mkIcon(false, false), mkIcon(true, false), mkIcon(false, true)]
+    const kind = (it: RankedItem) => (it.cat === 'mine' ? 2 : it.off || (layer.hours && it.open === false) ? 1 : 0) // Bizi tab: street racks keep their own colour and lock icon
+    const want = new Set(items.map(i => i.id))
+    const gone: L.Marker[] = []
+    markers.current.forEach((e, id) => { if (!want.has(id)) { gone.push(e.mk); markers.current.delete(id) } })
+    if (gone.length) g.removeLayers(gone)
+    const add: L.Marker[] = []
+    for (const it of items) {
+      const k = kind(it), have = markers.current.get(it.id)
+      if (have) { if (have.kind !== k) { have.mk.setIcon(icons[k]); have.kind = k } continue }
+      const mk = L.marker([it.lat, it.lon], { icon: icons[k], keyboard: false, riseOnHover: false, title: it.name || undefined })
+      mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
+      markers.current.set(it.id, { mk, kind: k }); add.push(mk)
     }
-    markers.current.forEach((mk, id) => {
+    if (add.length) g.addLayers(add)
+    markers.current.forEach(({ mk }, id) => {
       mk.getElement()?.firstElementChild?.classList.toggle('sel', id === selected)
       mk.setZIndexOffset(id === selected ? 1000 : 0)
     })
@@ -177,7 +180,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   // the pick moment: only when the person picked (pick counts up), on the marker that is now selected
   useEffect(() => {
     if (!pick) return
-    const el = live.current.selected ? markers.current.get(live.current.selected)?.getElement()?.firstElementChild : null
+    const el = live.current.selected ? markers.current.get(live.current.selected)?.mk.getElement()?.firstElementChild : null
     if (!el) return
     el.classList.remove('pulse'); void (el as HTMLElement).offsetWidth; el.classList.add('pulse')
     const done = () => el.classList.remove('pulse')
@@ -250,7 +253,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     vehLine.current?.remove(); vehLine.current = null
     vehArrow.current?.remove(); vehArrow.current = null
     if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, lineCap: 'round', interactive: false }).addTo(m0)
-    if (vehicles[0]) { const v0 = vehicles[0]; vehArrow.current = lineArrow(bearingTo(v0.via?.length ? v0.via[v0.via.length - 1] : v0.pos, v0.stop), v0.stop, getComputedStyle(document.documentElement).getPropertyValue(v0.color.replace(/^var\(|\)$/g, '')).trim()).addTo(m0) }
+    if (vehicles[0]) { const v0 = vehicles[0]; vehArrow.current = lineArrow(arrowBearing(v0.via, v0.pos, v0.stop), v0.stop, getComputedStyle(document.documentElement).getPropertyValue(v0.color.replace(/^var\(|\)$/g, '')).trim()).addTo(m0) }
     // a changed stop or direction (fit key) unmounts the marker, so it appears at its new place instead of floating there
     vehs.current.forEach((v, id) => { if (!keep.has(id) || v.fit !== vehicles.find(x => x.id === id)?.fit) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {

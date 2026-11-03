@@ -2,6 +2,7 @@
 // and the Renfe live feed cannot be read from a browser. So a vehicle is placed on the track, upstream of the stop, at (minutes x average speed).
 // Honest by design: the map marks these as "approx." and nothing is drawn without minutes.
 import { dist } from './geo'
+import { bearingAt } from './pathBearing'
 import { alongPath, pointAt } from './transit'
 import type { LatLon } from './types'
 
@@ -96,4 +97,12 @@ export function between(path: LatLon[], a: LatLon, b: LatLon): LatLon[] {
   const nearest = (p: LatLon) => path.reduce((k, q, i) => (dist(p, q) < dist(p, path[k]) ? i : k), 0)
   const i = nearest(a), j = nearest(b)
   return i <= j ? path.slice(i, j + 1) : path.slice(j, i + 1).reverse()
+}
+
+/**
+ * The way the vehicle runs through its stop: the direction of the part of `via` (vehicle to stop) that is nearest the stop.
+ * The last point of `via` is only the vertex nearest the stop and can lie just past it, which turned both directions' arrows the same way.
+ */
+export function arrowBearing(via: LatLon[] | undefined, pos: LatLon, stop: LatLon): number {
+  return via && via.length > 1 ? bearingAt([via], stop) ?? bearingTo(pos, stop) : bearingTo(pos, stop)
 }

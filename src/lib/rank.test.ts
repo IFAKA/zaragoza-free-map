@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rankOrAll } from './rank'
+import { rankOrAll, unavailable } from './rank'
 import type { Item, LayerConfig } from './types'
 
 const H = (h: number, m = 0) => h * 60 + m
@@ -45,5 +45,26 @@ describe('Bizi chips', () => {
     expect(r.arr.map(i => i.id)).toEqual(['a', 'b'])
     expect(r.allOut).toBe(true)
     expect(rankOrAll(cfgB, all, o('take')).allOut).toBe(false)
+  })
+})
+
+describe('unavailable', () => {
+  const night = { day: 0, min: H(23), md: 701 }
+  it('lists closed places, with the reason, when Open now is on', () => {
+    const r = unavailable(cfg, items, ref, night)
+    expect(r.map(i => [i.id, i.off])).toEqual([['near', 'closed'], ['far', 'closed']])
+  })
+  it('lists nothing when Open now is off or the places are open', () => {
+    expect(unavailable(cfg, items, { ...ref, openOnly: false }, night)).toEqual([])
+    expect(unavailable(cfg, items, ref, { day: 0, min: H(12), md: 701 })).toEqual([])
+  })
+  it('Bizi: a station with no bike is off on the take chip, no dock on the return chip, other chips stay out', () => {
+    const cfgB = { hours: false, cats: ['take', 'return', 'mine'] } as LayerConfig
+    const st = (id: string, bikes: number, docks: number) => ({ id, part: 'city', type: 'bizi', cat: 'station', name: id, lat: 41.64, lon: -0.88, bikes, docks } as Item)
+    const rack = { id: 'r', part: 'city', type: 'rack', cat: 'mine', name: 'r', lat: 41.64, lon: -0.88 } as Item
+    const all = [st('a', 0, 5), st('b', 3, 0), rack]
+    const o = { ref: null, openOnly: false }
+    expect(unavailable(cfgB, all, { ...o, cat: 'take' }).map(i => [i.id, i.off])).toEqual([['a', 'noBikes']])
+    expect(unavailable(cfgB, all, { ...o, cat: 'return' }).map(i => [i.id, i.off])).toEqual([['b', 'noDocks']])
   })
 })

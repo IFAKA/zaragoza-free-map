@@ -38,6 +38,10 @@ Dark mode is automatic (`prefers-color-scheme`). Tokens are overridden so brand 
 | Pharmacies on duty | `--color-pharmacy` | `#B3261E` | deep red, duty pharmacies (pill icon), 6.5:1 with white |
 | Warm or cool indoors | `--color-shelter` | `#A3315F` | raspberry, climate shelters (thermometer icon), 6.6:1 with white |
 
+The app icon (`public/icon.svg` and the PNGs made from it) is a white map pin with a drop on `--color-brand` red (`#D92A22`), the same red as `theme-color`.
+
+A place that a filter makes unavailable (closed with Open now on, a Bizi station with no bike or dock) stays on the map with the dashed grey marker; tapping it shows why and the source. Filters add, remove or re-icon only the markers that changed; they never rebuild the map.
+
 Markers are circles of 2.27em with a white Phosphor glyph. The selected marker is 3.8em with a white border. WiFi range circles (about 40 m around city buildings, about 25 m around OpenStreetMap venues) use the WiFi colour, dashed, and are labelled as an estimate.
 
 ## Type

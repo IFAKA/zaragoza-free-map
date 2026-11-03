@@ -7,7 +7,7 @@ import type { DutyRow } from '../lib/sources.ts'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
 import { nowMadrid } from '../lib/hours'
 import { canShowInstallHint, installEnv } from '../lib/install'
-import { rankOrAll } from '../lib/rank'
+import { rankOrAll, unavailable } from '../lib/rank'
 import { DATA } from '../data'
 import { loadBusRoutes, loadCercaniasTimes, type CercaniasTimes } from '../data/lazy'
 import { decodePolyline, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
@@ -170,6 +170,15 @@ export function App() {
     // tick re-evaluates open/closed as the minutes pass
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [layer, layerItems, pos, openOnly, cat, tick])
+  // places the filters leave out because they are not available: still on the map, greyed out
+  const offItems = useMemo(() => {
+    if (layer.live || lineSel) return []
+    const ids = new Set(arr.map(i => i.id))
+    return unavailable(layer, layerItems, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()).filter(i => !ids.has(i.id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arr, layer, layerItems, pos, openOnly, cat, lineSel])
+  const mapItems = useMemo(() => (offItems.length ? [...arr, ...offItems] : arr), [arr, offItems])
+  const offSel = selected && !arr.some(i => i.id === selected) ? offItems.find(i => i.id === selected) ?? null : null
   const chosen = selected ? arr.find(i => i.id === selected) ?? null : null
   const focus = chosen ?? arr[0] ?? null
   // the two nearest places after the one on the card
@@ -257,7 +266,7 @@ export function App() {
     track('select', layerId)
     setSelected(id)
     setPick(n => n + 1)
-    const it = arr.find(i => i.id === id)
+    const it = arr.find(i => i.id === id) ?? offItems.find(i => i.id === id)
     if (!desktop) setLevel(PEEK)
     if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
   }
@@ -304,7 +313,7 @@ export function App() {
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
       default: return (
         <HomePage
-          layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} nearby={nearby} peekRef={setPeekEl}
+          off={offSel} layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} nearby={nearby} peekRef={setPeekEl}
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
@@ -324,7 +333,7 @@ export function App() {
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <MapView
-              layer={layer} items={lineData ? [] : arr} pick={pick} selected={lineData ? null : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
+              layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
               showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
             />
           </div>
