@@ -201,6 +201,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       const dot = L.circleMarker([s.lat, s.lon], { radius: 3.5, color: brand, weight: 1.5, fillColor: white, fillOpacity: 1 }).addTo(g)
       dot.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onRouteStop?.(s.post) })
     })
+    const near = nearBus(route)
+    if (near) L.marker(near.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(near.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
     const cur = route.stops[route.cur]
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
   }, [route, track, layer.color])
@@ -240,7 +242,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       const pad = L.point(cb.current.desktop ? 440 : 40, 70), padB = L.point(40, cb.current.inset() + 30)
       const view = m.getBounds()
       const inner = L.latLngBounds(m.containerPointToLatLng(pad), m.containerPointToLatLng(m.getSize().subtract(padB)))
-      const pts = [vs[0].stop, ...vs.map(v => v.pos)]
+      const pts = [vs[0].stop, vs[0].pos, ...(userPos ? [userPos] : [])] // you, the stop and the closest (soonest) vehicle
       if (pts.every(q => inner.contains(q)) && view.isValid()) return
       m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: pad, paddingBottomRight: padB, maxZoom: 16, animate: !reduced(), duration: MS.fly / 1000 })
     }, MS.fly + 150)
