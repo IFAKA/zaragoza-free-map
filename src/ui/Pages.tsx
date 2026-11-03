@@ -30,7 +30,7 @@ import { DirPicker } from './DirPicker'
 import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
-import { bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
+import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
 
@@ -131,7 +131,7 @@ const vehicleOf = (pos: LatLon, i: number, icon: Vehicle['icon'], stop: LatLon, 
 /** The start of a direction (where its vehicles set off): the first point of `path` when they travel towards its end, else the last. */
 const startOf = (path: LatLon[], forward: boolean, stop: LatLon, fit: string, icon: Vehicle['icon'] = 'tram'): Vehicle => {
   const pos = forward ? path[0] : path[path.length - 1]
-  return { id: 'veh0', pos, icon, stop, fit, bearing: bearingTo(pos, stop), start: true, color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' }
+  return { id: 'veh0', pos, icon, stop, fit, bearing: bearingTo(pos, stop), start: true, via: between(path, pos, stop), color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' }
 }
 /** One short line under the times: the map markers are estimates. */
 function VehNote({ show }: { show: boolean }) {
@@ -158,7 +158,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const { dir, pickDir } = useDirChoice('tram:' + stopKey, opts, centre)
   // tram: the next 2 trams of the shown direction, placed on the track upstream of the stop (approximate; none without live minutes)
   const tramVeh: Vehicle[] = kind === 'tram' && state === 'live' && hasDirs && at
-    ? upstream(tramLine(), at, dir === 'n', nextTwo(tram.filter(x => x.dir === dir).flatMap(x => x.r.mins)), TRAM_KMH).map((p, i) => vehicleOf(p, i, 'tram', at, stopKey + dir)) : []
+    ? upstream(tramLine(), at, dir === 'n', nextTwo(tram.filter(x => x.dir === dir).flatMap(x => x.r.mins)), TRAM_KMH).map((p, i) => ({ ...vehicleOf(p, i, 'tram', at, stopKey + dir), via: between(tramLine(), p, at) })) : []
   const tramLn = tramLine()
   const tramShown: Vehicle[] = tramVeh.length || !(kind === 'tram' && hasDirs && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
@@ -275,7 +275,7 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
   // the next 2 planned trains of the shown direction, placed upstream of the station (planned time, not real time; the timetable has no stop times of one trip at several stations)
   const way = two ? dir : groups.length === 1 ? groups[0].id : null
   const trainVeh: Vehicle[] = way && times
-    ? upstream(railLine(), here, way === 'hi', nextTwo(next.filter(n => !n.tomorrow && n.inMin <= TRAIN_MAX_MIN).map(n => n.inMin)), TRAIN_KMH).map((p, i) => vehicleOf(p, i, 'train', here, (item.code ?? '') + way)) : []
+    ? upstream(railLine(), here, way === 'hi', nextTwo(next.filter(n => !n.tomorrow && n.inMin <= TRAIN_MAX_MIN).map(n => n.inMin)), TRAIN_KMH).map((p, i) => ({ ...vehicleOf(p, i, 'train', here, (item.code ?? '') + way), via: between(railLine(), p, here) })) : []
   const trainShown: Vehicle[] = trainVeh.length || !way || !times ? trainVeh : [startOf(railLine(), way === 'hi', here, (item.code ?? '') + way, 'train')]
   usePublishVehicles(trainShown)
   const [y, mo, d] = DATA.cercanias.updated?.split('-') ?? []

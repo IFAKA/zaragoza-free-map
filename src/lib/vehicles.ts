@@ -79,6 +79,8 @@ export interface Vehicle {
   bearing: number
   /** True for the start of the direction, shown when no vehicle can be placed: a fixed place, not an estimate. */
   start?: boolean
+  /** The track between the vehicle and the stop, so the dotted line follows the rails instead of cutting across. */
+  via?: LatLon[]
   /** The stop they are heading for, and a key that changes with the stop or direction: the map frames both when the key changes and a vehicle is out of view. */
   stop: LatLon; fit: string
 }
@@ -87,4 +89,11 @@ export interface Vehicle {
 export function bearingTo(a: LatLon, b: LatLon): number {
   const [kn, ke] = mpd(a[0])
   return (Math.atan2((b[1] - a[1]) * ke, (b[0] - a[0]) * kn) * 180 / Math.PI + 360) % 360
+}
+
+/** The part of `path` between the points nearest to `a` and `b` (vertices only), in the order a to b. */
+export function between(path: LatLon[], a: LatLon, b: LatLon): LatLon[] {
+  const nearest = (p: LatLon) => path.reduce((k, q, i) => (dist(p, q) < dist(p, path[k]) ? i : k), 0)
+  const i = nearest(a), j = nearest(b)
+  return i <= j ? path.slice(i, j + 1) : path.slice(j, i + 1).reverse()
 }

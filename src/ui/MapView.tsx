@@ -217,7 +217,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     if (!g) return
     const keep = new Set(vehicles.map(v => v.id))
     vehLine.current?.remove(); vehLine.current = null
-    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false, pane: 'vehPane' }).addTo(g)
+    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false, pane: 'vehPane' }).addTo(g)
     vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
       const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${(v.start ? vehStart : vehBadge) ? `<i>${v.start ? vehStart : vehBadge}</i>` : ''}</div>`
