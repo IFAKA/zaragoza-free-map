@@ -2,7 +2,7 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
@@ -10,7 +10,7 @@ import { chipSplit, nextDepartures, type BusRoutes } from '../lib/transit'
 import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
-import type { LayerConfig, LayerId, RankedItem } from '../lib/types'
+import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS } from '../layers'
 import type { GoalId } from '../layers/goals'
 import { GoalTabs, ServiceChips } from './GoalBar'
@@ -22,7 +22,8 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
-import { loadBus, loadTram } from '../lib/live'
+import { busAlternatives, loadBus, loadTram } from '../lib/live'
+import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
@@ -94,7 +95,7 @@ function ShelterNote() {
 }
 
 /** Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works. */
-function LiveTimes({ kind, stopKey, load }: { kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus> }) {
+function LiveTimes({ kind, stopKey, load, stopName }: { kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
   if (state === 'failed' && !live) return null
@@ -108,16 +109,17 @@ function LiveTimes({ kind, stopKey, load }: { kind: 'bus' | 'tram'; stopKey: str
       </div>
       {!live ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveLoading')}</p> : (
         <>
+          {live.via && <p className="m-0 mt-1 font-semibold leading-snug" data-testid="live-via">{t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d))}</p>}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
           {rows.length === 0 ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
             <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
-              {rows.map(r => (
+              {rows.map(r => { const dir = kind === 'tram' && stopName ? tramDir(r.dest, stopName, DATA.tram.rows) : null; return (
                 <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row">
                   <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
-                  <span className="min-w-0 flex-1 truncate">{r.dest}</span>
+                  <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span>{dir && <span className={cn(sub, 'block text-[0.8em]')} data-testid="live-dir" data-dir={dir}>{t(dir === 'n' ? 'tramNorth' : 'tramSouth')}</span>}</span>
                   <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>
                 </li>
-              ))}
+              )})}
             </ul>
           )}
           <div className={cn(sub, 'mt-1 text-[0.8em]')}>{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
@@ -128,11 +130,12 @@ function LiveTimes({ kind, stopKey, load }: { kind: 'bus' | 'tram'; stopKey: str
 }
 
 /** Bus stop: live next buses (city stops only), then the link to the bus company page, then Walk. Rural stops have no live data and keep the link-out only. */
-function BusActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
+function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon; onWalk: () => void }) {
   const { t } = useT()
   const stop = item.stop
   const live = !!stop && /^\d+$/.test(stop)
-  const load = useCallback((s: AbortSignal) => loadBus(stop ?? '', s), [stop])
+  const alts = useMemo(() => (stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : []), [stop, item.lines, item.lat, item.lon, origin])
+  const load = useCallback((s: AbortSignal) => loadBus(stop ?? '', s, undefined, undefined, alts), [stop, alts])
   const walk = <Button variant={item.stop ? 'secondary' : 'primary'} {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
   return (
     <>
@@ -156,7 +159,7 @@ function TramActions({ item, onWalk }: { item: RankedItem; onWalk: () => void })
   return (
     <>
       <p className="m-0 mt-2 text-[0.93em] leading-snug" data-testid="tram-info"><span className="mr-1.5 rounded-[0.3em] bg-[var(--color-tram)] px-1.5 py-0.5 font-bold text-on-brand">T1</span>{t('tramDirs').replace('{a}', a).replace('{b}', b)}</p>
-      {key && <LiveTimes kind="tram" stopKey={key} load={load} />}
+      {key && <LiveTimes kind="tram" stopKey={key} load={load} stopName={item.name} />}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant={key ? 'secondary' : 'primary'} {...linkProps(TRAM_URL)} onClick={() => track('times', 'tram')} data-testid="tram-times">{t('tramTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
         <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
@@ -327,8 +330,8 @@ export function LineBlock({ view, onBack, onDir }: { view: LineView; onBack: () 
 }
 
 // ---------- the block with the nearest (or selected) place ----------
-export function NearestBlock({ layer, item, isSelected, hasPos, cat, routes, times, onLine, onDetails, onWalk }: {
-  layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; cat: string
+export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, routes, times, onLine, onDetails, onWalk }: {
+  layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; origin: LatLon; cat: string
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void
   onDetails: () => void; onWalk: () => void
 }) {
@@ -345,7 +348,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, cat, routes, tim
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
           <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
@@ -420,7 +423,7 @@ export function Footer({ onAbout }: { onAbout: () => void }) {
 }
 
 export function HomePage(p: {
-  layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; locating: boolean
+  layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
   nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
@@ -437,7 +440,7 @@ export function HomePage(p: {
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.lineView ? <LineBlock view={p.lineView} onBack={p.onLineBack} onDir={p.onLineDir} />
-          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
+          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
         {!p.liveState && !p.lineView && <Nearby items={p.nearby} onSelect={p.onSelect} />}
