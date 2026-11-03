@@ -6,6 +6,7 @@ import 'leaflet.markercluster'
 import { useEffect, useRef } from 'react'
 import { CENTER } from '../lib/geo'
 import { pointAt } from '../lib/transit'
+import { walkRoute } from '../lib/walkRoute'
 import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
 import { iconHtml } from './icons'
 import type { Vehicle } from '../lib/vehicles'
@@ -223,7 +224,12 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const it = route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected) // the closest place: the selected stop, fountain, toilet..., never a vehicle mark
     if (!it) return
     const col = getComputedStyle(document.documentElement).getPropertyValue(layer.color.replace(/^var\(|\)$/g, '')).trim()
-    walkLine.current = L.polyline([userPos, [it.lat, it.lon]], { color: col, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m)
+    const to: [number, number] = [it.lat, it.lon]
+    const draw = (path: [number, number][]) => { walkLine.current?.remove(); walkLine.current = L.polyline(path, { color: col, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m) }
+    draw([userPos, to]) // straight line until the street route arrives (and if it never does)
+    const ac = new AbortController()
+    walkRoute(userPos, to, ac.signal).then(p => { if (p && !ac.signal.aborted) draw(p) })
+    return () => ac.abort()
   }, [userPos, selected, items, route, layer.color])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
   const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',') + (v.start ? 's' : '')).join('|') + '|' + vehBadge + vehStart
