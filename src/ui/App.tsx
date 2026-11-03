@@ -65,7 +65,7 @@ function useClosedPx(dep: unknown) {
 }
 
 /**
- * Height of the peeking sheet: from the top of the sheet to the end of the peek block (tabs, chips, the card, the two places after it), plus the bottom safe area.
+ * Height of the peeking sheet: from the top of the sheet to the end of the peek block (the chip row and the one card), plus the bottom safe area.
  * Measured on the real layout, so a long Spanish bus card or a hint line can never be cut off. Re-measured on every render and whenever any part changes size.
  */
 function usePeekPx(block: HTMLElement | null): number {

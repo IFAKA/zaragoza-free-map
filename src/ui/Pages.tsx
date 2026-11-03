@@ -1,8 +1,9 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, PersonSimpleWalk, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
@@ -41,6 +42,24 @@ const overline = 'text-[0.8em] font-semibold uppercase tracking-wide text-ink-so
 const sub = 'text-[0.93em] leading-snug text-ink-soft'
 
 // ---------- shared small pieces ----------
+/** The top of the scroll area (full height): what a card moves out of the peek (line chips, the position note, the links). HomePage sets it. */
+export const MoreCtx = createContext<HTMLElement | null>(null)
+function More({ children }: { children: ReactNode }) {
+  const el = useContext(MoreCtx)
+  return el ? createPortal(children, el) : null
+}
+/** The links of a transit card, small, icon plus label, in one row. */
+function MoreLinks({ times, walk }: { times?: { url: string; label: string; onClick: () => void; testId: string }; walk: { item: RankedItem; onWalk: () => void } }) {
+  const { t } = useT()
+  const link = 'min-h-[44px] px-3 text-[0.93em]'
+  return (
+    <div className="flex flex-wrap gap-2 px-4 pb-3" data-testid="more-links">
+      {times && <Button variant="secondary" className={link} {...linkProps(times.url)} onClick={times.onClick} data-testid={times.testId}><Clock size="1.2em" aria-hidden />{times.label}</Button>}
+      <Button variant="secondary" className={link} {...linkProps(walkUrl(walk.item.lat, walk.item.lon))} onClick={walk.onWalk} data-testid="walk"><PersonSimpleWalk size="1.2em" aria-hidden />{t('walk')}</Button>
+    </div>
+  )
+}
+
 export function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
   const { t } = useT()
   return (
@@ -135,10 +154,10 @@ const startOf = (path: LatLon[], forward: boolean, stop: LatLon, fit: string, ic
   const pos = forward ? path[0] : path[path.length - 1]
   return { id: 'veh0', pos, icon, stop, fit, bearing: bearingTo(pos, stop), start: true, via: between(path, pos, stop), color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' }
 }
-/** One short line under the times: the map markers are estimates. */
+/** The map markers are estimates: one short note, in the full-height area. */
 function VehNote({ show }: { show: boolean }) {
   const { t } = useT()
-  return show ? <p className={cn(sub, 'm-0 text-[0.8em] leading-tight')} data-testid="veh-note">{t('vehNote')}</p> : null
+  return show ? <More><p className={cn(sub, 'm-0 px-4 pb-2 text-[0.8em] leading-tight')} data-testid="veh-note">{t('vehNote')}</p></More> : null
 }
 
 /**
@@ -165,15 +184,13 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const tramShown: Vehicle[] = tramVeh.length || !(kind === 'tram' && hasDirs && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
   if (state === 'failed' && !live) return null
-  const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, hasDirs ? 3 : 4)
+  const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const [north, south] = DATA.tram.ends
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
+  const first = rows[0]
   return (
-    <div className="mt-3 min-h-[5.5rem]" data-testid="live-times" data-state={state}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className={overline}>{title ?? (kind === 'bus' ? t('nextBuses') : t('liveTrams'))}</span>
-        {state === 'live' && <span className="inline-flex items-center gap-1 text-[0.8em] font-bold text-brand-text"><span className="size-1.5 rounded-full bg-current" aria-hidden />{t('liveTag')}</span>}
-      </div>
+    <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
+      {title && <div className={overline}>{title}</div>}
       {!live ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveLoading')}</p> : (
         <>
           {live.via && (live.via.side ? (
@@ -183,22 +200,24 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
             </div>
           ) : <p className="m-0 mt-1 font-semibold leading-snug" data-testid="live-via">{t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d))}</p>)}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
-          {hasDirs && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
-            { id: 'n', label: t('dirTo').replace('{to}', north), sub: t('dirNorth') },
-            { id: 's', label: t('dirTo').replace('{to}', south), sub: t('dirSouth') },
-          ]} />}
-          {rows.length === 0 ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
-            <ul className={cn('m-0 flex list-none flex-col gap-1 p-0', hasDirs ? 'mt-2' : 'mt-1')}>
-              {rows.map(r => (
+          {!first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
+            <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
+              {rows.map((r, i) => (
                 <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row">
                   <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
                   <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span></span>
-                  <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>
+                  {i === 0
+                    ? <span className="shrink-0 tabular-nums" data-testid="live-first"><span className="text-[1.6em] font-bold leading-none">{min(r.mins[0])}</span>{r.mins.length > 1 && <span className="font-bold text-ink-soft"> · {r.mins.slice(1).map(min).join(' · ')}</span>}</span>
+                    : <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>}
                 </li>
               ))}
             </ul>
           )}
-          <div className={cn(sub, 'mt-1 text-[0.8em]')}>{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
+          {hasDirs && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
+            { id: 'n', label: t('dirTo').replace('{to}', north) },
+            { id: 's', label: t('dirTo').replace('{to}', south) },
+          ]} />}
+          <div className={cn(sub, 'mt-1 flex items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 rounded-full bg-current" aria-hidden />}{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
           <VehNote show={tramVeh.length > 0} />
         </>
       )}
@@ -206,7 +225,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   )
 }
 
-/** Bus stop: live next buses (city stops only), then the link to the bus company page, then Walk. Rural stops have no live data and keep the link-out only. */
+/** Bus stop: live next buses (city stops only). The link to the bus company page and Walk go to the full-height area. Rural stops have no live data and keep the link-out only. */
 function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon; onWalk: () => void }) {
   const { t } = useT()
   const stop = item.stop
@@ -216,35 +235,25 @@ function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon
     await ensureBakedBad()
     return loadBus(stop ?? '', s, undefined, undefined, stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : [])
   }, [stop, item.lines, item.lat, item.lon, origin])
-  const walk = <Button variant={item.stop ? 'secondary' : 'primary'} {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
   return (
     <>
       {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} />}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {stop && <Button variant={live ? 'secondary' : 'primary'} {...linkProps(busUrl(stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{live ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
-        {walk}
-      </div>
-      <p className={cn(sub, 'm-0 mt-1.5')}>{stop ? t('nextBusesHint') : t('noLive')}</p>
+      {!stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
+      <More><MoreLinks times={stop ? { url: busUrl(stop), label: t('timesShort'), onClick: () => track('times', 'bus'), testId: 'next-buses' } : undefined} walk={{ item, onWalk }} /></More>
     </>
   )
 }
 
-/** Tram stop: the line and its two ends, live next trams (both platforms), then the link to the tram company's times page, then Walk. */
+/** Tram stop: live next trams (both platforms). The link to the tram company's times page and Walk go to the full-height area. */
 function TramActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon; onWalk: () => void }) {
   const { t } = useT()
-  const [a, b] = DATA.tram.ends
   const ids = item.tramIds ?? []
   const key = ids.join(',')
   const load = useCallback((s: AbortSignal) => loadTram(key ? key.split(',') : [], s), [key])
   return (
     <>
-      <p className="m-0 mt-2 text-[0.93em] leading-snug" data-testid="tram-info"><span className="mr-1.5 rounded-[0.3em] bg-[var(--color-tram)] px-1.5 py-0.5 font-bold text-on-brand">T1</span>{t('tramDirs').replace('{a}', a).replace('{b}', b)}</p>
       {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} />}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant={key ? 'secondary' : 'primary'} {...linkProps(TRAM_URL)} onClick={() => track('times', 'tram')} data-testid="tram-times">{t('tramTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-        <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-      </div>
-      <p className={cn(sub, 'm-0 mt-1.5')}>{t('tramHint')}</p>
+      <More><MoreLinks times={{ url: TRAM_URL, label: t('timesShort'), onClick: () => track('times', 'tram'), testId: 'tram-times' }} walk={{ item, onWalk }} /></More>
     </>
   )
 }
@@ -286,28 +295,24 @@ function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origi
   const mine = alerts.filter(a => !a.stops.length || (item.code && a.stops.includes(item.code))).slice(0, 2)
   return (
     <>
-      <div className="mt-2" data-testid="train-next">
-        <div className={overline}>{t('trainNext')}</div>
-        {two && <DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} />}
+      <div className="mt-1" data-testid="train-next">
         {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
-          <ul className={cn('m-0 flex list-none flex-col p-0', two ? 'mt-2' : 'mt-1')}>
-            {next.map((n, i) => (
+          <ul className="m-0 flex list-none flex-col p-0">
+            {next.slice(0, 2).map((n, i) => (
               <li key={i} className="flex items-baseline gap-2 leading-snug" data-testid="train-row">
-                <span className="font-bold tabular-nums">{n.at}</span>
+                <span className={cn('font-bold tabular-nums', i === 0 && 'text-[1.6em] leading-none')}>{n.at}</span>
                 <span className="min-w-0 flex-1 truncate">{t('trainTo').replace('{to}', DATA.cercanias.dests[n.dest] ?? '')}</span>
                 <span className="text-ink-soft">{n.tomorrow ? t('trainTomorrow') : t('trainIn').replace('{n}', String(n.inMin))}</span>
               </li>
             ))}
           </ul>
         )}
-        <p className={cn(sub, 'm-0 mt-0.5')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
+        {two && <DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} />}
+        <p className={cn(sub, 'm-0 mt-1 text-[0.8em]')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
         {mine.map(a => <p key={a.id} className={cn(sub, 'm-0 mt-1 font-semibold text-ink')} role="note" data-testid="train-alert">{a.text} <span className="font-normal">(Renfe)</span></p>)}
         <VehNote show={trainVeh.length > 0} />
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Button {...linkProps(RENFE_URL)} onClick={() => track('times', 'cercanias')} data-testid="train-times">{t('trainTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-        <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-      </div>
+      <More><MoreLinks times={{ url: RENFE_URL, label: t('timesShort'), onClick: () => track('times', 'cercanias'), testId: 'train-times' }} walk={{ item, onWalk }} /></More>
     </>
   )
 }
@@ -326,7 +331,7 @@ function PharmacyActions({ item, onWalk }: { item: RankedItem; onWalk: () => voi
   const { t } = useT()
   const tel = item.phone?.replace(/[^\d+]/g, '')
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-2 flex flex-wrap gap-2">
       <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       {tel && <Button variant="secondary" render={<a href={`tel:${tel}`} />} nativeButton={false} data-testid="call">{t('call')} {item.phone}</Button>}
     </div>
@@ -384,7 +389,7 @@ function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes
   const { shown, more } = all ? { shown: list, more: 0 } : chipSplit(list, LINE_ROWS * LINE_COLS)
   const chip = 'flex min-h-[44px] min-w-0 items-center justify-center rounded-btn px-1 text-[0.93em] font-bold'
   return (
-    <div className="mt-1" data-testid="bus-lines">
+    <div className="px-4 pb-3 pt-3" data-testid="bus-lines">
       <span className="font-semibold">{t('lines')}</span>
       <ul className="m-0 mt-1 grid list-none grid-cols-6 gap-2 p-0">
         {shown.map(l => (
@@ -452,28 +457,33 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
 }
 
 // ---------- the block with the nearest (or selected) place ----------
+/** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
 export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, routes, times, onLine, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; origin: LatLon; cat: string
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void
   onDetails: () => void; onWalk: () => void
 }) {
   const { t, type } = useT()
-  if (!item) return <div className="px-4 py-5"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
+  if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
+  const name = item.name || type(item.type)
   return (
-    <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="nearest" aria-label={kind}>
-      <div className={overline}>{kind}</div>
-      <h2 className={cn(h2, 'mt-1')} data-testid="nearest-name">{item.name || type(item.type)}</h2>
-      <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
-      <div className="mt-0.5"><Status item={item} layer={layer} /></div>
+    <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
+      <BaseButton onClick={onDetails} aria-label={`${t('details')}: ${name}`} data-testid="details" render={<m.button {...tap} />} className="flex min-h-[44px] w-full items-center gap-2 border-0 bg-transparent p-0 text-left text-ink">
+        <span className="min-w-0 flex-1">
+          <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
+          <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
+          <span className="block"><Status item={item} layer={layer} /></span>
+        </span>
+        <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
+      </BaseButton>
       {item.type === 'lib' && <div className="mt-0.5"><Occupancy item={item} /></div>}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
-      {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
+      {item.lines && <More><LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} /></More>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-          <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>
         </div>
       )}
     </m.section>
@@ -497,7 +507,7 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
   )
 }
 
-// ---------- the next two nearest, under the card ----------
+// ---------- the next two nearest, at the top of the full-height area ----------
 /** The two nearest places after the one on the card, as compact chips: one tap shows that place (card and map). */
 export function Nearby({ items, onSelect }: { items: RankedItem[]; onSelect: (id: string) => void }) {
   const { t, type } = useT()
@@ -572,25 +582,27 @@ export function HomePage(p: {
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
+  const [more, setMore] = useState<HTMLElement | null>(null)
   return (
-    <>
+    <MoreCtx.Provider value={more}>
       <ServiceChips layer={p.layer.id} order={p.chipOrder} onService={p.onPick} />
-      {/* everything down to the end of this block is what the sheet shows at peek: the card and the two places after it */}
+      {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
-        {!p.liveState && !p.lineView && !p.off && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
+        <div ref={setMore} />
+        {!p.liveState && !p.lineView && !p.off && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
         <Footer onAbout={p.onAbout} />
       </Scroll>
-    </>
+    </MoreCtx.Provider>
   )
 }
 
