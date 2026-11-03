@@ -48,7 +48,7 @@ const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'Worl
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
-const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="1.4" stroke-linejoin="round"/></svg></b>`
+const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--color-on-brand)" stroke="var(--c, currentColor)" stroke-width="1.6" stroke-linejoin="round"/></svg></b>`
 
 export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
