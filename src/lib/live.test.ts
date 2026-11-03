@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { BAD_STOP_MS, busAlternatives, clearBad, loadBus, loadTram, markBad, onlyLine, parseBus, towardEnd, parseMins, parseTram, pickNotice, prettyDest } from './live'
+import { BAD_STOP_MS, busAlternatives, clearBad, loadBus, loadTram, markBad, onlyLine, parseBus, routeAlternatives, towardEnd, parseMins, parseTram, pickNotice, prettyDest } from './live'
 
 describe('parseMins', () => {
   it('reads minutes from the city text', () => {
@@ -95,7 +95,7 @@ describe('bus fallback to a neighbour stop', () => {
   it('asks the next stop when the first fails, and labels it', async () => {
     const { calls, get } = mk({ 1: bad, 10: ok })
     const l = await loadBus('1', undefined, get, () => 0, alts)
-    expect(calls).toEqual(['1', '10']); expect(l?.via).toEqual({ name: 'Neighbour A', d: 120 }); expect(l?.arrivals[0].line).toBe('35')
+    expect(calls).toEqual(['1', '10']); expect(l?.via).toEqual({ name: 'Neighbour A', d: 120, stop: '10' }); expect(l?.arrivals[0].line).toBe('35')
   })
   it('also tries a neighbour when the stop has no arrivals', async () => {
     const { get } = mk({ 1: empty, 10: bad, 11: ok })
@@ -191,4 +191,46 @@ describe('route view: one line at a stop', () => {
     expect(towardEnd(a, 'Oliver')).toHaveLength(2)
     expect(towardEnd(a, undefined)).toHaveLength(2)
   })
+})
+
+describe('route view: other stops of the same line', () => {
+  const ok = { destinos: [{ linea: '35', destino: 'SEMINARIO', primero: '4 minutos.', segundo: '15 minutos.' }] }
+  const bad = () => Promise.reject(new Error('HTTP 400'))
+  const order = ['261', '262', '263', '264', '265', '266'].map((post, i) => ({ post, name: 'Stop ' + post, lat: 41.64 + i * 0.001, lon: -0.89 }))
+  const alts = routeAlternatives(order, 2, [41.642, -0.89])
+  const mk = (answers: Record<string, unknown>) => {
+    const calls: string[] = []
+    const get = (url: string) => { const id = /tuzsa-(\d+)/.exec(url)![1]; calls.push(id); const a = answers[id]; return a instanceof Function ? a() : Promise.resolve(a) }
+    return { calls, get }
+  }
+  beforeEach(() => clearBad())
+
+  it('orders the stops: before first, then after, nearest along the route first', () => {
+    expect(alts.map(a => a.stop + a.side![0])).toEqual(['262b', '261b', '264a', '265a', '266a'])
+  })
+  it('own stop 400, previous stop answers: shown as a stop before', async () => {
+    const { calls, get } = mk({ 263: bad, 262: ok })
+    const l = await loadBus('263', undefined, get, () => 0, alts, '35')
+    expect(calls).toEqual(['263', '262'])
+    expect(l?.via).toMatchObject({ name: 'Stop 262', stop: '262', side: 'before' })
+    expect(l?.arrivals[0].mins).toEqual([4, 15])
+  })
+  it('own stop 400, previous stops bad, the next one answers', async () => {
+    const { calls, get } = mk({ 263: bad, 262: bad, 261: bad, 264: ok })
+    const l = await loadBus('263', undefined, get, () => 0, alts, '35')
+    expect(calls).toEqual(['263', '262', '261', '264'])
+    expect(l?.via?.side).toBe('after')
+  })
+  it('a previous stop already known as bad costs no request', async () => {
+    markBad('262', 0)
+    const { calls, get } = mk({ 263: bad, 261: ok })
+    const l = await loadBus('263', undefined, get, () => 1000, alts, '35')
+    expect(calls).toEqual(['263', '261']); expect(l?.via?.stop).toBe('261')
+  })
+  it('all bad: at most 3 extra requests, then the plain empty result', async () => {
+    const { calls, get } = mk({ 263: bad, 262: bad, 261: bad, 264: bad, 265: bad })
+    expect(await loadBus('263', undefined, get, () => 0, alts, '35')).toBeNull()
+    expect(calls).toEqual(['263', '262', '261', '264'])
+  })
+  it('no stop of the route known: no alternatives', () => { expect(routeAlternatives(order, -1, [0, 0])).toEqual([]) })
 })

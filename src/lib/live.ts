@@ -9,7 +9,7 @@ export const LIVE_TIMEOUT_MS = 8_000
 
 export interface Arrival { line: string; dest: string; mins: number[] }
 /** `via` is set when the times come from a neighbour stop because the asked stop did not answer. */
-export interface Live { arrivals: Arrival[]; notice: string | null; at: number; via?: { name: string; d: number } }
+export interface Live { arrivals: Arrival[]; notice: string | null; at: number; via?: { name: string; d: number; stop?: string; side?: 'before' | 'after' } }
 export type Get = (url: string, signal?: AbortSignal) => Promise<unknown>
 
 /** "VALDESPARTERA," -> "Valdespartera"; "PLAZA DEL PILAR" -> "Plaza del Pilar". */
@@ -98,8 +98,20 @@ export function towardEnd(arrivals: Arrival[], to?: string): Arrival[] {
   return hit.length ? hit : arrivals
 }
 
-export interface BusAlt { stop: string; name: string; d: number }
-const FALLBACK_REACH_M = 400, FALLBACK_TRIES = 2
+/** `side` is set for a stop of the same line route: 'before' = the bus passes it before the asked stop, 'after' = after it. */
+export interface BusAlt { stop: string; name: string; d: number; side?: 'before' | 'after' }
+const FALLBACK_REACH_M = 400, FALLBACK_TRIES = 2, ROUTE_TRIES = 3
+
+/**
+ * Other stops of the same line, in the chosen direction, to ask when the asked stop gives nothing (route view). `order` = the stops in route order, `idx` = the asked one.
+ * Nearest along the route first, the stops before it ahead of those after it: before 1, before 2, after 1, before 3, after 2, after 3.
+ */
+export function routeAlternatives(order: { post: string; name: string; lat: number; lon: number }[], idx: number, origin: LatLon, reach = 3): BusAlt[] {
+  if (idx < 0) return []
+  const mk = (k: number, side: 'before' | 'after'): BusAlt[] => { const s = order[k]; return s && /^\d+$/.test(s.post) && k !== idx ? [{ stop: s.post, name: s.name, d: dist(origin, [s.lat, s.lon]), side }] : [] }
+  const picks: [number, 'before' | 'after'][] = [[1, 'before'], [2, 'before'], [1, 'after'], [3, 'before'], [2, 'after'], [3, 'after']]
+  return picks.slice(0, reach * 2).flatMap(([k, side]) => mk(side === 'before' ? idx - k : idx + k, side))
+}
 
 /** The closest city stops that share a line with this one (a neighbour on the same street), nearest first; `d` is the distance from `origin` (the person). */
 export function busAlternatives(stop: string, lines: string, at: LatLon, origin: LatLon, rows: readonly (readonly [string, string, string, number, number])[], max = 4): BusAlt[] {
@@ -115,7 +127,7 @@ export function busAlternatives(stop: string, lines: string, at: LatLon, origin:
 
 /**
  * Live times for a city bus stop number ("688"). Null on any failure. Rural stops (id "r4") have no live data.
- * When the stop fails or has no arrivals, up to 2 neighbours from `alts` are asked one after the other (so at most 3 requests, and only 1 when the stop works).
+ * When the stop fails or has no arrivals, up to 2 neighbours from `alts` (3 for route stops, see routeAlternatives) are asked one after the other (so at most 3 or 4 requests, and only 1 when the stop works).
  * A stop that failed is skipped for 10 minutes. If a neighbour answers with arrivals the result carries `via`.
  */
 export async function loadBus(stop: string, signal?: AbortSignal, get: Get = defaultGet, now: () => number = Date.now, alts: BusAlt[] = [], line?: string): Promise<Live | null> {
@@ -127,12 +139,13 @@ export async function loadBus(stop: string, signal?: AbortSignal, get: Get = def
   const first = await ask(stop)
   if (first && first.arrivals.length) return first
   let n = 0
+  const tries = alts.some(a => a.side) ? ROUTE_TRIES : FALLBACK_TRIES
   for (const a of alts) {
-    if (n >= FALLBACK_TRIES || signal?.aborted) break
+    if (n >= tries || signal?.aborted) break
     if (isBad(a.stop, now())) continue
     n++
     const r = await ask(a.stop)
-    if (r && r.arrivals.length) return { ...r, via: { name: a.name, d: a.d } }
+    if (r && r.arrivals.length) return { ...r, via: { name: a.name, d: a.d, stop: a.stop, ...(a.side ? { side: a.side } : {}) } }
   }
   return first
 }

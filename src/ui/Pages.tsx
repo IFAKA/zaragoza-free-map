@@ -22,7 +22,7 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
-import { busAlternatives, loadBus, loadTram, towardEnd, type Arrival } from '../lib/live'
+import { busAlternatives, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
 import { chooseDir, outsideCentre, railGroups, shownDir, towardCentre, type DirOpt } from '../lib/direction'
 import { lsGet, lsSet } from '../lib/cache'
 import { decodePolyline } from '../lib/transit'
@@ -125,9 +125,9 @@ const tramEnds = (): { id: 'n' | 's'; at: LatLon }[] => {
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
  */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin }: {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line }: {
   kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
-  title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon
+  title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon; line?: string
 }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
@@ -150,7 +150,12 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin }: {
       </div>
       {!live ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveLoading')}</p> : (
         <>
-          {live.via && <p className="m-0 mt-1 font-semibold leading-snug" data-testid="live-via">{t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d))}</p>}
+          {live.via && (live.via.side ? (
+            <div className="m-0 mt-1 leading-snug" data-testid="live-via" data-side={live.via.side}>
+              <p className="m-0 font-semibold">{t('routeVia').replace('{n}', line ?? '').replace('{name}', live.via.name)}</p>
+              <p className={cn(sub, 'm-0')}>{t('routeNoCity')} {live.via.side === 'before' ? t('routeBefore') : t('routeAfter')}</p>
+            </div>
+          ) : <p className="m-0 mt-1 font-semibold leading-snug" data-testid="live-via">{t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d))}</p>)}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
           {hasDirs && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
             { id: 'n', label: t('dirTo').replace('{to}', north), sub: t('dirNorth') },
@@ -361,7 +366,8 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
   // live times of THIS line at this direction's stop (the one the person stands at, on the side of the street this direction uses)
   const here = view.idx >= 0 ? view.stops[view.idx] : undefined
   const post = here && /^\d+$/.test(here.post) ? here.post : undefined
-  const alts = useMemo(() => (post && here ? busAlternatives(post, view.line, [here.lat, here.lon], origin, DATA.bus.rows) : []), [post, here, view.line, origin])
+  // when this stop's own data fails, other stops of the same line in this direction are asked (before this one first), see routeAlternatives
+  const alts = useMemo(() => (post ? routeAlternatives(view.stops, view.idx, origin) : []), [post, view.stops, view.idx, origin])
   const load = useCallback((s: AbortSignal) => loadBus(post ?? '', s, undefined, undefined, alts, view.line), [post, alts, view.line])
   const toEnd = useCallback((a: Arrival[]) => towardEnd(a, view.to), [view.to])
   const title = [t('busLine').replace('{n}', view.line), view.to && t('toward').replace('{to}', view.to)].filter(Boolean).join(' · ')
@@ -390,7 +396,7 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
         })}
         {left > 0 && <li className={cn(sub, 'py-0.5 pl-[1.15rem]')}>{t('stepMore').replace('{n}', String(left))}</li>}
       </ol>
-      {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} />}
+      {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
       <div className="mt-2 flex flex-wrap gap-2">
         {view.stop && <Button variant={post ? 'secondary' : 'primary'} {...linkProps(busUrl(view.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{post ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
         {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
