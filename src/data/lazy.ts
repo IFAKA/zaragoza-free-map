@@ -1,9 +1,19 @@
 // Data files that only one service needs. They are separate chunks, fetched when that service opens (the service worker keeps them for offline use).
-import { cutClosed, type BusRoutes, type Timetable } from '../lib/transit'
+import { cutClosed, decodePolyline, spliceDetour, type BusRoutes, type Timetable } from '../lib/transit'
 import detours from './detours.json'
+import detourpaths from './detourpaths.json'
 import type { BusBad } from '../lib/busbad'
 
 export interface CercaniasTimes { updated: string; t: Record<string, Timetable> }
+
+/** The drawn route of one direction with its detour (detours.json "reroutes", paths in detourpaths.json) in place of the closed stretch; null when it has none. */
+function reroute(r: BusRoutes, line: string, dir: number, p: string[]): string[] | null {
+  const key = `${line}:${dir}`
+  const spec = (detours.reroutes as Record<string, { from: string; to: string }>)[key]
+  const path = (detourpaths.paths as Record<string, string>)[key]
+  const a = spec && r.stops[spec.from], b = spec && r.stops[spec.to]
+  return a && b && path ? spliceDetour(p, [a[1], a[2]], [b[1], b[2]], decodePolyline(path)) : null
+}
 
 let routes: Promise<BusRoutes> | null = null
 /** Bus lines: the route of each direction and its stops (see scripts/transit.mjs). Loaded once, when the Bus tab opens. */
@@ -16,7 +26,7 @@ export const loadBusRoutes = (): Promise<BusRoutes> => (routes ??= import('./bus
   const cut = (detours.lines as Record<string, unknown>)
   const way = detours.closedStops.way as [number, number][]
   // the drawing also loses the stretch along the closed street, for the lines that are detoured (its real detour path is not known)
-  const lines = Object.fromEntries(Object.entries(r.lines).map(([k, l]) => [k, { ...l, d: l.d.map(d => ({ ...d, s: d.s.filter(c => !closed.has(String(c))), p: k in cut ? cutClosed(d.p, way, detours.closedStops.radius) : d.p })) }]))
+  const lines = Object.fromEntries(Object.entries(r.lines).map(([k, l]) => [k, { ...l, d: l.d.map((d, i) => ({ ...d, s: d.s.filter(c => !closed.has(String(c))), p: reroute(r, k, i, d.p) ?? (k in cut ? cutClosed(d.p, way, detours.closedStops.radius) : d.p) })) }]))
   return { ...r, lines }
 }))
 

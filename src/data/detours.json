@@ -5,23 +5,23 @@
   "lines": {
     "35": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
+      "es": "Desviada por las obras de la avenida de Valencia. El mapa dibuja el desvío anunciado por el Ayuntamiento; puede cambiar, mira el cartel en la parada.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The map draws the detour announced by the city; it may change, check the sign at the stop."
     },
     "38": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
+      "es": "Desviada por las obras de la avenida de Valencia. El mapa dibuja el desvío anunciado por el Ayuntamiento; puede cambiar, mira el cartel en la parada.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The map draws the detour announced by the city; it may change, check the sign at the stop."
     },
     "41": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
+      "es": "Desviada por las obras de la avenida de Valencia. El mapa dibuja el desvío anunciado por el Ayuntamiento; puede cambiar, mira el cartel en la parada.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The map draws the detour announced by the city; it may change, check the sign at the stop."
     },
     "N4": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
+      "es": "Desviada por las obras de la avenida de Valencia. El mapa dibuja el desvío anunciado por el Ayuntamiento; puede cambiar, mira el cartel en la parada.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The map draws the detour announced by the city; it may change, check the sign at the stop."
     },
     "N6": {
       "until": "2026-12-31",
@@ -72,5 +72,71 @@
       ]
     ],
     "radius": 25
-  }
+  },
+  "reroutes": {
+    "35:0": {
+      "from": "698",
+      "via": [
+        "8113",
+        "985",
+        "863"
+      ],
+      "to": "325"
+    },
+    "35:1": {
+      "from": "236",
+      "via": [
+        "329",
+        "145"
+      ],
+      "to": "277"
+    },
+    "38:0": {
+      "from": "698",
+      "via": [
+        "795",
+        "436",
+        "442"
+      ],
+      "to": "3049"
+    },
+    "38:1": {
+      "from": "236",
+      "via": [
+        "329",
+        "145"
+      ],
+      "to": "277"
+    },
+    "41:0": {
+      "from": "1274",
+      "via": [
+        "795",
+        "436",
+        "851"
+      ],
+      "to": "134"
+    },
+    "41:1": {
+      "from": "239",
+      "via": [
+        "236",
+        "329",
+        "145",
+        "277"
+      ],
+      "to": "1079"
+    },
+    "N4:0": {
+      "from": "698",
+      "via": [
+        "795",
+        "436",
+        "442",
+        "851"
+      ],
+      "to": "133"
+    }
+  },
+  "rerouteSrc": "Itineraries from the city notice and Soy de Zaragoza (soydezaragoza.es/obras-desvios-reforma-avenida-valencia); waypoints are existing stops on the named streets; geometry from OSRM (OpenStreetMap)"
 }

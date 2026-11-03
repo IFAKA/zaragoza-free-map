@@ -198,3 +198,45 @@ export function cutClosed(pieces: string[], way: LatLon[], radius: number): stri
   }
   return out
 }
+
+/** Joins route pieces that share an end (the city stores a route as unordered pieces) into chains of points. */
+function chains(pieces: string[]): LatLon[][] {
+  const left = pieces.map(decodePolyline).filter(p => p.length > 1)
+  const near = (a: LatLon, b: LatLon) => Math.hypot((a[0] - b[0]) * 111_000, (a[1] - b[1]) * 83_000) < 20
+  const out: LatLon[][] = []
+  while (left.length) {
+    let c = left.shift()!
+    for (let grew = true; grew;) {
+      grew = false
+      for (let i = 0; i < left.length; i++) {
+        const p = left[i], end = c[c.length - 1], st = c[0]
+        const next = near(end, p[0]) ? [...c, ...p.slice(1)] : near(end, p[p.length - 1]) ? [...c, ...[...p].reverse().slice(1)]
+          : near(st, p[p.length - 1]) ? [...p, ...c.slice(1)] : near(st, p[0]) ? [...[...p].reverse(), ...c.slice(1)] : null
+        if (next) { c = next; left.splice(i, 1); grew = true; break }
+      }
+    }
+    out.push(c)
+  }
+  return out
+}
+
+/**
+ * Replaces the stretch of a route between the stops `from` and `to` with `detour` (the road a closed street is bypassed by).
+ * Returns the pieces with the chain that holds both stops mended into one continuous line, or null when no piece chain holds both
+ * (then the route is left alone). The direction of the chain is kept.
+ */
+export function spliceDetour(pieces: string[], from: LatLon, to: LatLon, detour: LatLon[]): string[] | null {
+  if (detour.length < 2) return null
+  const all = chains(pieces)
+  const k = all.findIndex(c => alongPath(c, from).off < 60 && alongPath(c, to).off < 60)
+  if (k < 0) return null
+  let pts = all[k]
+  const flip = alongPath(pts, from).at > alongPath(pts, to).at
+  if (flip) pts = [...pts].reverse()
+  const cum = [0]
+  for (let i = 1; i < pts.length; i++) { const [kn, ke] = mpd(pts[i][0]); cum.push(cum[i - 1] + Math.hypot((pts[i][0] - pts[i - 1][0]) * kn, (pts[i][1] - pts[i - 1][1]) * ke)) }
+  const a = alongPath(pts, from).at, b = alongPath(pts, to).at
+  let out = [...pts.filter((_, i) => cum[i] < a), ...detour, ...pts.filter((_, i) => cum[i] > b)]
+  if (flip) out = out.reverse()
+  return [...all.filter((_, i) => i !== k).map(encodePolyline), encodePolyline(out)]
+}

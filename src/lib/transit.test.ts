@@ -126,7 +126,7 @@ describe('baked transit files', () => {
   })
 })
 
-import { cutClosed as _cut } from './transit'
+import { cutClosed as _cut, spliceDetour as _splice } from './transit'
 describe('cutClosed', () => {
   const way: [number, number][] = [[41.6, -0.9], [41.6, -0.89]]
   it('cuts the part along a closed street and splits the route', () => {
@@ -137,5 +137,19 @@ describe('cutClosed', () => {
   it('leaves a route far from the closed street alone', () => {
     const route = encodePolyline([[41.7, -0.91], [41.7, -0.9]])
     expect(_cut([route], way, 25)).toEqual([route])
+  })
+})
+
+describe('spliceDetour', () => {
+  const route = [encodePolyline([[41.6, -0.92], [41.6, -0.9]]), encodePolyline([[41.6, -0.88], [41.6, -0.9]]), encodePolyline([[41.6, -0.88], [41.6, -0.86]])] // unordered, one reversed
+  it('joins the pieces and replaces the stretch between two stops with the detour', () => {
+    const out = _splice(route, [41.6, -0.91], [41.6, -0.87], [[41.6, -0.91], [41.61, -0.9], [41.61, -0.88], [41.6, -0.87]])
+    expect(out).not.toBeNull()
+    const pts = out!.flatMap(decodePolyline)
+    expect(pts.some(p => p[0] === 41.61)).toBe(true) // the detour is in
+    expect(pts.some(p => p[0] === 41.6 && p[1] === -0.9)).toBe(false) // the old stretch is out
+  })
+  it('does nothing when the stops are not on the route', () => {
+    expect(_splice(route, [41.7, -0.91], [41.7, -0.87], [[41.7, -0.91], [41.7, -0.87]])).toBeNull()
   })
 })
