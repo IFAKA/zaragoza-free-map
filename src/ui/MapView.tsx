@@ -47,6 +47,21 @@ const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Ligh
 const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'World_Light_Gray_Reference'}/MapServer/tile/{z}/{y}/{x}`
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
+/** The bus mark nearest the current stop (about every 5% of each piece of the route, not on the stop itself). Estimated, like the others. */
+function nearBus(route: RouteView): { pt: [number, number]; bearing: number } | null {
+  const cur = route.stops[route.cur]
+  if (!cur) return null
+  const here = L.latLng(cur.lat, cur.lon)
+  let best: { pt: [number, number]; bearing: number } | null = null, bd = Infinity
+  for (const path of route.paths) for (let f = 0.05; f < 1; f += 0.05) {
+    const a = pointAt(path, f)
+    if (!a) continue
+    const d = here.distanceTo(L.latLng(a.pt[0], a.pt[1]))
+    if (d > 150 && d < bd) { bd = d; best = { pt: [a.pt[0], a.pt[1]], bearing: a.bearing } }
+  }
+  return best
+}
+
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
 const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
 
@@ -168,26 +183,14 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       }
       return
     }
-    const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
-    for (const path of route.paths) {
-      L.polyline(path, { color: white, weight: 8, opacity: 0.9, interactive: false }).addTo(g)
-      L.polyline(path, { color: brand, weight: 4.5, interactive: false }).addTo(g)
-    }
-    for (const path of route.paths) {
-      for (const f of [0.2, 0.4, 0.6, 0.8]) {
-        const a = pointAt(path, f)
-        if (!a) continue
-        L.marker(a.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(a.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false }).addTo(g)
-      }
-    }
-    route.stops.forEach((s, i) => {
-      if (i === route.cur) return
-      const dot = L.circleMarker([s.lat, s.lon], { radius: 3.5, color: brand, weight: 1.5, fillColor: white, fillOpacity: 1 }).addTo(g)
-      dot.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onRouteStop?.(s.post) })
-    })
+    const bus = getComputedStyle(document.documentElement).getPropertyValue('--color-bus').trim()
     const cur = route.stops[route.cur]
-    if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
+    // only the stop and the closest bus mark (not the whole route); you are drawn by the position effect
+    const mark = nearBus(route)
+    if (cur && mark) L.polyline([[cur.lat, cur.lon], mark.pt], { color: white, weight: 6, opacity: 0.9, interactive: false }).addTo(g), L.polyline([[cur.lat, cur.lon], mark.pt], { color: bus, weight: 3, dashArray: '2 6', interactive: false }).addTo(g)
+    if (mark) L.marker(mark.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(mark.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
+    if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: bus, fillOpacity: 1, interactive: false }).addTo(g)
   }, [route, track, layer.color])
   // estimated vehicles: a marker per id, slid (not jumped) to its new place; no sliding when reduced motion is on
   const vsig = vehicles.map(v => v.id + v.icon + v.color + v.pos.join(',')).join('|') + '|' + vehBadge
@@ -234,7 +237,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   useEffect(() => {
     const m = map.current
     if (!m || !route) return
-    const pts = route.paths.flat()
+    const cs = route.stops[route.cur], mk = nearBus(route)
+    const pts: [number, number][] = [...(cs ? [[cs.lat, cs.lon] as [number, number]] : []), ...(mk ? [mk.pt as [number, number]] : []), ...(userPos ? [userPos as [number, number]] : [])]
     if (pts.length < 2) return
     const anim = !reduced()
     // fractional zoom for this one fit (whole zooms would leave a long route small): the zoom is worked out at once, so snapping can come back right after
