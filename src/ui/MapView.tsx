@@ -66,6 +66,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     c?.querySelector('.leaflet-control-zoom-out')?.setAttribute('aria-label', zoomTitles.out)
   }, [zoomTitles.in, zoomTitles.out])
 
+  useEffect(() => { el.current?.classList.toggle('rail', !!track) }, [track])
+
   const drawRings = () => {
     const m = map.current, g = rings.current
     if (!m || !g) return
@@ -97,6 +99,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     group.current = L.layerGroup().addTo(m)
     map.current = m
     m.on('moveend zoomend', drawRings)
+    const far = () => el.current?.classList.toggle('far', m.getZoom() < 15) // zoomed out: rail stops shrink so the line shows between them (see .rail.far in styles.css)
+    m.on('zoomend', far); far()
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
     return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }

@@ -9,6 +9,7 @@ const out = process.env.SHOTS || '/tmp/zgz-pw'
 let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++ }
 const b = await chromium.launch()
+const DATA_TRAM_STOPS = JSON.parse(fs.readFileSync([process.env.APP_DIR, process.cwd()].filter(Boolean).map(d => d + '/src/data/tram.json').find(f => fs.existsSync(f)), 'utf8')).rows.length
 const todo = [], late = [] // each block below is independent (own browser context): `todo` blocks run in parallel, `late` (timing measurements) alone afterwards
 // CityBikes is mocked (the real feed changes every minute): one station per bundled Bizi place, counts from its position in the list.
 // Station names are as the real feed writes them ("8-Puerta del Sol"), the stamp as the real feed writes it ("...+00:00Z").
@@ -414,7 +415,8 @@ todo.push(async () => {
   const info = await p.getByTestId('tram-info').innerText()
   ok(/T1/.test(info) && /Parque Goya/.test(info) && /Valdespartera/.test(info), `tram card: line and both ends (${info.replace(/\n/g, ' ')})`)
   ok(/tranviasdezaragoza\.es/.test(await p.getByTestId('tram-times').getAttribute('href') || ''), 'tram card: one link to the tram company times')
-  ok(await markers(p) >= 10, 'tram: the stops are drawn')
+  ok(await markers(p) === DATA_TRAM_STOPS, `tram: all ${DATA_TRAM_STOPS} stops are drawn`)
+  ok(await p.evaluate(() => document.querySelector('[data-testid=map]').classList.contains('rail')), 'tram: rail markers shrink when zoomed out (rail class on the map)')
   ok(await p.getByTestId('nearest').innerText().then(x => !/en vivo/i.test(x) || /\d+ min|Ahora/.test(x)), 'tram card claims live only when it shows minutes')
   await p.screenshot({ path: out + '/tram-es.png' })
   await ctx.close()

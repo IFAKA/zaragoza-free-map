@@ -126,6 +126,7 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .mk.off{background:var(--color-surface);color:var(--color-ink-soft);border:1.5px dashed var(--color-ink-soft);box-shadow:none;opacity:.8}
 /* Map markers and zoom buttons are Leaflet DOM nodes, not React: the motion library cannot wrap them, so their press scale stays in CSS (same 0.97 as PRESS_SCALE, same duration token). */
 .mk:active{transform:scale(.97)}
+.rail.far .mk:not(.sel){transform:scale(.55)}
 .mk.sel{transform:scale(1.67);border-width:1.5px;box-shadow:0 2px 8px rgb(0 0 0 / .45)}
 .mk.sel:active{transform:scale(1.62)}
 /* the "you picked this place" moment: the marker swells once and a soft ring fades out (user picks only; MapView adds .pulse) */
