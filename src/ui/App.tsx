@@ -287,7 +287,11 @@ export function App() {
     if (way) {
       lsSet('hinted', '1')
       const title = way === 'prompt' ? t.installHint : way === 'ios' ? t.installIos : way === 'browser' ? t.installBrowser : t.installMenu
-      setTimeout(() => toasts.add({ title, timeout: way === 'prompt' ? 9000 : 12000, data: { close: way === 'prompt' ? t.installClose : t.installClose, action: way === 'prompt' ? t.installBtn : undefined, onAction: () => void promptInstall() } }), 1200)
+      const show = () => toasts.add({ title, timeout: way === 'prompt' ? 9000 : 12000, data: { close: t.installClose, action: way === 'prompt' ? t.installBtn : undefined, onAction: () => void promptInstall() } })
+      // Walk opens Google Maps (another app or tab), so wait until the person is back in this app
+      const back = () => { if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', back); setTimeout(show, 600) } }
+      document.addEventListener('visibilitychange', back)
+      setTimeout(() => { if (document.visibilityState === 'hidden') return; back() }, 4000)
     }
   }
   const turnTo = (p: Page) => { go(p); raise() }
