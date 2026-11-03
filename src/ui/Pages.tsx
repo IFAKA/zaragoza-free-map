@@ -8,6 +8,7 @@ import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
 import detours from '../data/detours.json'
+import routecheck from '../data/routecheck.json'
 import { chipSplit, nextDepartures, type BusRoutes } from '../lib/transit'
 import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
@@ -405,7 +406,7 @@ function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes
 export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; origin: LatLon; onBack: () => void; onDir: () => void }) {
   const { t, lang } = useT()
   const det = (detours.lines as Record<string, { until: string; es: string; en: string }>)[view.line]
-  const detour = det && det.until >= new Date().toISOString().slice(0, 10) ? det[lang] : undefined
+  const detour = det && det.until >= new Date().toISOString().slice(0, 10) ? det[lang] : (routecheck.lines as Record<string, number>)[view.line] ? t('routeMaybe') : undefined
   // live times of THIS line at this direction's stop (the one the person stands at, on the side of the street this direction uses)
   const here = view.idx >= 0 ? view.stops[view.idx] : undefined
   const post = here && /^\d+$/.test(here.post) ? here.post : undefined

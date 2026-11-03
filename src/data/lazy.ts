@@ -1,5 +1,6 @@
 // Data files that only one service needs. They are separate chunks, fetched when that service opens (the service worker keeps them for offline use).
-import type { BusRoutes, Timetable } from '../lib/transit'
+import { cutClosed, type BusRoutes, type Timetable } from '../lib/transit'
+import detours from './detours.json'
 import type { BusBad } from '../lib/busbad'
 
 export interface CercaniasTimes { updated: string; t: Record<string, Timetable> }
@@ -12,7 +13,10 @@ export const loadBusRoutes = (): Promise<BusRoutes> => (routes ??= import('./bus
   const closed = closedBusStops()
   if (!closed.size) return r
   // closed stops leave every direction's stop list (the route line stays; the real detour path is not known)
-  const lines = Object.fromEntries(Object.entries(r.lines).map(([k, l]) => [k, { ...l, d: l.d.map(d => ({ ...d, s: d.s.filter(c => !closed.has(String(c))) })) }]))
+  const cut = (detours.lines as Record<string, unknown>)
+  const way = detours.closedStops.way as [number, number][]
+  // the drawing also loses the stretch along the closed street, for the lines that are detoured (its real detour path is not known)
+  const lines = Object.fromEntries(Object.entries(r.lines).map(([k, l]) => [k, { ...l, d: l.d.map(d => ({ ...d, s: d.s.filter(c => !closed.has(String(c))), p: k in cut ? cutClosed(d.p, way, detours.closedStops.radius) : d.p })) }]))
   return { ...r, lines }
 }))
 

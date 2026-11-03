@@ -173,3 +173,28 @@ export function nextDepartures(tt: Timetable, now: { day: number; min: number },
   if (today < n) push(tt[dayType((now.day + 1) % 7)], 1440, true)
   return out.sort((a, b) => a.inMin - b.inMin).slice(0, n)
 }
+
+/**
+ * A route piece (encoded polyline) with the parts that run along a closed street cut out: the road is shut, so the old drawing would be wrong.
+ * Returns the remaining pieces (a cut splits one piece in two); the gap is the detour, whose real path is not known.
+ */
+export function cutClosed(pieces: string[], way: LatLon[], radius: number): string[] {
+  const out: string[] = []
+  for (const enc of pieces) {
+    const pts = decodePolyline(enc)
+    let cur: LatLon[] = []
+    const flush = () => { if (cur.length > 1) out.push(encodePolyline(cur)); cur = [] }
+    const closed = (q: LatLon) => alongPath(way, q).off < radius
+    for (let i = 0; i < pts.length; i++) {
+      if (i > 0) { // test along each segment too, a long straight segment can run inside the closed street with both ends outside it
+        const a = pts[i - 1], b = pts[i], n = Math.ceil(Math.hypot((b[0] - a[0]) * 111_000, (b[1] - a[1]) * 83_000) / 15)
+        let cutMid = false
+        for (let k = 1; k < n; k++) if (closed([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n])) { cutMid = true; break }
+        if (cutMid) { flush(); if (!closed(b)) cur.push(b); continue }
+      }
+      if (closed(pts[i])) flush(); else cur.push(pts[i])
+    }
+    flush()
+  }
+  return out
+}

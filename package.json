@@ -11,6 +11,7 @@
     "data": "node scripts/build-data.mjs",
     "data:city": "node scripts/build-data.mjs --no-osm",
     "data:transit": "node scripts/build-data.mjs --transit-only",
+    "data:routecheck": "node --experimental-strip-types scripts/route-check.mjs",
     "data:busprobe": "nice -n 15 node scripts/probe-bus.mjs"
   },
   "dependencies": {

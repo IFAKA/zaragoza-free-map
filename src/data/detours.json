@@ -5,28 +5,28 @@
   "lines": {
     "35": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route."
+      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
     },
     "38": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route."
+      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
     },
     "41": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route."
+      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
     },
     "N4": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route."
+      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
     },
     "N6": {
       "until": "2026-12-31",
-      "es": "Desviada por las obras de la avenida de Valencia. El dibujo puede no ser el recorrido actual.",
-      "en": "Detoured because of roadworks on Avenida de Valencia. The drawing may not be the current route."
+      "es": "Desviada por las obras de la avenida de Valencia. El tramo cortado no se dibuja; el desvío real no se muestra.",
+      "en": "Detoured because of roadworks on Avenida de Valencia. The closed stretch is not drawn; the real detour is not shown."
     }
   },
   "closedStops": {
@@ -37,6 +37,29 @@
       "263",
       "264",
       "265"
-    ]
+    ],
+    "way": [
+      [
+        41.6451,
+        -0.8996
+      ],
+      [
+        41.6454,
+        -0.8991
+      ],
+      [
+        41.6462,
+        -0.8971
+      ],
+      [
+        41.6475,
+        -0.8944
+      ],
+      [
+        41.6478,
+        -0.8938
+      ]
+    ],
+    "radius": 25
   }
 }

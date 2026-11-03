@@ -125,3 +125,17 @@ describe('baked transit files', () => {
     expect(cercanias.valid[0] <= cercanias.valid[1]).toBe(true)
   })
 })
+
+import { cutClosed as _cut } from './transit'
+describe('cutClosed', () => {
+  const way: [number, number][] = [[41.6, -0.9], [41.6, -0.89]]
+  it('cuts the part along a closed street and splits the route', () => {
+    const route = encodePolyline([[41.59, -0.91], [41.6, -0.905], [41.6, -0.895], [41.61, -0.88], [41.62, -0.87]])
+    const out = _cut([route], way, 25)
+    expect(out.length).toBe(2)
+  })
+  it('leaves a route far from the closed street alone', () => {
+    const route = encodePolyline([[41.7, -0.91], [41.7, -0.9]])
+    expect(_cut([route], way, 25)).toEqual([route])
+  })
+})
