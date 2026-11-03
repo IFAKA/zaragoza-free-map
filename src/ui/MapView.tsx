@@ -48,7 +48,7 @@ const LABELS = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Reference' : 'Worl
 
 /** Plain Leaflet, driven from React effects. Markers live in one layer group (no React element per marker). */
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
-const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--color-on-brand)" stroke="var(--c, currentColor)" stroke-width="1.6" stroke-linejoin="round"/></svg></b>`
+const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
 
 export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
@@ -198,7 +198,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
       const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${vehBadge ? `<i>${vehBadge}</i>` : ''}</div>`
-      const icon = L.divIcon({ className: 'mkw', html, iconSize: [20, 20], iconAnchor: [10, 10] })
+      const icon = L.divIcon({ className: 'mkw', html, iconSize: [24, 24], iconAnchor: [12, 12] })
       const cur = vehs.current.get(v.id)
       if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g); vehs.current.set(v.id, { mk, raf: 0 }); continue }
       cur.mk.setIcon(icon)
