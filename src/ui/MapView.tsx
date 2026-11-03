@@ -183,7 +183,6 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       }
       return
     }
-    const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
     const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
     for (const path of route.paths) {
