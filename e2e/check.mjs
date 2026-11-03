@@ -139,6 +139,7 @@ todo.push(async () => {
   ok(await p.getByText('Idioma').count() > 0, 'Spanish applied')
   await p.getByTestId('back').last().click(); await settle(p)
   ok(await p.getByTestId('row-about').count() === 1, 'language back to Settings')
+  ok(await p.getByTestId('row-support').count() === 1, 'Settings has the Ko-fi support row')
   await p.getByTestId('row-about').click(); await settle(p)
   ok(await p.getByText(/Datos actualizados/).count() > 0, 'about shows data refreshed date')
   ok(await p.getByText(/sin relación con el Ayuntamiento/).count() > 0, 'disclaimer')

@@ -1,7 +1,7 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, DownloadSimple, PersonSimpleWalk, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
+import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, DownloadSimple, PersonSimpleWalk, Translate, Info as InfoIcon, Heart, Thermometer } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
@@ -628,6 +628,7 @@ export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClos
         <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
  {!installEnv().standalone && <PageRow testId="row-install" icon={<DownloadSimple size="1.4em" aria-hidden />} title={t('installRow')} onClick={() => go('install')} />}
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
+        <PageRow testId="row-support" icon={<Heart size="1.4em" aria-hidden />} title={t('support')} description={t('supportHint')} onClick={() => window.open('https://ko-fi.com/zfaka', '_blank', 'noopener')} />
       </Scroll>
     </>
   )

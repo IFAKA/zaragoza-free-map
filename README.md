@@ -88,3 +88,5 @@ One scrolling row of service chips (see `src/layers/goals.ts`): toilets, water, 
 
 ## Layout
 `src/data/*` bundled data, `src/layers/*` layer building, `src/lib/*` geo, utm, hours, cityHours, i18n, rank, bizi (live counts), duty (pharmacies), install (in-app browser check), `src/ui/*` React components (`PagedDrawer.tsx` = pages in one drawer), `scripts/build-data.mjs` data builder.
+
+Support: [ko-fi.com/zfaka](https://ko-fi.com/zfaka)
