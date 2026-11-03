@@ -75,6 +75,14 @@ export const nextTwo = (mins: number[]): number[] => mins.filter(n => n > 0).sor
 /** A vehicle marker for the map. `id` is stable, so a marker slides to its new place at the next refresh. */
 export interface Vehicle {
   id: string; pos: LatLon; color: string; icon: 'tram' | 'train'
+  /** Compass bearing the vehicle travels (degrees, 0 = north): towards its stop. */
+  bearing: number
   /** The stop they are heading for, and a key that changes with the stop or direction: the map frames both when the key changes and a vehicle is out of view. */
   stop: LatLon; fit: string
+}
+
+/** Compass bearing (degrees, 0 = north) of the straight line from `a` to `b`. */
+export function bearingTo(a: LatLon, b: LatLon): number {
+  const [kn, ke] = mpd(a[0])
+  return (Math.atan2((b[1] - a[1]) * ke, (b[0] - a[0]) * kn) * 180 / Math.PI + 360) % 360
 }

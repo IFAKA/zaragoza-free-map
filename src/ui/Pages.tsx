@@ -30,7 +30,7 @@ import { DirPicker } from './DirPicker'
 import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
-import { nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
+import { bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
 
@@ -127,7 +127,7 @@ const tramEnds = (): { id: 'n' | 's'; at: LatLon }[] => {
 let tramPath: LatLon[] | null = null, railPath: LatLon[] | null = null
 const tramLine = () => (tramPath ??= stitch(DATA.tram.line.map(decodePolyline)))
 const railLine = () => (railPath ??= decodePolyline(DATA.cercanias.line[0]))
-const vehicleOf = (pos: LatLon, i: number, icon: Vehicle['icon'], stop: LatLon, fit: string): Vehicle => ({ id: 'veh' + i, pos, icon, stop, fit, color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' })
+const vehicleOf = (pos: LatLon, i: number, icon: Vehicle['icon'], stop: LatLon, fit: string): Vehicle => ({ id: 'veh' + i, pos, icon, stop, fit, bearing: bearingTo(pos, stop), color: icon === 'tram' ? 'var(--color-tram)' : 'var(--color-train)' })
 /** One short line under the times: the map markers are estimates. */
 function VehNote({ show }: { show: boolean }) {
   const { t } = useT()
