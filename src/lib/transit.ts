@@ -154,14 +154,14 @@ const hhmm = (m: number) => { const x = ((m % 1440) + 1440) % 1440; return Strin
 
 /**
  * The next `n` trains from a baked timetable. `now.day` is 0 = Monday, `now.min` minutes since midnight (Madrid).
- * Looks at today's plan, at yesterday's trains that run after midnight (24:10 is 00:10 the next morning), and, when today has fewer than `n` left, at tomorrow's plan.
+ * `accept` keeps only some destinations (one direction). Looks at today's plan, at yesterday's trains that run after midnight (24:10 is 00:10 the next morning), and, when today has fewer than `n` left, at tomorrow's plan.
  */
-export function nextDepartures(tt: Timetable, now: { day: number; min: number }, n = 3): Departure[] {
+export function nextDepartures(tt: Timetable, now: { day: number; min: number }, n = 3, accept?: (dest: number) => boolean): Departure[] {
   const out: Departure[] = []
   const push = (list: number[], shift: number, tomorrow: boolean) => {
     for (let i = 0; i < list.length; i += 2) {
       const abs = list[i] + shift // minutes counted from midnight today
-      if (abs >= now.min && abs < now.min + 1440) out.push({ inMin: abs - now.min, at: hhmm(abs), dest: list[i + 1], tomorrow })
+      if (abs >= now.min && abs < now.min + 1440 && (!accept || accept(list[i + 1]))) out.push({ inMin: abs - now.min, at: hhmm(abs), dest: list[i + 1], tomorrow })
     }
   }
   const late: number[] = [] // yesterday's trains that run after midnight

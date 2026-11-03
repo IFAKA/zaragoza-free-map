@@ -23,6 +23,10 @@ import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, 
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
 import { busAlternatives, loadBus, loadTram, towardEnd, type Arrival } from '../lib/live'
+import { chooseDir, outsideCentre, railGroups, shownDir, towardCentre, type DirOpt } from '../lib/direction'
+import { lsGet, lsSet } from '../lib/cache'
+import { decodePolyline } from '../lib/transit'
+import { DirPicker } from './DirPicker'
 import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
@@ -94,12 +98,49 @@ function ShelterNote() {
   )
 }
 
-/** Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works. */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick }: { kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string; title?: string; pick?: (a: Arrival[]) => Arrival[] }) {
+/** The last direction chosen at a stop, kept on this device only. */
+const lastDir = (key: string): string | null => lsGet('dir:' + key)
+
+/**
+ * Which of two directions is on show. The person's tap wins; before any tap the default is worked out once, when the data first arrives
+ * (remembered choice, else soonest, else the way to the centre) and then stays, so the chips never jump under a thumb when the times refresh.
+ */
+function useDirChoice(memo: string, opts: DirOpt[], centre: string | null) {
+  const [chosen, setChosen] = useState<string | null>(null)
+  const ready = opts.some(o => o.soon !== null)
+  const def = opts.length ? chooseDir(opts, lastDir(memo), centre) : ''
+  useEffect(() => { if (chosen === null && ready) setChosen(def) }, [chosen, ready, def])
+  const pickDir = (id: string) => { setChosen(id); lsSet('dir:' + memo, id) }
+  return { dir: opts.length ? shownDir(opts, chosen ?? def) : '', pickDir }
+}
+
+/** The tram's two ends as points, north first: the baked stops with the highest and the lowest latitude (the line runs north-south). */
+const tramEnds = (): { id: 'n' | 's'; at: LatLon }[] => {
+  const rows = DATA.tram.rows
+  const n = rows.reduce((a, r) => (r[2] > a[2] ? r : a)), s = rows.reduce((a, r) => (r[2] < a[2] ? r : a))
+  return [{ id: 'n', at: [n[2], n[3]] }, { id: 's', at: [s[2], s[3]] }]
+}
+
+/**
+ * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
+ * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
+ */
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin }: {
+  kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
+  title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon
+}) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
+  const all = live ? (pick ? pick(live.arrivals) : live.arrivals) : []
+  // tram: split the rows by direction (from the destination's place on the line)
+  const tram = kind === 'tram' && stopName ? all.map(r => ({ r, dir: tramDir(r.dest, stopName, DATA.tram.rows) })) : null
+  const hasDirs = !!tram && tram.some(x => x.dir)
+  const opts: DirOpt[] = hasDirs ? (['n', 's'] as const).map(id => ({ id, soon: tram.filter(x => x.dir === id).reduce<number | null>((m0, x) => (m0 === null ? x.r.mins[0] : Math.min(m0, x.r.mins[0])), null) })) : []
+  const centre = hasDirs && at && outsideCentre(origin ?? at) ? towardCentre(at, tramEnds()) : null
+  const { dir, pickDir } = useDirChoice('tram:' + stopKey, opts, centre)
   if (state === 'failed' && !live) return null
-  const rows = (live ? (pick ? pick(live.arrivals) : live.arrivals) : []).slice(0, 4)
+  const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, hasDirs ? 3 : 4)
+  const [north, south] = DATA.tram.ends
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
   return (
     <div className="mt-3 min-h-[5.5rem]" data-testid="live-times" data-state={state}>
@@ -111,15 +152,19 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick }: { kind: 'bus'
         <>
           {live.via && <p className="m-0 mt-1 font-semibold leading-snug" data-testid="live-via">{t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d))}</p>}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
+          {hasDirs && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
+            { id: 'n', label: t('dirTo').replace('{to}', north), sub: t('dirNorth') },
+            { id: 's', label: t('dirTo').replace('{to}', south), sub: t('dirSouth') },
+          ]} />}
           {rows.length === 0 ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
-            <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
-              {rows.map(r => { const dir = kind === 'tram' && stopName ? tramDir(r.dest, stopName, DATA.tram.rows) : null; return (
+            <ul className={cn('m-0 flex list-none flex-col gap-1 p-0', hasDirs ? 'mt-2' : 'mt-1')}>
+              {rows.map(r => (
                 <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row">
                   <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
-                  <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span>{dir && <span className={cn(sub, 'block text-[0.8em]')} data-testid="live-dir" data-dir={dir}>{t(dir === 'n' ? 'tramNorth' : 'tramSouth')}</span>}</span>
+                  <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span></span>
                   <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>
                 </li>
-              )})}
+              ))}
             </ul>
           )}
           <div className={cn(sub, 'mt-1 text-[0.8em]')}>{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
@@ -139,7 +184,7 @@ function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon
   const walk = <Button variant={item.stop ? 'secondary' : 'primary'} {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
   return (
     <>
-      {live && <LiveTimes kind="bus" stopKey={stop} load={load} />}
+      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} />}
       <div className="mt-3 flex flex-wrap gap-2">
         {stop && <Button variant={live ? 'secondary' : 'primary'} {...linkProps(busUrl(stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{live ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
         {walk}
@@ -150,7 +195,7 @@ function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon
 }
 
 /** Tram stop: the line and its two ends, live next trams (both platforms), then the link to the tram company's times page, then Walk. */
-function TramActions({ item, onWalk }: { item: RankedItem; onWalk: () => void }) {
+function TramActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon; onWalk: () => void }) {
   const { t } = useT()
   const [a, b] = DATA.tram.ends
   const ids = item.tramIds ?? []
@@ -159,7 +204,7 @@ function TramActions({ item, onWalk }: { item: RankedItem; onWalk: () => void })
   return (
     <>
       <p className="m-0 mt-2 text-[0.93em] leading-snug" data-testid="tram-info"><span className="mr-1.5 rounded-[0.3em] bg-[var(--color-tram)] px-1.5 py-0.5 font-bold text-on-brand">T1</span>{t('tramDirs').replace('{a}', a).replace('{b}', b)}</p>
-      {key && <LiveTimes kind="tram" stopKey={key} load={load} stopName={item.name} />}
+      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} />}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant={key ? 'secondary' : 'primary'} {...linkProps(TRAM_URL)} onClick={() => track('times', 'tram')} data-testid="tram-times">{t('tramTimes')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
         <Button variant="secondary" {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
@@ -170,20 +215,38 @@ function TramActions({ item, onWalk }: { item: RankedItem; onWalk: () => void })
 }
 
 /** Cercanías station: the next 3 trains from the baked timetable, plainly labelled as planned (not real time), with the date of the data. Renfe link-out for delays. */
-function TrainActions({ item, times, onWalk }: { item: RankedItem; times: CercaniasTimes | null; onWalk: () => void }) {
+function TrainActions({ item, origin, times, onWalk }: { item: RankedItem; origin: LatLon; times: CercaniasTimes | null; onWalk: () => void }) {
   const { t } = useT()
   const [tick, setTick] = useState(0)
   useEffect(() => { const i = setInterval(() => setTick(n => n + 1), 30_000); return () => clearInterval(i) }, [])
   const tt = times && item.code ? times.t[item.code] : undefined
   void tick
-  const next = tt ? nextDepartures(tt, nowMadrid(), 3) : []
+  const here: LatLon = [item.lat, item.lon]
+  // the two travel directions at this station, from the destinations its timetable really has
+  const groups = useMemo(() => {
+    if (!tt) return []
+    const used = new Set<number>()
+    for (const day of Object.values(tt)) for (let i = 1; i < day.length; i += 2) used.add(day[i])
+    const dests = [...used].flatMap(i => { const r = DATA.cercanias.rows.find(x => x[1] === DATA.cercanias.dests[i]); return r ? [{ i, at: [r[2], r[3]] as LatLon }] : [] })
+    return railGroups(decodePolyline(DATA.cercanias.line[0]), here, dests)
+  }, [tt, item.lat, item.lon]) // eslint-disable-line react-hooks/exhaustive-deps
+  const now = nowMadrid()
+  const per = groups.map(g => { const deps = tt ? nextDepartures(tt, now, 3, d => g.dests.includes(d)) : []; return { g, deps, soon: deps.length && !deps[0].tomorrow ? deps[0].inMin : null } })
+  const two = per.length === 2
+  const opts: DirOpt[] = per.map(x => ({ id: x.g.id, soon: x.soon }))
+  const ends = per.flatMap(x => { const r = DATA.cercanias.rows.find(y => y[1] === DATA.cercanias.dests[x.g.far]); return r ? [{ id: x.g.id, at: [r[2], r[3]] as LatLon }] : [] })
+  const centre = two && outsideCentre(origin) ? towardCentre(here, ends) : null
+  const { dir, pickDir } = useDirChoice('train:' + (item.code ?? ''), two ? opts : [], centre)
+  const empty = per.every(x => x.soon === null) ? new Set<string>() : new Set(per.filter(x => x.soon === null).map(x => x.g.id)) // nothing left on either side: no chip is greyed
+  const next = two ? per.find(x => x.g.id === dir)?.deps ?? [] : tt ? nextDepartures(tt, now, 3) : []
   const [y, mo, d] = DATA.cercanias.updated?.split('-') ?? []
   return (
     <>
       <div className="mt-2" data-testid="train-next">
         <div className={overline}>{t('trainNext')}</div>
+        {two && <DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} />}
         {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
-          <ul className="m-0 flex list-none flex-col p-0">
+          <ul className={cn('m-0 flex list-none flex-col p-0', two ? 'mt-2' : 'mt-1')}>
             {next.map((n, i) => (
               <li key={i} className="flex items-baseline gap-2 leading-snug" data-testid="train-row">
                 <span className="font-bold tabular-nums">{n.at}</span>
@@ -355,7 +418,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
           <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>

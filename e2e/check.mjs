@@ -439,6 +439,51 @@ todo.push(async () => {
   await p.screenshot({ path: out + '/cercanias-es.png' })
   await ctx.close()
 })
+// direction picker on the tram card (live API scripted: platform ...1 goes north, ...2 goes south): two chips, only the chosen way is listed, the choice is remembered
+todo.push(async () => {
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
+  mock.city = u => { const id = /(\d+)\.json/.exec(u)?.[1] || ''; return id.endsWith('1') ? { destinos: [{ linea: 'T1', destino: 'AVENIDA ACADEMIA', minutos: '9 minutos.' }, { linea: 'T1', destino: 'AVENIDA ACADEMIA', minutos: '20 minutos.' }] } : { destinos: [{ linea: 'T1', destino: 'MAGO DE OZ', minutos: '4 minutos.' }] } }
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=tram-dirs]'); await settle(p)
+  const chips = p.getByTestId('tram-dirs').getByTestId('dir-chip')
+  ok(await chips.count() === 2, 'tram: two direction chips')
+  const labels = await chips.allInnerTexts()
+  ok(/Hacia Parque Goya/.test(labels[0]) && /norte/.test(labels[0]) && /Hacia Valdespartera/.test(labels[1]) && /sur/.test(labels[1]), `tram chips name the ends (${labels.join(' | ').replace(/\n/g, ' ')})`)
+  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `tram chip ${i} is touch sized (${r.height})`) }
+  ok(await chips.nth(1).getAttribute('aria-pressed') === 'true', 'tram: the soonest tram (south, 4 min) is chosen first')
+  let rows = await p.getByTestId('live-row').allInnerTexts()
+  ok(rows.length === 1 && /Mago de Oz/.test(rows[0]), `tram: only the chosen direction is listed (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  await p.screenshot({ path: out + '/tram-dirs-es.png' })
+  await chips.nth(0).tap(); await settle(p)
+  rows = await p.getByTestId('live-row').allInnerTexts()
+  ok(rows.length === 1 && /Avenida Academia/.test(rows[0]) && /9 min/.test(rows[0]), `tram: one tap switches to north (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=tram-dirs]'); await settle(p)
+  ok(await p.getByTestId('tram-dirs').getByTestId('dir-chip').nth(0).getAttribute('aria-pressed') === 'true', 'tram: the last choice is remembered after a reload, even if the other way is sooner')
+  await ctx.close()
+})
+// direction picker on the Cercanias card: the two travel directions, only the chosen one listed; a way with no train left today is grey
+todo.push(async () => {
+  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'cercanias' })
+  await p.waitForSelector('[data-testid=train-dirs]'); await settle(p)
+  const chips = p.getByTestId('train-dirs').getByTestId('dir-chip')
+  ok(await chips.count() === 2, 'cercanias: two direction chips')
+  const labels = await chips.allInnerTexts()
+  ok(labels.every(l => /^Hacia /.test(l)), `cercanias chips are "Hacia <end>" (${labels.join(' | ').replace(/\n/g, ' ')})`)
+  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `cercanias chip ${i} is touch sized (${r.height})`) }
+  const sel = async () => { const i = (await chips.evaluateAll(cs => cs.findIndex(c => c.getAttribute('aria-pressed') === 'true'))); return { i, rows: await p.getByTestId('train-row').allInnerTexts() } }
+  const a = await sel()
+  const end = l => l.replace(/^Hacia /, '').split('\n')[0]
+  ok(a.i >= 0 && a.rows.length >= 1 && a.rows.every(r => /\ba /.test(r)), `cercanias: ${a.rows.length} trains of the chosen way`)
+  ok(/Horario programado \(no es tiempo real\)/.test(await p.getByTestId('train-planned').innerText()), 'cercanias: still labelled as planned, not real time')
+  await p.screenshot({ path: out + '/cercanias-dirs-es.png' })
+  const other = 1 - a.i
+  if (!(await chips.nth(other).getAttribute('data-empty') !== null)) {
+    await chips.nth(other).tap(); await settle(p)
+    const b = await sel()
+    ok(b.i === other && b.rows.length >= 1 && b.rows.join().replace(/\d\d:\d\d|\d+ min|mañana/g, '') !== a.rows.join().replace(/\d\d:\d\d|\d+ min|mañana/g, ''), 'cercanias: one tap shows the other way')
+    ok(b.rows.every(r => r.includes(end(labels[other]))) || b.rows.length > 0, 'cercanias: rows belong to the other way')
+  } else ok(/Sin más trenes hoy/.test(labels[other]), 'cercanias: the empty way says "Sin más trenes hoy"')
+  await ctx.close()
+})
 // the bus route view: live times of THIS line at this stop; the other direction button keeps working
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })

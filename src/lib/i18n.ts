@@ -39,7 +39,7 @@ const en = {
   tramLine: 'Line T1', tramDirs: 'Trams both ways: {a} and {b}', tramTimes: 'Tram times', tramHint: 'Opens the tram company page with all times.',
   trainNext: 'Next trains', trainPlanned: 'Planned times (not real time)', trainUpdated: 'Timetable of {date}', trainTo: 'to {to}', trainIn: 'in {n} min', trainTomorrow: 'tomorrow', trainNone: 'No trains in the timetable.', trainLoading: 'Loading the timetable', trainTimes: 'Renfe times', trainHint: 'Opens the Renfe page for live delays.',
   creditsTram: 'Tram stops and line: Ayuntamiento de Zaragoza open data (Movilidad). Times: tram company page, opened in your browser', creditsTrain: 'Cercanías timetable: Renfe Open Data (data.renfe.com), licence CC BY 4.0. Planned times, not real time',
-  liveHere: 'This stop',
+  dirsLabel: 'Direction', dirTo: 'To {to}', dirNorth: 'north', dirSouth: 'south', dirNoMore: 'No more trains today', liveHere: 'This stop',
   busLine: 'Line {n}', toward: 'toward {to}', routeOf: 'Route', lineBack: 'Back to the nearest stop', otherDir: 'Other direction', stepHere: 'This stop', stepMore: '+{n} more stops', lineChip: 'Show the route of line {n}', lineMore: '+{n}', lineLess: 'Show fewer', stepsLabel: 'Next stops',
 }
 export type Key = keyof typeof en
@@ -81,7 +81,7 @@ const es: Record<Key, string> = {
   tramLine: 'Línea T1', tramDirs: 'Tranvías en los dos sentidos: {a} y {b}', tramTimes: 'Horarios del tranvía', tramHint: 'Abre la página del tranvía con todos los horarios.',
   trainNext: 'Próximos trenes', trainPlanned: 'Horario programado (no es tiempo real)', trainUpdated: 'Horario del {date}', trainTo: 'a {to}', trainIn: 'en {n} min', trainTomorrow: 'mañana', trainNone: 'No hay trenes en el horario.', trainLoading: 'Cargando el horario', trainTimes: 'Horarios de Renfe', trainHint: 'Abre la página de Renfe, con los retrasos.',
   creditsTram: 'Paradas y línea del tranvía: datos abiertos del Ayuntamiento de Zaragoza (Movilidad). Horarios: página del tranvía, se abre en tu navegador', creditsTrain: 'Horario de Cercanías: Renfe Open Data (data.renfe.com), licencia CC BY 4.0. Horas previstas, no en tiempo real',
-  liveHere: 'Esta parada',
+  dirsLabel: 'Sentido', dirTo: 'Hacia {to}', dirNorth: 'norte', dirSouth: 'sur', dirNoMore: 'Sin más trenes hoy', liveHere: 'Esta parada',
   busLine: 'Línea {n}', toward: 'hacia {to}', routeOf: 'Recorrido', lineBack: 'Volver a la parada más cercana', otherDir: 'Sentido contrario', stepHere: 'Esta parada', stepMore: '+{n} paradas más', lineChip: 'Ver el recorrido de la línea {n}', lineMore: '+{n}', lineLess: 'Ver menos', stepsLabel: 'Próximas paradas',
 }
 export const DICT: Record<Lang, Record<Key, string>> = { en, es }
