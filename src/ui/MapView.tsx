@@ -75,6 +75,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const sig = useRef('')
   const me = useRef<L.Marker | null>(null)
   const vehGroup = useRef<L.LayerGroup | null>(null)
+  const vehLine = useRef<L.Polyline | null>(null)
   const vehs = useRef(new Map<string, { mk: L.Marker; raf: number }>())
   const routeGroup = useRef<L.LayerGroup | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
@@ -184,6 +185,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       }
       return
     }
+    const busCol = getComputedStyle(document.documentElement).getPropertyValue('--color-bus').trim()
     const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
     for (const path of route.paths) {
@@ -202,7 +204,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       const dot = L.circleMarker([s.lat, s.lon], { radius: 3.5, color: brand, weight: 1.5, fillColor: white, fillOpacity: 1 }).addTo(g)
       dot.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onRouteStop?.(s.post) })
     })
-    const near = nearBus(route)
+    const near = nearBus(route), stopAt = route.stops[route.cur]
+    if (near && stopAt) L.polyline([[stopAt.lat, stopAt.lon], near.pt], { color: busCol, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(g)
     if (near) L.marker(near.pt, { icon: L.divIcon({ className: 'mkw', html: `<div class="vbus">${iconHtml('bus')}${dirHtml(near.bearing)}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g)
     const cur = route.stops[route.cur]
     if (cur) L.circleMarker([cur.lat, cur.lon], { radius: 9, color: white, weight: 3, fillColor: brand, fillOpacity: 1, interactive: false }).addTo(g)
@@ -213,6 +216,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const g = vehGroup.current
     if (!g) return
     const keep = new Set(vehicles.map(v => v.id))
+    vehLine.current?.remove(); vehLine.current = null
+    if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false, pane: 'vehPane' }).addTo(g)
     vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
       const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${(v.start ? vehStart : vehBadge) ? `<i>${v.start ? vehStart : vehBadge}</i>` : ''}</div>`
@@ -268,7 +273,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const m = map.current
     if (!m) return
     me.current?.remove(); me.current = null
-    if (userPos) me.current = L.marker(userPos, { icon: L.divIcon({ className: 'mkw', html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 500 }).addTo(m)
+    if (userPos) me.current = L.marker(userPos, { icon: L.divIcon({ className: 'mkw', html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 3000 }).addTo(m)
   }, [userPos])
 
   // fly requests: interruptible (a new request retargets), no movement when reduced motion is on
