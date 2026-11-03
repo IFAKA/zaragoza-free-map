@@ -186,7 +186,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       }
       return
     }
-    const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim() // canvas needs a real colour, not var()
+    const brand = getComputedStyle(document.documentElement).getPropertyValue('--color-bus').trim() // canvas needs a real colour, not var()
     const white = getComputedStyle(document.documentElement).getPropertyValue('--color-on-brand').trim()
     for (const path of route.paths) {
       L.polyline(path, { color: white, weight: 8, opacity: 0.9, interactive: false }).addTo(g)
