@@ -1,12 +1,13 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, PersonSimpleWalk, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
+import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, DownloadSimple, PersonSimpleWalk, Translate, Info as InfoIcon, Thermometer } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
 import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
+import { installEnv, installWay, promptInstall } from '../lib/install'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
 import detours from '../data/detours.json'
 import routecheck from '../data/routecheck.json'
@@ -618,14 +619,32 @@ function PageRow({ icon, title, description, status, onClick, testId, active }: 
   )
 }
 
-export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClose: () => void; go: (p: 'language' | 'about') => void; locked: boolean }) {
+export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClose: () => void; go: (p: 'language' | 'about' | 'install') => void; locked: boolean }) {
   const { t } = useT()
   return (
     <>
       <ViewHeader title={t('settingsTitle')} onClose={onClose} />
       <Scroll locked={locked}>
         <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
+ {!installEnv().standalone && <PageRow testId="row-install" icon={<DownloadSimple size="1.4em" aria-hidden />} title={t('installRow')} onClick={() => go('install')} />}
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
+      </Scroll>
+    </>
+  )
+}
+
+export function InstallPage({ onBack, onClose, locked }: { onBack?: () => void; onClose: () => void; locked: boolean }) {
+  const { t } = useT()
+  const way = installWay(installEnv())
+  const text = way === 'ios' ? t('installIos') : way === 'browser' ? t('installBrowser') : way === 'menu' ? t('installMenu') : t('installHint')
+  return (
+    <>
+      <ViewHeader title={t('installTitle')} onBack={onBack} onClose={onClose} />
+      <Scroll locked={locked}>
+        <div className="flex flex-col gap-4 px-4 pb-8 pt-2 leading-relaxed">
+          <p className="m-0 font-bold">{text}</p>
+          {way === 'prompt' && <Button onClick={() => void promptInstall()} data-testid="install-now">{t('installBtn')}</Button>}
+        </div>
       </Scroll>
     </>
   )

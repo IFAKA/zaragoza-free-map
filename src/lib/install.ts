@@ -43,3 +43,12 @@ export function installWay(e: InstallEnv): InstallWay | null {
   if (/iPhone|iPad|iPod/.test(e.ua)) return 'ios'
   return 'menu'
 }
+
+/** Count this visit once per browser session (a new tab or a new day of use counts again). */
+export function countVisit(): number {
+  try {
+    const k = 'zgz:visits'
+    if (!sessionStorage.getItem('zgz:v')) { sessionStorage.setItem('zgz:v', '1'); localStorage.setItem(k, String(Number(localStorage.getItem(k) || 0) + 1)) }
+    return Number(localStorage.getItem(k) || 0)
+  } catch { return 0 }
+}

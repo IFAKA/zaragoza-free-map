@@ -249,8 +249,20 @@ export function App() {
     viewport.current?.scrollTo({ top: 0 })
   }
   // a map marker or one of the two places under the card: show its card at peek, with the place and you both framed above the sheet (only the place when your position is unknown)
+  // Install hint: only on a second visit or later (the first visit is about the job), once, a few seconds after a place is picked
+  const hintDone = useRef(false)
+  const installHint = () => {
+    if (hintDone.current || lsGet('hinted') || Number(localStorage.getItem('zgz:visits') || 0) < 2) return
+    const way = installWay(installEnv())
+    if (!way) return
+    hintDone.current = true
+    lsSet('hinted', '1')
+    const title = way === 'prompt' ? t.installHint : way === 'ios' ? t.installIos : way === 'browser' ? t.installBrowser : t.installMenu
+    setTimeout(() => toasts.add({ title, timeout: way === 'prompt' ? 9000 : 12000, data: { close: t.installClose, action: way === 'prompt' ? t.installBtn : undefined, onAction: () => void promptInstall() } }), 3000)
+  }
   const select = (id: string) => {
     track('select', layerId)
+    installHint()
     setSelected(id)
     setPick(n => n + 1)
     const it = arr.find(i => i.id === id) ?? offItems.find(i => i.id === id)
@@ -282,17 +294,6 @@ export function App() {
   const doLocate = () => { askedLocation.current = true; void locate(true) }
   const onWalk = () => {
     track('directions', layerId)
-    // the install hint, once, right after the first "walk": the person just got what they came for, so now it makes sense
-    const way = !lsGet('hinted') ? installWay(installEnv()) : null
-    if (way) {
-      lsSet('hinted', '1')
-      const title = way === 'prompt' ? t.installHint : way === 'ios' ? t.installIos : way === 'browser' ? t.installBrowser : t.installMenu
-      const show = () => toasts.add({ title, timeout: way === 'prompt' ? 9000 : 12000, data: { close: t.installClose, action: way === 'prompt' ? t.installBtn : undefined, onAction: () => void promptInstall() } })
-      // Walk opens Google Maps (another app or tab), so wait until the person is back in this app
-      const back = () => { if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', back); setTimeout(show, 600) } }
-      document.addEventListener('visibilitychange', back)
-      setTimeout(() => { if (document.visibilityState === 'hidden') return; back() }, 4000)
-    }
   }
   const turnTo = (p: Page) => { go(p); raise() }
   const back = () => { goUp() }
