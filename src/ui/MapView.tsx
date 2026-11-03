@@ -1,6 +1,8 @@
 import { MS } from './motion'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import '../lib/leafletGlobal'
+import 'leaflet.markercluster'
 import { useEffect, useRef } from 'react'
 import { CENTER } from '../lib/geo'
 import { pointAt } from '../lib/transit'
@@ -69,7 +71,7 @@ const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${
 export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
-  const group = useRef<L.LayerGroup | null>(null)
+  const group = useRef<L.MarkerClusterGroup | null>(null)
   const rings = useRef<L.LayerGroup | null>(null)
   const markers = useRef(new Map<string, L.Marker>())
   const sig = useRef('')
@@ -125,7 +127,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     routeGroup.current = L.layerGroup().addTo(m)
     m.createPane('vehPane').style.zIndex = '640' // above the stop markers (markerPane 600), whatever their screen position
     vehGroup.current = L.layerGroup().addTo(m)
-    group.current = L.layerGroup().addTo(m)
+    // close markers merge into a numbered circle when zoomed out; from zoom 16 each one shows on its own
+    group.current = L.markerClusterGroup({ maxClusterRadius: 50, disableClusteringAtZoom: 16, showCoverageOnHover: false, spiderfyOnMaxZoom: false, chunkedLoading: true, iconCreateFunction: c => { const n = c.getChildCount(); return L.divIcon({ className: 'mkw', html: `<div class="mkc" style="--c:${live.current.layer.color}">${n}</div>`, iconSize: [38, 38], iconAnchor: [19, 19] }) } }).addTo(m)
     map.current = m
     m.on('moveend zoomend', drawRings)
     const far = () => el.current?.classList.toggle('far', m.getZoom() < 15) // zoomed out: rail stops shrink so the line shows between them (see .rail.far in styles.css)
@@ -144,14 +147,16 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     if (s !== sig.current) {
       sig.current = s
       g.clearLayers(); markers.current.clear()
+      const batch: L.Marker[] = []
       const mkIcon = (closed: boolean, rack: boolean) => L.divIcon({ className: 'mkw', html: `<div class="mk${closed ? ' off' : ''}" style="--c:${rack ? 'var(--color-rack)' : layer.color}">${iconHtml(rack ? 'lock' : layer.icon)}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
       const icons = [mkIcon(false, false), mkIcon(true, false), mkIcon(false, true)]
       for (const it of items) {
         const icon = icons[it.cat === 'mine' ? 2 : layer.hours && it.open === false ? 1 : 0] // Bizi tab: street racks keep their own colour and lock icon
         const mk = L.marker([it.lat, it.lon], { icon, keyboard: false, riseOnHover: false, title: it.name || undefined })
         mk.on('click', e => { L.DomEvent.stopPropagation(e); cb.current.onSelect(it.id) })
-        markers.current.set(it.id, mk); g.addLayer(mk)
+        markers.current.set(it.id, mk); batch.push(mk)
       }
+      g.addLayers(batch)
     }
     markers.current.forEach((mk, id) => {
       mk.getElement()?.firstElementChild?.classList.toggle('sel', id === selected)
