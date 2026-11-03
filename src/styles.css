@@ -126,6 +126,7 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .veh svg{width:1.15em;height:1.15em;display:block}
 .veh i{position:absolute;top:100%;z-index:1;left:50%;transform:translateX(-50%);margin-top:1px;padding:0 4px;border-radius:99px;background:var(--color-paper);color:var(--color-ink-soft);font:600 9px/13px var(--font-sans, inherit);font-style:normal;white-space:nowrap;box-shadow:0 0 0 1px var(--color-line-strong)}
 .vdir{position:absolute;bottom:100%;left:50%;margin:0 0 2px -7px;width:14px;height:14px;pointer-events:none;display:block}
+.vdir.mid{position:static;margin:0}
 .vbus{--c:var(--color-bus);position:relative;width:24px;height:24px;border-radius:6px;background:var(--color-on-brand);color:var(--c);border:2px solid var(--c);box-shadow:0 0 0 2px var(--color-on-brand),0 2px 6px rgb(0 0 0 / .4);display:flex;align-items:center;justify-content:center;font-size:13px;pointer-events:none;box-sizing:border-box}
 .vbus >svg{width:1.15em;height:1.15em;display:block}
 .mk.off{background:var(--color-surface);color:var(--color-ink-soft);border:1.5px dashed var(--color-ink-soft);box-shadow:none;opacity:.8}
