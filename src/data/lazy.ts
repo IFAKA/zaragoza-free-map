@@ -1,5 +1,5 @@
 // Data files that only one service needs. They are separate chunks, fetched when that service opens (the service worker keeps them for offline use).
-import { cutClosed, decodePolyline, spliceDetour, type BusRoutes, type Timetable } from '../lib/transit'
+import { decodePolyline, spliceDetour, type BusRoutes, type Timetable } from '../lib/transit'
 import detours from './detours.json'
 import detourpaths from './detourpaths.json'
 import type { BusBad } from '../lib/busbad'
@@ -23,10 +23,8 @@ export const loadBusRoutes = (): Promise<BusRoutes> => (routes ??= import('./bus
   const closed = closedBusStops()
   if (!closed.size) return r
   // closed stops leave every direction's stop list (the route line stays; the real detour path is not known)
-  const cut = (detours.lines as Record<string, unknown>)
-  const way = detours.closedStops.way as [number, number][]
-  // the drawing also loses the stretch along the closed street, for the lines that are detoured (its real detour path is not known)
-  const lines = Object.fromEntries(Object.entries(r.lines).map(([k, l]) => [k, { ...l, d: l.d.map((d, i) => ({ ...d, s: d.s.filter(c => !closed.has(String(c))), p: reroute(r, k, i, d.p) ?? (k in cut ? cutClosed(d.p, way, detours.closedStops.radius) : d.p) })) }]))
+  // a line with no known detour stays whole (never a gap); its notice says the path may differ
+  const lines = Object.fromEntries(Object.entries(r.lines).map(([k, l]) => [k, { ...l, d: l.d.map((d, i) => ({ ...d, s: d.s.filter(c => !closed.has(String(c))), p: reroute(r, k, i, d.p) ?? d.p })) }]))
   return { ...r, lines }
 }))
 
