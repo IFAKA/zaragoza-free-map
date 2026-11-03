@@ -80,7 +80,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const vehGroup = useRef<L.LayerGroup | null>(null)
   const vehLine = useRef<L.Polyline | null>(null)
   const walkLine = useRef<L.Polyline | null>(null)
-  const vehs = useRef(new Map<string, { mk: L.Marker; raf: number }>())
+  const vehs = useRef(new Map<string, { mk: L.Marker; raf: number; fit: string }>())
   const routeGroup = useRef<L.LayerGroup | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
   cb.current = { onSelect, onBackgroundClick, inset, onRouteStop, desktop }
@@ -239,12 +239,13 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const keep = new Set(vehicles.map(v => v.id))
     vehLine.current?.remove(); vehLine.current = null
     if (vehicles[0]) vehLine.current = L.polyline([vehicles[0].pos, ...(vehicles[0].via ?? []), vehicles[0].stop], { color: getComputedStyle(document.documentElement).getPropertyValue(vehicles[0].color.replace(/^var\(|\)$/g, '')).trim(), weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m0)
-    vehs.current.forEach((v, id) => { if (!keep.has(id)) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
+    // a changed stop or direction (fit key) unmounts the marker, so it appears at its new place instead of floating there
+    vehs.current.forEach((v, id) => { if (!keep.has(id) || v.fit !== vehicles.find(x => x.id === id)?.fit) { cancelAnimationFrame(v.raf); g.removeLayer(v.mk); vehs.current.delete(id) } })
     for (const v of vehicles) {
       const html = `<div class="veh" style="--c:${v.color}">${iconHtml(v.icon)}${dirHtml(v.bearing)}${(v.start ? vehStart : vehBadge) ? `<i>${v.start ? vehStart : vehBadge}</i>` : ''}</div>`
       const icon = L.divIcon({ className: 'mkw', html, iconSize: [24, 24], iconAnchor: [12, 12] })
       const cur = vehs.current.get(v.id)
-      if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g); vehs.current.set(v.id, { mk, raf: 0 }); continue }
+      if (!cur) { const mk = L.marker(v.pos, { icon, interactive: false, keyboard: false, pane: 'vehPane' }).addTo(g); vehs.current.set(v.id, { mk, raf: 0, fit: v.fit }); continue }
       cur.mk.setIcon(icon)
       cancelAnimationFrame(cur.raf)
       const from = cur.mk.getLatLng(), to = L.latLng(v.pos)
