@@ -269,7 +269,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       const pad = L.point(cb.current.desktop ? 440 : 40, 70), padB = L.point(40, cb.current.inset() + 30)
       const view = m.getBounds()
       const inner = L.latLngBounds(m.containerPointToLatLng(pad), m.containerPointToLatLng(m.getSize().subtract(padB)))
-      const pts = [vs[0].stop, vs[0].pos, ...(userPos ? [userPos] : [])] // you, the stop and the closest (soonest) vehicle
+      const pts = [vs[0].stop, ...(userPos ? [userPos] : [])] // only you and the closest place (the stop), not the vehicle
       if (pts.every(q => inner.contains(q)) && view.isValid()) return
       m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: pad, paddingBottomRight: padB, maxZoom: 16, animate: !reduced(), duration: MS.fly / 1000 })
     }, MS.fly + 150)
