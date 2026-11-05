@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=/Users/faka/code/projects/adkit/schema/ad.schema.json
-# 43 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s.
+# 43 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s. Story: water, bus, tram+Bizi, montage, end card; every tap step plays a live recording of the app.
 meta: {fps: 30, width: 1080, height: 1920, bars: 43}
 
 brief:
@@ -19,7 +19,6 @@ brand:
 capture: capture.yaml
 
 scenes:
-  # Beats 0-20: the pain on a plain phone browser (searching, tab after tab), then the app opens.
   # Every title stays long enough to read (4 words/s + 0.5 s + its entrance); the story is 129 beats = 43 bars = 43 s.
   - block: reveal
     bars: 0.6666666666666666
@@ -64,100 +63,80 @@ scenes:
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
-  # One interaction in one phone, the way a person does it: services button, Bus tab, a stop on the map, its card (half height, the map stays above).
+  # One interaction in one phone, recorded live: services button, Bus tab, a stop on the map. Every screen step plays the real app motion
+  # (150 ms page fade, 300 ms drawer height ease, map pan); the tap lands half a beat in, where the recording starts to move.
   # The only push-in reads the live minutes that just appeared, holds 1.5 s, then pulls back.
   - block: tapFlow
     id: bus
-    bars: 5.666666666666667
+    bars: 6
     start: {screen: map}
     titles:
-      - {lines: ["Y el *bus,*", "en directo."], at: 0, to: 7.5, size: 90, y: 262}
+      - {lines: ["Y el *bus,*", "en directo."], at: 0, to: 11, size: 90, y: 262}
     steps:
+      - {type: screen, at: 1, screen: bus-svc, transition: live}
       - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 2.5, screen: svc-water, transition: fade}
-      - {type: tap, at: 4, element: tab-bus, radius: 22, press: true}
-      - {type: screen, at: 5, screen: bus-map, transition: fade}
-      - {type: tap, at: 7, element: pin, radius: 22, press: true}
-      - {type: screen, at: 8, screen: bus-stop, transition: fade}
+      - {type: screen, at: 4, screen: bus-tab, transition: live}
+      - {type: tap, at: 4.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 8, screen: bus-pin, transition: live}
+      - {type: tap, at: 8.5, element: pin, radius: 22, press: true}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 10, zoom: {fit: rows, fraction: 0.88}, focus: {y: 330}, qy: 1000, why: 'reads: "3 min"'}
-      - {at: 15.5, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
+      - {at: 10.5, zoom: {fit: rows, fraction: 0.88}, focus: {y: 330}, qy: 1000, why: 'reads: "3 min"'}
+      - {at: 16, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
 
+  # Tram, then Bizi: the same three taps, one block, one drawer.
   - block: tapFlow
-    id: tram
-    bars: 5.666666666666667
-    start: {screen: bus-stop}
+    id: transport
+    bars: 11.333333333333334
+    start: {screen: bus-pin}
     titles:
-      - {lines: ["Tranvía", "y *Bizi.*"], at: 0, to: 8, size: 90, y: 262}
+      - {lines: ["Tranvía", "y *Bizi.*"], at: 0, to: 16, size: 90, y: 262}
     steps:
+      - {type: screen, at: 1, screen: tram-svc, transition: live}
       - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 2.5, screen: svc-bus, transition: fade}
-      - {type: tap, at: 4, element: tab-tram, radius: 22, press: true}
-      - {type: screen, at: 5, screen: tram-map, transition: fade}
-      - {type: tap, at: 7, element: pin, radius: 22, press: true}
-      - {type: screen, at: 8, screen: tram-stop, transition: fade}
+      - {type: screen, at: 4, screen: tram-tab, transition: live}
+      - {type: tap, at: 4.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 8, screen: tram-pin, transition: live}
+      - {type: tap, at: 8.5, element: pin, radius: 22, press: true}
+      - {type: screen, at: 17, screen: bizi-svc, transition: live}
+      - {type: tap, at: 17.5, element: svcopen, radius: 22, press: true}
+      - {type: screen, at: 20, screen: bizi-tab, transition: live}
+      - {type: tap, at: 20.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 24, screen: bizi-pin, transition: live}
+      - {type: tap, at: 24.5, element: pin, radius: 22, press: true}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 10, zoom: {fit: card, fraction: 0.88}, focus: {y: 267}, qy: 1000, why: 'reads: "2 min"'}
-      - {at: 15.5, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
+      - {at: 10.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 267}, qy: 1000, why: 'reads: "2 min"'}
+      - {at: 16, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
+      - {at: 26.5, zoom: {fit: card, fraction: 0.78}, focus: {y: 640}, qy: 1000, why: 'reads: "7 bicis"'}
+      - {at: 32, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
 
-  - block: tapFlow
-    id: bizi
-    bars: 5
-    start: {screen: tram-stop}
-    steps:
-      - {type: tap, at: 1, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 2, screen: svc-tram, transition: fade}
-      - {type: tap, at: 3.5, element: tab-bizi, radius: 22, press: true}
-      - {type: screen, at: 4.5, screen: bizi-map, transition: fade}
-      - {type: tap, at: 6.5, element: pin, radius: 22, press: true}
-      - {type: screen, at: 7.5, screen: bizi-stop, transition: fade}
-    camera:
-      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 8.5, zoom: {fit: card, fraction: 0.78}, focus: {y: 640}, qy: 1000, why: 'reads: "7 bicis"'}
-      - {at: 14, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
-
-  # One service after another, each one a tap on its tab, then its map with its pins held about a second.
+  # One service after another, each one a tap on its tab, then its map with its pins held. The end card follows at once.
   - block: tapFlow
     id: montage
-    bars: 6.666666666666667
-    start: {screen: bizi-stop}
+    bars: 9
+    start: {screen: bizi-pin}
     titles:
-      - {lines: ["Todo, *cerca.*"], at: 0, to: 8, size: 90, y: 262}
+      - {lines: ["Todo, *cerca.*"], at: 0, to: 12, size: 90, y: 262}
     steps:
-      - {type: tap, at: 1, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 2, screen: svc-bizi, transition: fade}
-      - {type: tap, at: 3.5, element: tab-toilets, radius: 22, press: true}
-      - {type: screen, at: 4.5, screen: m-toilets, transition: fade}
-      - {type: tap, at: 7, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 8, screen: svc-toilets, transition: fade}
-      - {type: tap, at: 9.5, element: tab-wifi, radius: 22, press: true}
-      - {type: screen, at: 10.5, screen: m-wifi, transition: fade}
-      - {type: tap, at: 13, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 14, screen: svc-wifi, transition: fade}
-      - {type: tap, at: 15.5, element: tab-charge, radius: 22, press: true}
-      - {type: screen, at: 16.5, screen: m-charge, transition: fade}
-      - {type: tap, at: 19, element: svcopen, radius: 22, press: true}
+      - {type: screen, at: 1, screen: m1-svc, transition: live}
+      - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
+      - {type: screen, at: 4, screen: m1-tab, transition: live}
+      - {type: tap, at: 4.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 9.5, screen: m2-svc, transition: live}
+      - {type: tap, at: 10, element: svcopen, radius: 22, press: true}
+      - {type: screen, at: 12.5, screen: m2-tab, transition: live}
+      - {type: tap, at: 13, element: tab, radius: 22, press: true}
+      - {type: screen, at: 18, screen: m3-svc, transition: live}
+      - {type: tap, at: 18.5, element: svcopen, radius: 22, press: true}
+      - {type: screen, at: 21, screen: m3-tab, transition: live}
+      - {type: tap, at: 21.5, element: tab, radius: 22, press: true}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
-  # The climate shelters: pins pop. No push-in: the next scene is the end card.
-  - block: tapFlow
-    id: shelter
-    bars: 3.6666666666666665
-    start: {screen: shelter}
-    titles:
-      - {lines: ["Y refugios", "del *calor.*"], at: 0, to: 9, size: 90, y: 262}
-    steps:
-      - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4], stagger: 0.5, style: pin, under: shelter-bare}
-    camera:
-      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-
-  # Beats 85-96.
   - block: endCard
-    bars: 3.6666666666666665
-    screen: map
+    bars: 4
+    screen: m3-tab
     mark: monogram
     title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
     phone: {scale: 0.8, y: 410, x: 110}
