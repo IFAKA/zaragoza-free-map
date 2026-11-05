@@ -14,6 +14,7 @@ safeArea: {top: 47, bottom: 34}
 # Live data answered with fixed files, so every capture is the same: a bus stop, the tram stops, Bizi.
 routes:
   - {url: '**/hook*', file: capture/hook/page.html, contentType: text/html}
+  - {url: '**/poste-autobus/*.json', file: capture/live/bus36.json}
   - {url: '**/poste-autobus/tuzsa-1099.json', file: capture/live/bus.json}
   - {url: '**/parada-tranvia/*.json', file: capture/live/tram.json}
   - {url: 'https://api.citybik.es/v2/networks/bizi', file: capture/live/bizi.json}
@@ -91,6 +92,7 @@ sets:
           me: '.me'
           card: {selector: '[data-testid=nearest]', fixed: true}
           walkline: {selector: '#walkline', fixed: true}
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
       # The same page with no pins.
       - name: map-bare
         steps:
@@ -102,82 +104,259 @@ sets:
           - {evaluate: {file: capture/bare.js}}
           - {wait: 600}
         settleMs: 800
-      # A bus stop with its next buses (served from capture/live/bus.json), the Líneas chips in view.
-      - name: bus-stop
-        steps:
-          - {goto: /}
-          - {evaluate: {file: capture/layer-bus.js}}
-          - {goto: /}
-          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
-          - {wait: 4000}
-          - {evaluate: {file: capture/bus-select.js}}
-          - {wait: 3500}
-          - {click: '[data-testid=handle]'}
-          - {wait: 1500}
-          - {wait: {for: '[data-testid=bus-line-chip][data-line="50"]', timeoutMs: 20000}}
-          - {wait: 600}
-        settleMs: 800
-        elements:
-          chip: {selector: '[data-testid=bus-line-chip][data-line="50"]', fixed: true}
-          rows: {selector: '[data-testid=live-times]', fixed: true}
-      # The route of line 50 from that stop: the line on the map, its next stops, the live minutes.
-      - name: bus-line
-        steps:
-          - {goto: /}
-          - {evaluate: {file: capture/layer-bus.js}}
-          - {goto: /}
-          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
-          - {wait: 4000}
-          - {evaluate: {file: capture/bus-select.js}}
-          - {wait: 3500}
-          - {click: '[data-testid=handle]'}
-          - {wait: 1500}
-          - {wait: {for: '[data-testid=bus-line-chip][data-line="50"]', timeoutMs: 20000}}
-          - {click: '[data-testid=bus-line-chip][data-line="50"]'}
-          - {wait: 3500}
-          - {wait: 600}
-        settleMs: 800
-        elements:
-          steps: {selector: '[data-testid=line-steps]', fixed: true}
-          times: {selector: '[data-testid=live-times]', fixed: true}
-      # The tram stop nearest to you, with its minutes (capture/live/tram.json).
-      - name: tram
-        steps:
-          - {goto: /}
-          - {evaluate: {file: capture/layer-tram.js}}
-          - {goto: /}
-          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
-          - {wait: 3000}
-          - {wait: 3500}
-          - {click: '[data-testid=handle]'}
-          - {wait: 1500}
-          - {wait: 600}
-        settleMs: 800
-        elements:
-          card: {selector: '[data-testid=nearest]', fixed: true}
-      # A Bizi station with the live counts (capture/live/bizi.json).
-      - name: bizi
-        steps:
-          - {goto: /}
-          - {evaluate: {file: capture/layer-bizi.js}}
-          - {goto: /}
-          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
-          - {wait: 3000}
-          - {wait: 3500}
-          - {wait: 600}
-        settleMs: 800
-        elements:
-          card: {selector: '[data-testid=nearest]', fixed: true}
-      - name: m-water
+      # The services page, opened from each layer: the tab bar, the map and its pins above (the sheet stays half-height, never full).
+      - name: svc-water
         steps:
           - {goto: /}
           - {evaluate: {file: capture/state.js}}
           - {goto: /}
           - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
           - {wait: 3500}
-          - {evaluate: {file: capture/montage.js}}
-          - {wait: 600}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
         settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-bus
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-bus.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-tram
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-tram.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-bizi
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-bizi.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-toilets
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-toilets.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-wifi
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-wifi.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-charge
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-charge.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      - name: svc-libraries
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-libraries.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tab-bus: {selector: '[data-testid=tab-bus]', fixed: true}
+          tab-tram: {selector: '[data-testid=tab-tram]', fixed: true}
+          tab-bizi: {selector: '[data-testid=tab-bizi]', fixed: true}
+          tab-toilets: {selector: '[data-testid=tab-toilets]', fixed: true}
+          tab-wifi: {selector: '[data-testid=tab-wifi]', fixed: true}
+          tab-charge: {selector: '[data-testid=tab-charge]', fixed: true}
+          tab-libraries: {selector: '[data-testid=tab-libraries]', fixed: true}
+          tab-shelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      # Bus: the layer's map with its stops, then the stop pressed (live minutes from capture/live/bus.json).
+      - name: bus-map
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 800}
+          - {click: '[data-testid=tab-bus]'}
+          - {wait: 3500}
+        settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+          pin: {selector: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}
+      - name: bus-stop
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 800}
+          - {click: '[data-testid=tab-bus]'}
+          - {wait: 3500}
+          - {evaluate: {file: capture/press.js}}
+          - {wait: 3000}
+        settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+          rows: {selector: '[data-testid=live-times]', fixed: true}
+      # Tram.
+      - name: tram-map
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 800}
+          - {click: '[data-testid=tab-tram]'}
+          - {wait: 3500}
+        settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+          pin: {selector: '.mkw[title="Plaza del Pilar - Murallas"] .mk'}
+      - name: tram-stop
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 800}
+          - {click: '[data-testid=tab-tram]'}
+          - {wait: 3500}
+          - {evaluate: {file: capture/press.js}}
+          - {wait: 3000}
+        settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+          card: {selector: '[data-testid=nearest]', fixed: true}
+      # Bizi.
+      - name: bizi-map
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 800}
+          - {click: '[data-testid=tab-bizi]'}
+          - {wait: 3500}
+        settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+          pin: {selector: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}
+      - name: bizi-stop
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: 800}
+          - {click: '[data-testid=tab-bizi]'}
+          - {wait: 3500}
+          - {evaluate: {file: capture/press.js}}
+          - {wait: 3000}
+        settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+          card: {selector: '[data-testid=nearest]', fixed: true}
+      # The montage: each service's map with its pins (the card hidden: it would name a real place).
       - name: m-toilets
         steps:
           - {goto: /}
@@ -188,6 +367,8 @@ sets:
           - {evaluate: {file: capture/montage.js}}
           - {wait: 600}
         settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
       - name: m-wifi
         steps:
           - {goto: /}
@@ -198,6 +379,8 @@ sets:
           - {evaluate: {file: capture/montage.js}}
           - {wait: 600}
         settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
       - name: m-charge
         steps:
           - {goto: /}
@@ -208,6 +391,8 @@ sets:
           - {evaluate: {file: capture/montage.js}}
           - {wait: 600}
         settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
       - name: m-libraries
         steps:
           - {goto: /}
@@ -218,6 +403,8 @@ sets:
           - {evaluate: {file: capture/montage.js}}
           - {wait: 600}
         settleMs: 800
+        elements:
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
       # Climate shelters: the building, the walking route; with pins, and the same without.
       - name: shelter
         steps:

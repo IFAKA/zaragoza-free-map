@@ -1,5 +1,5 @@
 # Zaragoza a mano: every sound is an object of the city or of a hot summer day on foot.
-# Music: the approved jota (35 bars) (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
+# Music: the approved jota (43 bars) (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
 seed: 15
 music: {file: music.json}
 
@@ -67,10 +67,9 @@ cues:
   drop: silent
   app-open: cierzo_breath
   pop-in: {sound: water_pin, variations: 4}
-  skin-swap: {sound: water_pin, variations: 6, reason: "each service on the beat is one more drop, like the pins"}
   pulse: {sound: bell_echo, reason: "the blue dot answers with a soft echo of the bell"}
   tap: glass_tap
-  screen-swap: cool_air
+  screen-swap: {sound: cool_air, gain: -8, reason: "a soft breath when the screen changes; the glass tap already marks the touch"}
   title-in: palma_flick
   title-out: silent
   cut: silent
