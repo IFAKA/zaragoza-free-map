@@ -13,6 +13,7 @@ viewport: {width: 390, height: 844, scale: 3}
 safeArea: {top: 47, bottom: 34}
 # Live data answered with fixed files, so every capture is the same: a bus stop, the tram stops, Bizi.
 routes:
+  - {url: '**/hook*', file: capture/hook/page.html, contentType: text/html}
   - {url: '**/poste-autobus/tuzsa-1099.json', file: capture/live/bus.json}
   - {url: '**/parada-tranvia/*.json', file: capture/live/tram.json}
   - {url: 'https://api.citybik.es/v2/networks/bizi', file: capture/live/bizi.json}
@@ -25,6 +26,48 @@ inputs: [capture]
 sets:
   main:
     screens:
+      # The hook: a plain, generic phone browser (capture/hook/page.html, served by a route).
+      - name: hook-empty
+        steps:
+          - {goto: '/hook?v=empty&n=1'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          field: {selector: '.pill', fixed: true}
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r1
+        steps:
+          - {goto: '/hook?v=results&q=fuente%20agua%20potable%20cerca&n=1'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r2
+        steps:
+          - {goto: '/hook?v=results&q=ba%C3%B1os%20p%C3%BAblicos%20zaragoza&n=4'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r3
+        steps:
+          - {goto: '/hook?v=results&q=refugio%20clim%C3%A1tico%20abierto&n=8'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r4
+        steps:
+          - {goto: '/hook?v=results&q=%C2%BFcu%C3%A1ndo%20pasa%20el%2035%3F&n=12'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-tabs
+        steps:
+          - {goto: '/hook?v=tabs&n=12'}
+          - {wait: 700}
+        settleMs: 400
       # The water layer with 8 fountain pins around the user and the nearest card.
       - name: map
         steps:

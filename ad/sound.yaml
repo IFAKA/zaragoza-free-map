@@ -10,20 +10,6 @@ sounds:
       - {model: modal, preset: wood_block, note: A5, params: {decay: 0.03, hardness: 1, detune_cents: 30}, gain: -9}
       - {model: modal, preset: metal_bar, note: E7, params: {decay: 0.02, hardness: 1}, gain: -24}
 
-  cierzo_haze:
-    meaning: "The cierzo, the dry north wind of Zaragoza, rising under the pile of tabs like heat haze on a July street"
-    layers:
-      - {model: wind, params: {dur: 3.0, strength: 0.7, gustiness: 0.7, gust_hz: 0.5, centre: 520, brightness: 0.6, whistle: 0.2, whistle_hz: 700}, gain: -9}
-    fx: [{type: widen, amount: 0.3}]
-
-  tram_bell:
-    meaning: "The bell of the Zaragoza tram, the sound of the city itself, striking when the app icon opens"
-    tune: chord
-    layers:
-      - {model: modal, preset: tram_bell, note: D6, params: {decay: 2.0, strike_pos: 0.22}, gain: -6}
-      - {model: modal, preset: tram_bell, note: D6, at: 0.28, params: {decay: 2.2, velocity: 0.85, strike_pos: 0.3}, gain: -8}
-    fx: [{type: reverb, rt60: 1.1, wet: 0.12, predelay_ms: 8, damp_hz: 9000}]
-
   bell_echo:
     meaning: "A soft low echo of the tram bell down the street, the pulse of your own position on the map"
     tune: chord
@@ -77,11 +63,8 @@ sounds:
     fx: [{type: reverb, rt60: 1.2, wet: 0.14, damp_hz: 9000}]
 
 cues:
-  ping: keyboard_tap
-  riser-chaos: {sound: cierzo_haze, align: end}
-  bubble-pop: silent
-  icon-morph: {sound: tram_bell, duck: 2}
-  drop: bell_echo
+  type-tick: {sound: keyboard_tap, reason: "typing the search is the same dry keyboard tap"}
+  drop: silent
   app-open: cierzo_breath
   pop-in: {sound: water_pin, variations: 4}
   skin-swap: {sound: water_pin, variations: 6, reason: "each service on the beat is one more drop, like the pins"}

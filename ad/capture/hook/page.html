@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>hook</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 390px; height: 844px; overflow: hidden; background: #fff; color: #202124; font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+  .bar { position: absolute; left: 0; top: 0; right: 0; padding: env(safe-area-inset-top) 12px 0 12px; height: calc(env(safe-area-inset-top) + 64px); background: #fff; border-bottom: 1px solid #e3e3e3; display: flex; align-items: center; gap: 10px; }
+  .bar { padding-top: calc(env(safe-area-inset-top) + 10px); align-items: flex-start; }
+  .pill { flex: 1; height: 46px; border-radius: 23px; background: #f1f3f4; display: flex; align-items: center; padding: 0 14px; gap: 10px; font-size: 19px; color: #202124; white-space: nowrap; overflow: hidden; }
+  .pill svg { flex: none; }
+  .tabbtn { flex: none; width: 40px; height: 40px; margin-top: 3px; border: 2.5px solid #3c4043; border-radius: 10px; font-weight: 700; font-size: 19px; display: flex; align-items: center; justify-content: center; color: #3c4043; }
+  .dots { flex: none; width: 22px; height: 40px; margin-top: 3px; display: flex; flex-direction: column; justify-content: center; gap: 4px; align-items: center; }
+  .dots i { width: 5px; height: 5px; border-radius: 50%; background: #5f6368; display: block; }
+  .body { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 64px); bottom: 0; padding: 0 16px; overflow: hidden; }
+  .chips { display: flex; gap: 22px; font-size: 16px; color: #5f6368; padding: 14px 0 12px; border-bottom: 1px solid #ebebeb; margin: 0 -16px 0; padding-left: 16px; }
+  .chips b { color: #1a73e8; font-weight: 600; border-bottom: 3px solid #1a73e8; padding-bottom: 9px; }
+  .count { font-size: 14px; color: #70757a; margin: 12px 0 6px; }
+  .res { padding: 11px 0 12px; }
+  .res .site { font-size: 14px; color: #4d5156; display: flex; align-items: center; gap: 8px; }
+  .res .site i { width: 20px; height: 20px; border-radius: 50%; background: #dadce0; display: block; }
+  .res .t { font-size: 20px; line-height: 1.22; color: #1a0dab; margin-top: 4px; font-weight: 500; }
+  .res .s { font-size: 15px; line-height: 1.35; color: #4d5156; margin-top: 4px; }
+  .sugg { padding-top: 18px; font-size: 18px; color: #5f6368; }
+  .sugg div { display: flex; align-items: center; gap: 14px; padding: 13px 0; }
+  .grid { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top)); bottom: 0; background: #e6e8eb; padding: 14px 12px; }
+  .grid h1 { font-size: 20px; font-weight: 700; margin: 6px 4px 14px; color: #3c4043; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { background: #fff; border-radius: 14px; height: 168px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+  .card .h { height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 13px; color: #3c4043; background: #f1f3f4; }
+  .card .h b { font-size: 16px; color: #80868b; }
+  .card .q { font-size: 15px; font-weight: 600; padding: 10px 10px 6px; color: #202124; line-height: 1.2; }
+  .card .l { height: 8px; border-radius: 4px; background: #e8eaed; margin: 8px 10px 0; }
+  .card .l.b { background: #c6dafc; width: 70%; }
+</style></head>
+<body>
+<script>
+  const h = new URLSearchParams(location.search);
+  const view = h.get('v') || 'empty', q = h.get('q') || '', n = h.get('n') || '1';
+  const mag = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="2.4" stroke-linecap="round"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>';
+  const RES = {
+    a: [['guiasdeaguas.example', 'Fuentes de agua potable: listado completo en PDF (2019)', 'Descarga el documento con más de 40 páginas. Consulta el índice y busca la zona que te interesa entre cientos de entradas...'],
+        ['foro-viajeros.example', 'Foro: ¿alguien sabe dónde se puede beber agua?', '12 respuestas. «Yo siempre llevo una botella, pero si te quedas sin ella…» Mensaje con 3 años de antigüedad.'],
+        ['viajes-top.example', 'Las 10 mejores fuentes que ver en España', 'Un recorrido en 10 pasos. Anuncio: reserva ya tu hotel con descuento. Continuar leyendo…'],
+        ['directorio.example', 'Agua potable cerca de mí: resultados patrocinados', 'Compara precios de botellas, filtros y dispensadores. Envío gratis a partir de 29 €…']],
+    b: [['ciudad-info.example', 'Baños públicos: ¿dónde están? Guía no oficial', 'Esta lista puede estar desactualizada. Última revisión: hace 4 años. Ver mapa (cargando…)'],
+        ['foro-viajeros.example', 'Aseos públicos en el centro: opiniones', '«Mejor entrar en un bar y pedir algo.» 8 respuestas · Mensaje de hace 5 años.'],
+        ['turismo-blog.example', 'Los baños de la ciudad, a examen', 'Ranking subjetivo con fotos. Suscríbete a nuestra newsletter para ver el resto…'],
+        ['directorio.example', 'Baños cerca de mí: anuncios', 'Alquiler de baños portátiles para eventos. Pide presupuesto sin compromiso.']],
+    c: [['noticias-hoy.example', 'Refugios climáticos: qué son y cómo funcionan', 'Un artículo de 6 minutos de lectura sobre la ola de calor. Los horarios cambian según el verano…'],
+        ['servicios.example', 'Red de refugios: página de información (PDF)', 'Consulta el listado de centros adheridos. Archivo de 3,2 MB. Algunos pueden estar cerrados…'],
+        ['foro-viajeros.example', '¿Alguien sabe cuál está abierto ahora?', 'Sin respuestas todavía. Publicado hace 3 días.'],
+        ['directorio.example', 'Aire acondicionado portátil: ofertas', 'Los mejores ventiladores y aires acondicionados del año. Compra ahora…']],
+    d: [['transportes.example', 'Horarios de autobuses urbanos: línea 35', 'Tabla de horarios teóricos (pueden variar). Consulta la tabla por día de la semana y sentido…'],
+        ['foro-viajeros.example', '¿Cuándo pasa el 35? Siempre llega tarde', '«Hoy ha tardado 20 minutos.» 31 respuestas · Mensaje de hace 2 años.'],
+        ['mapas.example', 'Líneas de autobús: plano de recorridos (PDF)', 'Plano general de la red. Archivo grande, puede tardar en cargar…'],
+        ['directorio.example', 'Bus cerca de mí: resultados patrocinados', 'Compara billetes y coches de alquiler…']]
+  };
+  const key = {'fuente agua potable cerca': 'a', 'baños públicos zaragoza': 'b', 'refugio climático abierto': 'c', '¿cuándo pasa el 35?': 'd'}[q] || 'a';
+  const bar = (text, num) => `<div class="bar"><div class="pill">${mag}<span>${text}</span></div><div class="tabbtn">${num}</div><div class="dots"><i></i><i></i><i></i></div></div>`;
+  let html = '';
+  if (view === 'empty') {
+    html = bar('', n) + `<div class="body"><div class="sugg">${['tiempo hoy', 'noticias', 'resultados de fútbol', 'recetas fáciles'].map((s) => `<div>${mag}<span>${s}</span></div>`).join('')}</div></div>`;
+  } else if (view === 'results') {
+    html = bar(q, n) + `<div class="body"><div class="chips"><b>Todo</b><span>Imágenes</span><span>Vídeos</span><span>Noticias</span></div><div class="count">Cerca de 1.240.000 resultados</div>` +
+      RES[key].map((r) => `<div class="res"><div class="site"><i></i>${r[0]}</div><div class="t">${r[1]}</div><div class="s">${r[2]}</div></div>`).join('') + '</div>';
+  } else {
+    const qs = ['fuente agua potable cerca', 'baños públicos zaragoza', 'refugio climático abierto', '¿cuándo pasa el 35?', 'wifi gratis cerca', 'bizi libres ahora', '¿dónde hay sombra?', 'fuente agua potable cerca'];
+    html = `<div class="grid"><h1>${n} pestañas</h1><div class="cards">` + qs.map((s, i) => `<div class="card"><div class="h"><span>${RES[['a', 'b', 'c', 'd'][i % 4]][i % 4][0]}</span><b>×</b></div><div class="q">${s}</div><div class="l b"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>`).join('') + '</div></div>';
+  }
+  document.body.innerHTML = html;
+</script>
+</body></html>
