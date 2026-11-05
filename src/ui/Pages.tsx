@@ -682,6 +682,7 @@ export function AboutPage({ onBack, onClose, locked }: { onBack?: () => void; on
           <p className="m-0 font-bold">{t('disclaimer')}</p>
           <p className="m-0">{t('privacy')}</p>
           <p className="m-0">{t('noGuarantee')}</p>
+          <a className="font-bold text-brand-text" href="https://github.com/IFAKA/zaragoza-free-map" target="_blank" rel="noopener">{t('openSource')}</a>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
             <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsTram')} ({DATA.tram.updated})</li><li>{t('creditsTrain')} ({DATA.cercanias.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsBizi')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>

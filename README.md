@@ -86,6 +86,9 @@ One scrolling row of service chips (see `src/layers/goals.ts`): toilets, water, 
 ## Browser check
 `e2e/check.mjs` (needs `playwright` installed separately and `npm run build && npx vite preview --port 4173`) blocks all non-tile network (the CityBikes feed is mocked), taps every control, checks the Bizi counts, stale and failed states, the service chips (fit at 360 and 390 px, order, 1-tap reach), the Settings view (slide, close cross, back, Escape, focus), the analytics events, the first-tap location prompt (granted, denied, blocked), the install hint under in-app browser UAs, one Pixel 7 emulation run, checks every layer, measures drawer timings and screenshots at 390x844 and 1280x800.
 
+## Licence
+The code is under the GNU AGPL-3.0 (see `LICENSE`), Copyright (c) 2026 Facundo Arenas. It is approved by the OSI. Anyone who runs a changed version as a website must share their source code. The bundled data keeps its own licences: OpenStreetMap data is ODbL 1.0, and Ayuntamiento de Zaragoza open data and Renfe data are CC BY 4.0 (credited in the app). Third-party npm packages keep theirs.
+
 ## Layout
 `src/data/*` bundled data, `src/layers/*` layer building, `src/lib/*` geo, utm, hours, cityHours, i18n, rank, bizi (live counts), duty (pharmacies), install (in-app browser check), `src/ui/*` React components (`PagedDrawer.tsx` = pages in one drawer), `scripts/build-data.mjs` data builder.
 
