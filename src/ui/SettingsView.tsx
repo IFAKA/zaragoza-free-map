@@ -36,6 +36,17 @@ export function useSettingsView() {
   return { stack, open, push, back, close, isOpen: stack.length > 0 }
 }
 
+/** True at the width where the app shows the side panels (the same 900 px as the min-[900px] classes). */
+function useDesktop() {
+  const [yes, setYes] = useState(() => matchMedia('(min-width: 900px)').matches)
+  useEffect(() => {
+    const mq = matchMedia('(min-width: 900px)'), on = () => setYes(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return yes
+}
+
 /** The full view: slides in from the right (where its button is), a page inside it slides over the first. Desktop: a 420 px panel on the right. */
 export function SettingsView({ stack, push, back, close, lang, setLang, title }: { stack: ViewPage[]; push: (p: ViewPage) => void; back: (by?: 'back' | 'escape') => void; close: () => void; lang: Lang; setLang: (l: Lang) => void; title: string }) {
   const reduced = !!useReducedMotion()
@@ -45,17 +56,18 @@ export function SettingsView({ stack, push, back, close, lang, setLang, title }:
   if (open) last.current = stack
   const shown = last.current
   const root = useRef<HTMLDivElement>(null)
+  const desktop = useDesktop()
 
-  // while open: the app behind cannot take focus or scroll; focus moves into the view; Escape closes one level
+  // while open: on a phone the app behind cannot take focus or scroll and focus moves into the view; on desktop the map and the sheet stay usable. Escape closes one level
   useEffect(() => {
     if (!open) return
-    const app = document.getElementById('root')
-    app?.setAttribute('inert', ''); document.body.style.overflow = 'hidden'
+    const app = desktop ? null : document.getElementById('root')
+    if (app) { app.setAttribute('inert', ''); document.body.style.overflow = 'hidden' }
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); back('escape') } }
     window.addEventListener('keydown', key, true)
-    return () => { app?.removeAttribute('inert'); document.body.style.overflow = ''; window.removeEventListener('keydown', key, true) }
-  }, [open, back])
-  useEffect(() => { if (open) root.current?.focus({ preventScroll: true }) }, [open, shown.length])
+    return () => { if (app) { app.removeAttribute('inert'); document.body.style.overflow = '' } window.removeEventListener('keydown', key, true) }
+  }, [open, back, desktop])
+  useEffect(() => { if (open && !desktop) root.current?.focus({ preventScroll: true }) }, [open, shown.length, desktop])
 
   // the chevron only on a page that was pushed over another; the root of the view has only the cross
   const page = (p: ViewPage, sub: boolean) => p === 'settings'
@@ -67,7 +79,7 @@ export function SettingsView({ stack, push, back, close, lang, setLang, title }:
     <AnimatePresence onExitComplete={() => document.querySelector<HTMLElement>('[data-testid=open-settings]')?.focus({ preventScroll: true })}>
       {open && (
         <m.div
-          key="view" ref={root} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} data-testid="settings-view"
+          key="view" ref={root} tabIndex={-1} role="dialog" aria-modal={desktop ? undefined : true} aria-label={title} data-testid="settings-view"
           variants={v} initial="out" animate="in" exit="out"
           className="fixed inset-y-0 right-0 z-[60] w-full overflow-hidden bg-paper outline-none min-[900px]:w-[420px] min-[900px]:border-l min-[900px]:border-line min-[900px]:shadow-[-2px_0_14px_rgb(0_0_0/0.12)]"
         >
