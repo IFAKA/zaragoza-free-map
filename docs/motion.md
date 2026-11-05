@@ -22,6 +22,7 @@ Calm, quick, physical, "at hand". Think of a sheet of paper that your thumb slid
 - The sheet moves up and down only.
 - Live data (Bizi counts, minutes) swaps at once. No fade, no slide, also under reduced motion.
 - Picking a place on the map: the marker grows to 115% and a soft ring fades once (300 ms). Only when a person picks it, never on load. The ring on the selected marker pulses twice, then stops.
+- Service header: the icon and name swap with `cardSwap` when the service changes. The 2x2 button swaps its three icons (the fourth cell is a fixed plus) one at a time (`slotSwap`, every `TEASER_EVERY` ms) through the other services once per service, then settles. No teaser with reduced motion.
 
 ## Never animate
 List rows, tab labels, distance text, a repeated tap on the same tab, and anything caused by the keyboard or the back gesture (except the Settings slide itself). Only `transform` and `opacity` move.

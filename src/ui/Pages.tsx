@@ -17,7 +17,7 @@ import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { LAYERS } from '../layers'
-import { ServiceChips } from './ServiceBar'
+import { ServiceGroups, ServiceHeader } from './ServiceBar'
 import { Tick } from './Tick'
 import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
@@ -578,7 +578,7 @@ export function HomePage(p: {
   nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
-  locked: boolean; onPick: (id: LayerId) => void; chipOrder: LayerId[]
+  locked: boolean; onServices: () => void; chipOrder: LayerId[]
   onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
@@ -586,7 +586,7 @@ export function HomePage(p: {
   const [more, setMore] = useState<HTMLElement | null>(null)
   return (
     <MoreCtx.Provider value={more}>
-      <ServiceChips layer={p.layer.id} order={p.chipOrder} onService={p.onPick} />
+      <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
@@ -694,7 +694,18 @@ export function AboutPage({ onBack, onClose, locked }: { onBack?: () => void; on
   )
 }
 
-export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked }: { layer: LayerConfig; item: RankedItem | null; hasPos: boolean; onBack: () => void; onWalk: () => void; locked: boolean }) {
+/** The Services page: the same drawer turns to it; its height is the height of its content (peekRef), so the drawer fits it. */
+export function ServicesPage({ layer, onPick, onBack, peekRef }: { layer: LayerId; onPick: (id: LayerId) => void; onBack: () => void; peekRef: React.Ref<HTMLDivElement> }) {
+  const { t } = useT()
+  return (
+    <div ref={peekRef} className="shrink-0">
+      <PageHeader title={t('tabsLabel')} onBack={onBack} />
+      <ServiceGroups layer={layer} onPick={onPick} />
+    </div>
+  )
+}
+
+export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked, peekRef }: { layer: LayerConfig; item: RankedItem | null; hasPos: boolean; onBack: () => void; onWalk: () => void; locked: boolean; peekRef: (el: HTMLElement | null) => void }) {
   const { t, type, lang } = useT()
   if (!item) return <PageHeader title={t('details')} onBack={onBack} />
   const tel = item.phone?.replace(/[^\d+]/g, '')
@@ -705,7 +716,7 @@ export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked }: { lay
     <>
       <PageHeader title={item.name || type(item.type)} onBack={onBack} />
       <Scroll locked={locked}>
-        <div className="flex flex-col gap-3 px-4 pb-8 pt-1">
+        <div ref={peekRef} className="flex flex-col gap-3 px-4 pb-8 pt-1">
           <div className={sub}>{type(item.type)}{item.cust ? ` · ${t('cust')}` : ''}{item.note ? ` · ${item.note}` : ''}</div>
           <div className="font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
           <div><Status item={item} layer={layer} /></div>

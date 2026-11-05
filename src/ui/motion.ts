@@ -20,6 +20,8 @@ export const MS = {
   pick: 300,
   /** The map flying to a place (Leaflet's own animation, in ms). */
   fly: 450,
+  /** The map sliding to keep the place above the sheet while the sheet changes height (the sheet's own move is 300 ms). */
+  reframe: 300,
 } as const
 const s = (ms: number) => ms / 1000
 
@@ -49,3 +51,16 @@ export const cardSwap = {
   animate: { opacity: 1, y: 0 },
   transition: T.card,
 } as const
+
+/**
+ * The 2x2 button of the home header: its three icons (the fourth cell is a fixed plus) swap one at a time (an icon fades out 6 px up, the next fades in from 6 px below)
+ * through the other services, once each time a service opens, then settle on the person's own three. Reduced motion: no teaser.
+ */
+export const slotSwap = {
+  initial: { opacity: 0, y: TRAVEL.card },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -TRAVEL.card },
+  transition: T.small,
+} as const
+/** Pause between two swaps of the teaser, in ms (a pause, not the length of an animation). */
+export const TEASER_EVERY = 1500

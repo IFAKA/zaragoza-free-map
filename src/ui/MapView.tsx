@@ -12,7 +12,7 @@ import type { LatLon, LayerConfig, RankedItem } from '../lib/types'
 import { iconHtml } from './icons'
 import { arrowBearing, type Vehicle } from '../lib/vehicles'
 
-export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon; instant?: boolean }
+export interface FlyRequest { n: number; to: LatLon; zoom: number; fitUser?: LatLon; soft?: boolean }
 /** A bus line to draw in place of the markers: its route pieces, its stops in order, and which stop is the current one (-1 = none). */
 export interface RouteView { key: string; paths: LatLon[][]; stops: { post: string; name: string; lat: number; lon: number }[]; cur: number }
 interface Props {
@@ -318,16 +318,16 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const m = map.current
     if (!m || !fly) return
     const bottom = cb.current.inset()
-    const anim = !reduced() && !fly.instant
+    const anim = !reduced()
     if (fly.fitUser) {
       const b = L.latLngBounds([fly.fitUser, fly.to])
       const o = { paddingTopLeft: L.point(40, 70), paddingBottomRight: L.point(40, bottom + 30), maxZoom: fly.zoom, animate: anim, duration: MS.fly / 1000 }
-      if (anim) m.flyToBounds(b, o); else m.fitBounds(b, o)
+      if (anim && !fly.soft) m.flyToBounds(b, o); else m.fitBounds(b, { ...o, duration: MS.reframe / 1000 })
       return
     }
     const p = m.project(fly.to, fly.zoom).add([0, bottom / 2])
     const c = m.unproject(p, fly.zoom)
-    if (anim) m.flyTo(c, fly.zoom, { duration: MS.fly / 1000 }); else m.setView(c, fly.zoom, { animate: false })
+    if (anim && !fly.soft) m.flyTo(c, fly.zoom, { duration: MS.fly / 1000 }); else m.setView(c, fly.zoom, { animate: anim, duration: MS.reframe / 1000 })
   }, [fly])
 
   return <div ref={el} className="absolute inset-0 z-0" role="application" aria-label={label} data-testid="map" />

@@ -19,7 +19,7 @@ import { LangCtx } from './lang'
 import { LocatingCtx, SheetClosedCtx } from './sheet'
 import { MapView, type FlyRequest, type RouteView } from './MapView'
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
-import { HomePage, PlacePage, type LineView } from './Pages'
+import { HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
 import { VehicleCtx } from './vehicles'
 import type { Vehicle } from '../lib/vehicles'
 import { SettingsView, useSettingsView } from './SettingsView'
@@ -31,11 +31,11 @@ import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
 
-type Page = 'home' | 'place'
+type Page = 'home' | 'place' | 'services'
 
-// Drawer levels. Closed shows only the chip row; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
+// Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 2
-const DEFAULT_CLOSED_PX = 78, DEFAULT_PEEK_PX = 360
+const DEFAULT_CLOSED_PX = 94, DEFAULT_PEEK_PX = 360
 const MAP_SHARE = 0.28 // the sheet never covers more than 72% of the screen at peek: this much stays for the map
 /** The phone's bottom safe area (home indicator) in px. */
 function safeBottom(): number {
@@ -46,14 +46,14 @@ function safeBottom(): number {
   probe.remove()
   return inset
 }
-/** Height of the closed sheet: the handle and the chip row, plus the phone's bottom safe area. Measured, so it follows the real layout. */
+/** Height of the closed sheet: the handle and the service header, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), tabs = pop?.querySelector('[role=tablist]')
-      if (!pop || !tabs) return
-      const next = Math.ceil(tabs.parentElement!.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + safeBottom())
+      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-testid=services]')
+      if (!pop || !head) return
+      const next = Math.ceil(head.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
     }
     measure()
@@ -65,7 +65,7 @@ function useClosedPx(dep: unknown) {
 }
 
 /**
- * Height of the peeking sheet: from the top of the sheet to the end of the peek block (the chip row and the one card), plus the bottom safe area.
+ * Height of the peeking sheet: from the top of the sheet to the end of the peek block (the service header and the one card), plus the bottom safe area.
  * Measured on the real layout, so a long Spanish bus card or a hint line can never be cut off. Re-measured on every render and whenever any part changes size.
  */
 function usePeekPx(block: HTMLElement | null): number {
@@ -73,7 +73,9 @@ function usePeekPx(block: HTMLElement | null): number {
   const measure = useCallback(() => {
     const pop = block?.closest('[data-slot=drawer-popup]')
     if (!block || !pop) return
-    const next = Math.min(Math.ceil(block.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + safeBottom()), Math.floor(window.innerHeight * (1 - MAP_SHARE)))
+    let scrolled = 0 // a block inside a scrolled area still counts from its top, so the height does not follow the scrolling
+    for (let e = block.parentElement; e && e !== pop; e = e.parentElement) scrolled += e.scrollTop
+    const next = Math.min(Math.ceil(block.getBoundingClientRect().bottom + scrolled - pop.getBoundingClientRect().top + safeBottom()), Math.floor(window.innerHeight * (1 - MAP_SHARE)))
     if (next > 120) setPx(old => (old === next ? old : next))
   }, [block])
   useEffect(measure) // after every render
@@ -207,11 +209,11 @@ export function App() {
 
   const lastFly = useRef<FlyRequest | null>(null)
   const flyTo = useCallback((to: LatLon, zoom: number, o: Partial<FlyRequest> = {}) => { const r = { n: ++flyN.current, to, zoom, ...o }; lastFly.current = r; setFly(r) }, [])
-  // the card got taller or shorter (another place, another language): frame the same place again above the new edge of the sheet, without animation
+  // the card got taller or shorter (another place, another language, another page): slide the map to frame the same place above the new edge of the sheet, as the sheet moves
   useEffect(() => {
     const r = lastFly.current
     if (lineData) setFitN(n => n + 1)
-    else if (r && !desktop && level === PEEK) setFly({ ...r, n: ++flyN.current, instant: true })
+    else if (r && !desktop && level === PEEK && page === 'home') setFly({ ...r, n: ++flyN.current, soft: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peekPx])
 
@@ -228,7 +230,6 @@ export function App() {
   const [permPending, setPermPending] = useState(true) // until we know whether the browser already allows location
   useEffect(() => { alreadyGranted().then(ok => { if (ok) locate(); setPermPending(false) }) }, [alreadyGranted, locate])
 
-  const raise = (min: number = FULL) => setLevel(l => Math.max(l, min))
   const askLocation = () => {
     // the first tap is the first moment of intent (and a user gesture): ask for the position once, unless the person already blocked it
     if (!pos && !askedLocation.current && !blocked()) { askedLocation.current = true; void locate(true) }
@@ -295,23 +296,27 @@ export function App() {
   const onWalk = () => {
     track('directions', layerId)
   }
-  const turnTo = (p: Page) => { go(p); raise() }
-  const back = () => { goUp() }
+  // a page that is not home (details, services) sizes the sheet to its own content (peek height) and gives back the size you had when you leave
+  const levelBefore = useRef(PEEK)
+  const turnTo = (p: Page) => { levelBefore.current = level; go(p); setLevel(PEEK) }
+  const back = () => { if (goUp() && page !== 'home') setLevel(levelBefore.current) }
+  const openServices = () => turnTo('services')
   // Escape and the back gesture: up one page, then lower the sheet one step
-  const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (!goUp()) setLevel(l => Math.max(CLOSED, l - 1)) }
+  const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') setLevel(levelBefore.current) } else setLevel(l => Math.max(CLOSED, l - 1)) }
   const cycle = () => setLevel(l => (l === CLOSED ? PEEK : l === PEEK ? FULL : PEEK))
   const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
   const pageEl = (() => {
     switch (page) {
-      case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} />
+      case 'services': return <ServicesPage layer={layer.id} onPick={pickLayer} onBack={back} peekRef={setPeekEl} />
+      case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} peekRef={setPeekEl} />
       default: return (
         <HomePage
           off={offSel} layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} nearby={nearby} peekRef={setPeekEl}
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onPick={pickLayer} chipOrder={chipOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
+          onServices={openServices} chipOrder={chipOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
           desktop={desktop}
         />
       )
