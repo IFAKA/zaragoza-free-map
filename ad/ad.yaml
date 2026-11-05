@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=/Users/faka/code/projects/adkit/schema/ad.schema.json
+# 15 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s.
+meta: {fps: 30, width: 1080, height: 1920, bars: 15}
+
+brief:
+  audience: People in Zaragoza on foot (locals, families, visitors) in summer.
+  message: "Lo que necesitas, cerca de ti: abres la app y lo más cercano ya está ahí, sin buscar."
+  language: es-ES
+  tone: warm, local, calm confidence. Not a tech demo.
+
+brand:
+  name: Zaragoza a mano
+  tagline: Lo que necesitas, cerca de ti
+  contact: "zaragoza-free-map.vercel.app"
+  colors: {paper: "#FFFFFF", paperDeep: "#F1F1F0", ink: "#3C3C3B", glow: "#FFD9D4", accent: "#D92A22", night: "#262625"}
+  fonts: {sans: Montserrat, serif: Montserrat, mark: Montserrat}
+  icon: {text: Z, color: "#D92A22", textColor: "#FFFFFF", image: ../public/pwa-512.png}
+
+capture: capture.yaml
+
+scenes:
+  # Bars 1-3: the pain, searching. Tabs pile up (frame -x = already there at the first frame).
+  - block: chaos
+    id: tabs
+    bars: 3
+    look: tabs
+    size: 1.05
+    counter: {start: 3, rise: 36, cap: 40, label: "pestañas"}
+    items:
+      - {frame: -30, icon: "🚰", text: "fuente agua potable cerca"}
+      - {frame: -20, icon: "🚻", text: "baños públicos zaragoza"}
+      - {beat: 0.5, icon: "🌳", text: "¿dónde hay sombra?"}
+      - {beat: 1, icon: "❄️", text: "refugio climático abierto"}
+      - {beat: 2, icon: "📶", text: "wifi gratis cerca"}
+      - {beat: 3, icon: "🚌", text: "¿cuándo pasa el 35?"}
+      - {beat: 4, icon: "💊", text: "farmacia cerca de mí"}
+      - {beat: 5, icon: "🚲", text: "bizi libres ahora"}
+      - {beat: 6, icon: "🚰", text: "fuente agua potable cerca"}
+    into: icon
+    flyBeats: 1
+    title: {lines: ["Julio.", "*40_°C.*"], at: 0.5, to: 4.5, size: 130, y: 440, accent: "#FF6A5E"}
+    titles:
+      - {lines: ["¿Dónde hay", "*agua* cerca?"], at: 5, to: 8, size: 120, y: 440, accent: "#FF6A5E"}
+
+  # Bar 4: the tram bell, the app icon.
+  - block: iconOpen
+    bars: 0.3333333333333333
+    bloom: {core: "#F2554A", edge: "#7A1410"}
+
+  # Bars 5-6: the map.
+  - block: reveal
+    bars: 2.6666666666666665
+    screen: map-bare
+    open: icon
+    titles:
+      - {lines: ["Zaragoza", "*a_mano.*"], at: 2, size: 130, scrim: true}
+
+  # Bars 7-12: fountains appear around you, the nearest first, one minute away; then the climate shelters.
+  - block: tapFlow
+    id: near
+    bars: 6
+    start: {screen: map}
+    titles:
+      - {lines: ["La más cercana,", "*primero.*"], at: 0.5, to: 5.5, size: 110, scrim: true}
+      - {lines: ["A un minuto,", "*a_pie.*"], at: 6, to: 10, size: 110, scrim: true}
+      - {lines: ["Y refugios", "del *calor.*"], at: 12.5, size: 110, scrim: true}
+    steps:
+      - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8], stagger: 0.5, style: pin, under: map-bare}
+      - {type: pulse, at: 4, element: me, count: 2}
+      - {type: tap, at: 7, element: walkline, x: 0.35, radius: 22}
+      - {type: tap, at: 10, element: servicesOpen, radius: 24, press: true}
+      - {type: screen, at: 10.5, screen: services, transition: sheet, sheetHeight: 360}
+      - {type: tap, at: 12, element: tabShelter, radius: 24, press: true}
+      - {type: screen, at: 12.5, screen: shelter, transition: fade}
+    camera:
+      - {at: 0, zoom: 1.0, focus: {y: 422}, qy: 1180}
+      - {at: 5.5, zoom: 1.5, focus: {element: walkline}, qy: 1180, spring: fast}
+      - {at: 9, zoom: 1.0, focus: {y: 422}, qy: 1180}
+
+  # Bars 13-15.
+  - block: endCard
+    bars: 3
+    screen: map
+    mark: monogram
+    title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
+    note: "Proyecto independiente. No oficial."
+    lockupAt: 3
+    contactAt: 4.5
+    hitAt: 6
+
+sound: sound.yaml
+
+output: {file: out/zaragoza-a-mano.mp4, crf: 18}

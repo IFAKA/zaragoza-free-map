@@ -1,0 +1,84 @@
+# Photographs "Zaragoza a mano" (the app one folder up): a build in .adkit/work, served by vite preview.
+# Fixed place (Plaza del Pilar), fixed Madrid summer afternoon, fresh storage. The map tiles come from arcgisonline.com.
+app:
+  dir: ..
+  isolate: copy
+  setup: ['npm ci --no-audit --no-fund']
+  build: ['npm run build']
+  start: 'npx vite preview --port {port} --strictPort'
+  ready: {path: /, timeoutSeconds: 120}
+
+viewport: {width: 390, height: 844, scale: 3}
+locale: es-ES
+timezone: Europe/Madrid
+clock: '2026-07-15T17:00:00+02:00'
+geolocation: {latitude: 41.6563, longitude: -0.8790}
+inputs: [capture]
+
+sets:
+  main:
+    screens:
+      # The water layer with 8 fountain pins around the user and the nearest card.
+      - name: map
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 5000}
+          - {evaluate: {file: capture/pins.js}}
+          - {wait: 600}
+        settleMs: 800
+        elements:
+          pin1: '#pin1'
+          pin2: '#pin2'
+          pin3: '#pin3'
+          pin4: '#pin4'
+          pin5: '#pin5'
+          pin6: '#pin6'
+          pin7: '#pin7'
+          pin8: '#pin8'
+          me: '.me'
+          card: {selector: '[data-testid=nearest]', fixed: true}
+          walkline: {selector: '#walkline', fixed: true}
+          servicesOpen: {selector: '[data-testid=services-open]', fixed: true}
+      # The same page with no pins.
+      - name: map-bare
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 5000}
+          - {evaluate: {file: capture/bare.js}}
+          - {wait: 600}
+        settleMs: 800
+      # The Services page open in the drawer (the sheet rises over the map).
+      - name: services
+        drawer: true
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 4000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: {for: '[data-testid=tab-shelter]'}}
+          - {wait: 1200}
+        settleMs: 800
+        elements:
+          tabShelter: {selector: '[data-testid=tab-shelter]', fixed: true}
+      # Climate shelters: a public building, the walking route.
+      - name: shelter
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {click: '[data-testid=services-open]'}
+          - {wait: {for: '[data-testid=tab-shelter]'}}
+          - {wait: 800}
+          - {click: '[data-testid=tab-shelter]'}
+          - {wait: 4500}
+        settleMs: 800

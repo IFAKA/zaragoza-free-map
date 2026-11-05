@@ -3,3 +3,7 @@ dist
 *.local
 .vercel
 logs
+
+# adkit ad
+ad/.adkit/
+ad/out/
