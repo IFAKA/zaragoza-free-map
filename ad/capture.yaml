@@ -149,6 +149,8 @@ sets:
           - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
           - {wait: 3000}
           - {wait: 3500}
+          - {click: '[data-testid=handle]'}
+          - {wait: 1500}
           - {wait: 600}
         settleMs: 800
         elements:

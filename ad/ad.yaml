@@ -92,7 +92,7 @@ scenes:
       - {type: screen, at: 4.5, screen: bizi, transition: cut}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 2, zoom: {fit: card, fraction: 0.88}, focus: {y: 724}, qy: 1000, spring: fast}
+      - {at: 2, zoom: {fit: card, fraction: 0.88}, focus: {y: 267}, qy: 1000, spring: fast}
       - {at: 4.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 738}, qy: 1000, spring: fast}
       - {at: 6.5, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
