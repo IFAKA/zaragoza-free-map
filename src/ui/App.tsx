@@ -316,7 +316,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} chipOrder={chipOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
+          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
           desktop={desktop}
         />
       )

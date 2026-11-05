@@ -209,6 +209,8 @@ todo.push(async () => {
     await go(p, 'toilets', 'tap'); await settle(p); ok(await lvl(p) === 'peek', 'picking the service on show at peek keeps peek')
     await drag(195, 690, 800, 300); ok(await lvl(p) === 'closed', 'peek -> closed again by dragging down')
     await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'peek', 'closed: handle tap opens the sheet')
+    await drag(195, 690, 800, 300); ok(await lvl(p) === 'closed', 'closed again')
+    await p.getByTestId('service-on-show').tap(); await settle(p); ok(await lvl(p) === 'peek', 'closed: tapping the service on show opens to peek')
     await ctx.close()
   })
   // flicks (velocity)

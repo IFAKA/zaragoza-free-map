@@ -17,7 +17,7 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
  * The header of the home page: the service you are on (left, plain) and one button (right) that shows four of the other services.
  * The button turns the drawer to the Services page (same drawer, new page). `order` is the person's own order, so the four are the ones they use most.
  */
-export function ServiceHeader({ layer, order, onOpen }: { layer: LayerId; order: LayerId[]; onOpen: () => void }) {
+export function ServiceHeader({ layer, order, onOpen, onShow }: { layer: LayerId; order: LayerId[]; onOpen: () => void; onShow: () => void }) {
   const { lang, t } = useT()
   const cur = LAYERS[layer], I = ICONS[cur.icon]
   const others = order.filter(id => id !== layer)
@@ -40,11 +40,13 @@ export function ServiceHeader({ layer, order, onOpen }: { layer: LayerId; order:
   return (
     <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="shrink-0">
       <div className="flex items-center gap-3 px-4 pb-2 pt-1">
+        <button type="button" onClick={onShow} data-testid="service-on-show" className="flex min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent p-0 text-left text-inherit">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-btn text-on-brand" style={{ background: cur.color }}><m.span key={layer} {...cardSwap} className="flex"><I size="1.6em" weight="fill" aria-hidden /></m.span></span>
         <m.span key={layer + 't'} {...cardSwap} className="min-w-0 flex-1">
           <span className="block truncate font-title text-[1.15em] font-bold text-ink">{cur.label[lang]}</span>
           <span className="block truncate text-[0.88em] text-ink-soft">{cur.hint[lang]}</span>
         </m.span>
+        </button>
         <m.button {...tap} type="button" onClick={onOpen} aria-label={t('tabsLabel')} data-testid="services-open"
           className="relative grid size-[62px] shrink-0 grid-cols-2 grid-rows-2 place-items-center gap-0.5 rounded-[16px] border-[1.5px] border-line bg-paper p-[7px] text-ink shadow-md">
           {shown.map((id, k) => { const J = ICONS[LAYERS[id].icon]; return (
