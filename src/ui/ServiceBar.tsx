@@ -20,6 +20,17 @@ export function ServiceChips({ layer, order, onService }: { layer: LayerId; orde
     const row = list.current.getBoundingClientRect(), r = el.getBoundingClientRect()
     if (r.left < row.left || r.right > row.right) list.current.scrollLeft += r.left + r.width / 2 - (row.left + row.width / 2)
   }, [layer])
+  // a mouse wheel only turns vertically: on an overflowing row it scrolls sideways (React's onWheel is passive, so this one is added by hand)
+  useEffect(() => {
+    const el = list.current
+    if (!el) return
+    const wheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      e.preventDefault(); el.scrollLeft += e.deltaY
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => el.removeEventListener('wheel', wheel)
+  }, [])
   return (
     <Tabs.Root value={layer} className="shrink-0">
       <Tabs.List ref={list} className="no-scrollbar flex touch-pan-x gap-2 overflow-x-auto overflow-y-hidden px-3 py-1" aria-label={t('tabsLabel')} data-testid="services">
