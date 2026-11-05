@@ -9,6 +9,13 @@ app:
   ready: {path: /, timeoutSeconds: 120}
 
 viewport: {width: 390, height: 844, scale: 3}
+# A real phone's safe areas (status bar and home indicator), so the app lays out as on a device.
+safeArea: {top: 47, bottom: 34}
+# Live data answered with fixed files, so every capture is the same: a bus stop, the tram stops, Bizi.
+routes:
+  - {url: '**/poste-autobus/tuzsa-1099.json', file: capture/live/bus.json}
+  - {url: '**/parada-tranvia/*.json', file: capture/live/tram.json}
+  - {url: 'https://api.citybik.es/v2/networks/bizi', file: capture/live/bizi.json}
 locale: es-ES
 timezone: Europe/Madrid
 clock: '2026-07-15T17:00:00+02:00'
@@ -41,7 +48,6 @@ sets:
           me: '.me'
           card: {selector: '[data-testid=nearest]', fixed: true}
           walkline: {selector: '#walkline', fixed: true}
-          servicesOpen: {selector: '[data-testid=services-open]', fixed: true}
       # The same page with no pins.
       - name: map-bare
         steps:
@@ -53,32 +59,145 @@ sets:
           - {evaluate: {file: capture/bare.js}}
           - {wait: 600}
         settleMs: 800
-      # The Services page open in the drawer (the sheet rises over the map).
-      - name: services
-        drawer: true
+      # A bus stop with its next buses (served from capture/live/bus.json), the Líneas chips in view.
+      - name: bus-stop
         steps:
           - {goto: /}
-          - {evaluate: {file: capture/state.js}}
+          - {evaluate: {file: capture/layer-bus.js}}
           - {goto: /}
           - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
           - {wait: 4000}
-          - {click: '[data-testid=services-open]'}
-          - {wait: {for: '[data-testid=tab-shelter]'}}
-          - {wait: 1200}
+          - {evaluate: {file: capture/bus-select.js}}
+          - {wait: 3500}
+          - {click: '[data-testid=handle]'}
+          - {wait: 1500}
+          - {wait: {for: '[data-testid=bus-line-chip][data-line="50"]', timeoutMs: 20000}}
+          - {wait: 600}
         settleMs: 800
         elements:
-          tabShelter: {selector: '[data-testid=tab-shelter]', fixed: true}
-      # Climate shelters: a public building, the walking route.
-      - name: shelter
+          chip: {selector: '[data-testid=bus-line-chip][data-line="50"]', fixed: true}
+          rows: {selector: '[data-testid=live-times]', fixed: true}
+      # The route of line 50 from that stop: the line on the map, its next stops, the live minutes.
+      - name: bus-line
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-bus.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 4000}
+          - {evaluate: {file: capture/bus-select.js}}
+          - {wait: 3500}
+          - {click: '[data-testid=handle]'}
+          - {wait: 1500}
+          - {wait: {for: '[data-testid=bus-line-chip][data-line="50"]', timeoutMs: 20000}}
+          - {click: '[data-testid=bus-line-chip][data-line="50"]'}
+          - {wait: 3500}
+          - {wait: 600}
+        settleMs: 800
+        elements:
+          steps: {selector: '[data-testid=line-steps]', fixed: true}
+          times: {selector: '[data-testid=live-times]', fixed: true}
+      # The tram stop nearest to you, with its minutes (capture/live/tram.json).
+      - name: tram
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-tram.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {wait: 3500}
+          - {wait: 600}
+        settleMs: 800
+        elements:
+          card: {selector: '[data-testid=nearest]', fixed: true}
+      # A Bizi station with the live counts (capture/live/bizi.json).
+      - name: bizi
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-bizi.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3000}
+          - {wait: 3500}
+          - {wait: 600}
+        settleMs: 800
+        elements:
+          card: {selector: '[data-testid=nearest]', fixed: true}
+      - name: m-water
         steps:
           - {goto: /}
           - {evaluate: {file: capture/state.js}}
           - {goto: /}
           - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
-          - {wait: 3000}
-          - {click: '[data-testid=services-open]'}
-          - {wait: {for: '[data-testid=tab-shelter]'}}
-          - {wait: 800}
-          - {click: '[data-testid=tab-shelter]'}
-          - {wait: 4500}
+          - {wait: 3500}
+          - {evaluate: {file: capture/montage.js}}
+          - {wait: 600}
+        settleMs: 800
+      - name: m-toilets
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-toilets.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {evaluate: {file: capture/montage.js}}
+          - {wait: 600}
+        settleMs: 800
+      - name: m-wifi
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-wifi.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {evaluate: {file: capture/montage.js}}
+          - {wait: 600}
+        settleMs: 800
+      - name: m-charge
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-charge.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {evaluate: {file: capture/montage.js}}
+          - {wait: 600}
+        settleMs: 800
+      - name: m-libraries
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-libraries.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 3500}
+          - {evaluate: {file: capture/montage.js}}
+          - {wait: 600}
+        settleMs: 800
+      # Climate shelters: the building, the walking route; with pins, and the same without.
+      - name: shelter
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-shelter.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 4000}
+          - {evaluate: {file: capture/pins.js}}
+          - {wait: 600}
+        settleMs: 800
+        elements:
+          pin1: '#pin1'
+          pin2: '#pin2'
+          pin3: '#pin3'
+          pin4: '#pin4'
+          me: '.me'
+          card: {selector: '[data-testid=nearest]', fixed: true}
+      - name: shelter-bare
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/layer-shelter.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 4000}
+          - {evaluate: {file: capture/bare.js}}
+          - {wait: 600}
         settleMs: 800

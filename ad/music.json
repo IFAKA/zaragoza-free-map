@@ -1054,9 +1054,6 @@
     "Dm"
    ],
    "tracks": {
-    "tram_bell": [
-     "bell"
-    ],
     "wind": [
      "wind_tail"
     ],
@@ -1167,6 +1164,106 @@
     "palmas": "palmas_3",
     "palmas_crowd": "crowd",
     "castanets": "cast_3"
+   }
+  },
+  {
+   "name": "jota2b",
+   "bars": 5,
+   "mood": "the jota again, the crowd clapping, one bar longer",
+   "chords": [
+    "Dm",
+    "Gm",
+    "A7",
+    "Dm",
+    "A7"
+   ],
+   "tracks": {
+    "bandurria": [
+     "melody_b",
+     {
+      "bars": 2,
+      "notes": [
+       [
+        0,
+        8,
+        0.5,
+        0.9
+       ],
+       [
+        0.5,
+        7,
+        0.5,
+        0.7
+       ],
+       [
+        1,
+        8,
+        1,
+        0.85
+       ],
+       [
+        2,
+        5,
+        1,
+        0.8
+       ],
+       [
+        3,
+        7,
+        0.5,
+        0.8
+       ],
+       [
+        3.5,
+        6,
+        0.5,
+        0.7
+       ],
+       [
+        4,
+        5,
+        1.5,
+        0.85
+       ]
+      ]
+     },
+     "motif"
+    ],
+    "guitar": [
+     "rasgueo",
+     "rasgueo",
+     "rasgueo",
+     "rasgueo",
+     "rasgueo"
+    ],
+    "bass": [
+     "bass_oom",
+     "bass_oom",
+     "bass_oom",
+     "bass_oom",
+     "bass_oom"
+    ],
+    "palmas": [
+     "palmas_3",
+     "palmas_3",
+     "palmas_3",
+     "palmas_3",
+     "palmas_3"
+    ],
+    "palmas_crowd": [
+     "crowd",
+     "crowd",
+     "crowd",
+     "crowd",
+     "crowd"
+    ],
+    "castanets": [
+     "cast_3",
+     "cast_3",
+     "cast_3",
+     "cast_3",
+     "cast_3"
+    ]
    }
   },
   {

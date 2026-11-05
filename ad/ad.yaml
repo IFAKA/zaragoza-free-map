@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=/Users/faka/code/projects/adkit/schema/ad.schema.json
 # 15 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s.
-meta: {fps: 30, width: 1080, height: 1920, bars: 15}
+meta: {fps: 30, width: 1080, height: 1920, bars: 20}
 
 brief:
   audience: People in Zaragoza on foot (locals, families, visitors) in summer.
@@ -19,28 +19,30 @@ brand:
 capture: capture.yaml
 
 scenes:
-  # Bars 1-3: the pain, searching. Tabs pile up (frame -x = already there at the first frame).
+  # Bars 1-3: the pain, searching. Titles at the top, the tabs pile up below them.
   - block: chaos
     id: tabs
     bars: 3
     look: tabs
-    size: 1.05
+    size: 1.4
+    pileTop: 700
+    tile: {glyph: false}
     counter: {start: 3, rise: 36, cap: 40, label: "pestañas"}
     items:
-      - {frame: -30, icon: "🚰", text: "fuente agua potable cerca"}
-      - {frame: -20, icon: "🚻", text: "baños públicos zaragoza"}
-      - {beat: 0.5, icon: "🌳", text: "¿dónde hay sombra?"}
-      - {beat: 1, icon: "❄️", text: "refugio climático abierto"}
-      - {beat: 2, icon: "📶", text: "wifi gratis cerca"}
+      - {frame: -30, icon: "🚰", text: "fuente agua cerca"}
+      - {frame: -20, icon: "🚻", text: "baños públicos"}
+      - {beat: 0.5, icon: "🌳", text: "¿sombra?"}
+      - {beat: 1, icon: "❄️", text: "refugio climático"}
+      - {beat: 2, icon: "📶", text: "wifi gratis"}
       - {beat: 3, icon: "🚌", text: "¿cuándo pasa el 35?"}
-      - {beat: 4, icon: "💊", text: "farmacia cerca de mí"}
-      - {beat: 5, icon: "🚲", text: "bizi libres ahora"}
-      - {beat: 6, icon: "🚰", text: "fuente agua potable cerca"}
+      - {beat: 4, icon: "🚲", text: "bizi libres"}
+      - {beat: 5, icon: "🚰", text: "fuente agua cerca"}
+      - {beat: 6, icon: "🚻", text: "baños públicos"}
     into: icon
     flyBeats: 1
-    title: {lines: ["Julio.", "*40_°C.*"], at: 0.5, to: 4.5, size: 130, y: 440, accent: "#FF6A5E"}
+    title: {lines: ["Julio.", "*40_°C.*"], at: 0, to: 4.5, size: 130, y: 290, accent: "#FF6A5E", instant: true}
     titles:
-      - {lines: ["¿Dónde hay", "*agua* cerca?"], at: 5, to: 8, size: 120, y: 440, accent: "#FF6A5E"}
+      - {lines: ["¿Dónde hay", "*agua* cerca?"], at: 5, to: 7.5, size: 110, y: 290, accent: "#FF6A5E"}
 
   # Bar 4: the tram bell, the app icon.
   - block: iconOpen
@@ -52,40 +54,90 @@ scenes:
     bars: 2.6666666666666665
     screen: map-bare
     open: icon
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
     titles:
-      - {lines: ["Zaragoza", "*a_mano.*"], at: 2, size: 130, scrim: true}
+      - {lines: ["Zaragoza", "*a_mano.*"], at: 2, size: 90, y: 262}
 
-  # Bars 7-12: fountains appear around you, the nearest first, one minute away; then the climate shelters.
+  # Bars 7-9: the nearest fountain, one minute away.
   - block: tapFlow
     id: near
-    bars: 6
+    bars: 3
     start: {screen: map}
     titles:
-      - {lines: ["La más cercana,", "*primero.*"], at: 0.5, to: 5.5, size: 110, scrim: true}
-      - {lines: ["A un minuto,", "*a_pie.*"], at: 6, to: 10, size: 110, scrim: true}
-      - {lines: ["Y refugios", "del *calor.*"], at: 12.5, size: 110, scrim: true}
+      - {lines: ["La más cercana,", "*primero.*"], at: 0, to: 2.5, size: 90, y: 262}
+      - {lines: ["A un minuto,", "*a_pie.*"], at: 2.5, to: 4.5, size: 90, y: 262}
     steps:
       - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8], stagger: 0.5, style: pin, under: map-bare}
-      - {type: pulse, at: 4, element: me, count: 2}
-      - {type: tap, at: 7, element: walkline, x: 0.35, radius: 22}
-      - {type: tap, at: 10, element: servicesOpen, radius: 24, press: true}
-      - {type: screen, at: 10.5, screen: services, transition: sheet, sheetHeight: 360}
-      - {type: tap, at: 12, element: tabShelter, radius: 24, press: true}
-      - {type: screen, at: 12.5, screen: shelter, transition: fade}
+      - {type: pulse, at: 3.5, element: me, count: 1}
     camera:
-      - {at: 0, zoom: 1.0, focus: {y: 422}, qy: 1180}
-      - {at: 5.5, zoom: 1.5, focus: {element: walkline}, qy: 1180, spring: fast}
-      - {at: 9, zoom: 1.0, focus: {y: 422}, qy: 1180}
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 4.5, zoom: {fit: card, fraction: 0.88}, focus: {element: card}, qy: 1120, spring: fast}
+      - {at: 8, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
-  # Bars 13-15.
-  - block: endCard
+  # Bars 10-12: a bus stop, a line, the live minutes.
+  - block: tapFlow
+    id: bus
     bars: 3
+    start: {screen: bus-stop}
+    titles:
+      - {lines: ["Y el *bus,*", "en directo."], at: 1, size: 90, y: 262}
+    steps:
+      - {type: tap, at: 3, element: chip, radius: 22, press: true}
+      - {type: screen, at: 3.5, screen: bus-line, transition: fade}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+
+  # Bars 13-14: the tram, then Bizi.
+  - block: tapFlow
+    id: tram
+    bars: 1.3333333333333333
+    start: {screen: tram}
+    titles:
+      - {lines: ["Tranvía y *Bizi.*"], at: 0, size: 90, y: 262}
+    steps:
+      - {type: screen, at: 2, screen: bizi, transition: cut}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+
+  # Bars 14-16: one service on every beat.
+  - block: skins
+    id: montage
+    bars: 2
+    every: 1
+    variants:
+      - {screen: m-water}
+      - {screen: m-toilets}
+      - {screen: m-wifi}
+      - {screen: m-charge}
+      - {screen: m-libraries}
+      - {screen: m-water}
+    title: {lines: ["Todo, *cerca.*"], at: 0, size: 90, y: 262}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+
+  # Bars 16-17: the climate shelters.
+  - block: tapFlow
+    id: shelter
+    bars: 2
+    start: {screen: shelter}
+    titles:
+      - {lines: ["Y refugios", "del *calor.*"], at: 0, size: 90, y: 262}
+    steps:
+      - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4], stagger: 0.5, style: pin, under: shelter-bare}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+
+  # Bars 18-20.
+  - block: endCard
+    bars: 2.6666666666666665
     screen: map
     mark: monogram
     title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
+    phone: {scale: 0.8, y: 410, x: 110}
     note: "Proyecto independiente. No oficial."
-    lockupAt: 3
-    contactAt: 4.5
+    lockupAt: 2.5
+    contactAt: 4
     hitAt: 6
 
 sound: sound.yaml

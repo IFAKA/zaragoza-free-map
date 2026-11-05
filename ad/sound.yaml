@@ -1,5 +1,5 @@
 # Zaragoza a mano: every sound is an object of the city or of a hot summer day on foot.
-# Music: the approved 15-bar jota (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
+# Music: the approved jota (20 bars) (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
 seed: 15
 music: {file: music.json}
 
@@ -48,11 +48,6 @@ sounds:
       - {model: modal, preset: glass, note: C7, params: {decay: 0.05, hardness: 0.8}, gain: -12}
       - {model: modal, preset: wood_block, note: A4, params: {decay: 0.02, hardness: 0.6}, gain: -20}
 
-  air_rise:
-    meaning: "A soft rise of air, the drawer of the app lifting like a breath of wind in the shade"
-    layers:
-      - {model: whoosh, params: {dur: 0.6, f_start: 300, f_end: 1400, width: 0.9, shape: swell}, gain: -12}
-
   cool_air:
     meaning: "A cool breath from a fan in a climate shelter, the map switching to places with air conditioning"
     layers:
@@ -69,8 +64,9 @@ sounds:
   palma_flick:
     meaning: "A flick of castanets in time with the jota, the title lands like a dancer's finger snap"
     layers:
-      - {model: castanets, params: {velocity: 0.75, rattle: 1}, gain: -8}
-    fx: [{type: highpass, hz: 500}, {type: reverb, rt60: 0.5, wet: 0.08}]
+      - {model: sampler, params: {set: castanets, hit: strike, vel: 0.8}, gain: -6}
+      - {model: sampler, params: {set: hands, hit: palma_sorda, vel: 0.5}, at: 0.0, gain: -12}
+    fx: [{type: reverb, rt60: 0.5, wet: 0.08}]
 
   final_hit:
     meaning: "The tram bell with a castanet roll on the tonic, the last beat of the jota and the promise of the ad"
@@ -88,9 +84,9 @@ cues:
   drop: bell_echo
   app-open: cierzo_breath
   pop-in: {sound: water_pin, variations: 4}
-  pulse: {sound: bell_echo, reason: "the blue dot answers with the same low echo of the tram bell as the map opening"}
+  skin-swap: {sound: water_pin, variations: 6, reason: "each service on the beat is one more drop, like the pins"}
+  pulse: {sound: bell_echo, reason: "the blue dot answers with a soft echo of the bell"}
   tap: glass_tap
-  sheet-up: air_rise
   screen-swap: cool_air
   title-in: palma_flick
   title-out: silent
