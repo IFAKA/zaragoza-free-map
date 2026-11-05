@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=/Users/faka/code/projects/adkit/schema/ad.schema.json
-# 15 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s.
-meta: {fps: 30, width: 1080, height: 1920, bars: 20}
+# 35 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s.
+meta: {fps: 30, width: 1080, height: 1920, bars: 35}
 
 brief:
   audience: People in Zaragoza on foot (locals, families, visitors) in summer.
@@ -19,7 +19,8 @@ brand:
 capture: capture.yaml
 
 scenes:
-  # Bars 1-6: the pain on a plain phone browser (searching, tab after tab), then the app opens.
+  # Beats 0-20: the pain on a plain phone browser (searching, tab after tab), then the app opens.
+  # Every title stays long enough to read (4 words/s + 0.5 s + its entrance); the story is 105 beats = 35 bars = 35 s.
   - block: reveal
     bars: 0.6666666666666666
     screen: hook-empty
@@ -31,70 +32,67 @@ scenes:
 
   - block: tapFlow
     id: hook
-    bars: 5.333333333333333
+    bars: 6.333333333333333
     start: {screen: hook-empty}
     titles:
-      - {lines: ["Julio.", "*40_°C.*"], at: 0, to: 3.5, size: 110, y: 262, accent: "#D92A22", instant: true}
-      - {lines: ["¿Dónde hay", "*agua* cerca?"], at: 4.5, to: 9.5, size: 110, y: 262}
-      - {lines: ["Zaragoza", "*a_mano.*"], at: 11, size: 110, y: 262}
+      - {lines: ["Julio.", "*40_°C.*"], at: 0, to: 2.5, size: 110, y: 262, accent: "#D92A22", instant: true}
+      - {lines: ["¿Dónde hay", "*agua* cerca?"], at: 4.5, to: 11, size: 110, y: 262}
+      - {lines: ["Zaragoza", "*a_mano.*"], at: 13, size: 110, y: 262}
     steps:
       - {type: type, at: 0, element: field, text: "fuente agua potable cerca", beats: 2.5, fontSize: 19, color: "#202124"}
-      - {type: screen, at: 3, screen: hook-r1, transition: cut}
-      - {type: screen, at: 4.5, screen: hook-r2, transition: cut}
-      - {type: screen, at: 5.5, screen: hook-r3, transition: cut}
-      - {type: screen, at: 6.5, screen: hook-r4, transition: cut}
-      - {type: tap, at: 7.5, element: tabbtn, radius: 22}
-      - {type: screen, at: 8, screen: hook-tabs, transition: zoom}
-      - {type: screen, at: 10, screen: map-bare, transition: zoom}
+      - {type: screen, at: 3, screen: hook-r1, transition: fade}
+      - {type: screen, at: 5, screen: hook-r2, transition: fade}
+      - {type: screen, at: 7, screen: hook-r3, transition: fade}
+      - {type: screen, at: 8.5, screen: hook-r4, transition: fade}
+      - {type: tap, at: 10, element: tabbtn, radius: 22}
+      - {type: screen, at: 10.5, screen: hook-tabs, transition: zoom}
+      - {type: screen, at: 13, screen: map-bare, transition: zoom}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
-  # Bars 7-9: the nearest fountain, one minute away.
+  # Beats 20-38: the nearest fountain, one minute away. The card holds still after the push-in.
   - block: tapFlow
     id: near
-    bars: 3
+    bars: 7
     start: {screen: map}
     titles:
-      - {lines: ["La más cercana,", "*primero.*"], at: 0, to: 2, size: 90, y: 262}
-      - {lines: ["A un minuto,", "*a_pie.*"], at: 3, to: 4.5, size: 90, y: 262}
+      - {lines: ["La más cercana,", "*primero.*"], at: 0, to: 6.5, size: 90, y: 262}
+      - {lines: ["A un minuto,", "*a_pie.*"], at: 8.5, to: 16, size: 90, y: 262}
     steps:
       - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8], stagger: 0.5, style: pin, under: map-bare}
-      - {type: pulse, at: 3.5, element: me, count: 1}
+      - {type: pulse, at: 9, element: me, count: 1}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 4.5, zoom: {fit: card, fraction: 0.88}, focus: {element: card}, qy: 1120, spring: fast}
-      - {at: 7, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 15.5, zoom: {fit: card, fraction: 0.88}, focus: {element: card}, qy: 1120}
 
-  # Bars 10-12: a bus stop, a line, the live minutes. Wide with the title, then close on the rows, then on the route.
+  # Beats 38-54: a bus stop, a line, the live minutes.
   - block: tapFlow
     id: bus
-    bars: 2.6666666666666665
+    bars: 5.666666666666667
     start: {screen: bus-stop}
     titles:
-      - {lines: ["Y el *bus,*", "en directo."], at: 1.5, to: 2.5, size: 90, y: 262}
+      - {lines: ["Y el *bus,*", "en directo."], at: 0, to: 7.5, size: 90, y: 262}
     steps:
-      - {type: tap, at: 4.5, element: chip, radius: 22, press: true}
-      - {type: screen, at: 5, screen: bus-line, transition: fade}
+      - {type: tap, at: 10.5, element: chip, radius: 22, press: true}
+      - {type: screen, at: 11, screen: bus-line, transition: fade}
     camera:
-      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 2.5, zoom: {fit: rows, fraction: 0.88}, focus: {y: 330}, qy: 1000, spring: fast}
-      - {at: 5, zoom: {fit: steps, fraction: 0.88}, focus: {y: 590}, qy: 1000, spring: fast}
-      - {at: 7, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
+      - {at: 5, zoom: {fit: rows, fraction: 0.88}, focus: {y: 330}, qy: 1000}
+      - {at: 11, zoom: {fit: steps, fraction: 0.88}, focus: {y: 590}, qy: 1000, spring: slow}
 
-  # Bars 13-15: the tram, then Bizi, each with its own close-up.
+  # Beats 54-67: the tram, then Bizi, each with its own close-up.
   - block: tapFlow
     id: tram
-    bars: 2.6666666666666665
+    bars: 5.666666666666667
     start: {screen: tram}
     titles:
-      - {lines: ["Tranvía y *Bizi.*"], at: 0.5, to: 1.5, size: 90, y: 262}
+      - {lines: ["Tranvía y *Bizi.*"], at: 0, to: 5.5, size: 90, y: 262}
     steps:
-      - {type: screen, at: 4.5, screen: bizi, transition: cut}
+      - {type: screen, at: 11, screen: bizi, transition: fade}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 2, zoom: {fit: card, fraction: 0.88}, focus: {y: 267}, qy: 1000, spring: fast}
-      - {at: 4.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 738}, qy: 1000, spring: fast}
-      - {at: 6.5, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 5.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 267}, qy: 1000}
+      - {at: 11, zoom: {fit: card, fraction: 0.88}, focus: {y: 738}, qy: 1000, spring: slow}
 
   # One service on every beat.
   - block: skins
@@ -109,32 +107,35 @@ scenes:
       - {screen: m-libraries}
     title: {lines: ["Todo, *cerca.*"], at: 0, size: 90, y: 262}
     camera:
-      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
 
-  # The climate shelters: pins pop, then the card.
+  # Beats 72-85: the climate shelters: pins pop, then the card.
   - block: tapFlow
     id: shelter
-    bars: 2
+    bars: 4.333333333333333
     start: {screen: shelter}
     titles:
-      - {lines: ["Y refugios", "del *calor.*"], at: 0, to: 3, size: 90, y: 262}
+      - {lines: ["Y refugios", "del *calor.*"], at: 0, to: 6.5, size: 90, y: 262}
     steps:
       - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4], stagger: 0.5, style: pin, under: shelter-bare}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 3.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 727}, qy: 1000, spring: fast}
+      - {at: 6.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 727}, qy: 1000}
 
-  # Bars 18-20.
+  # Beats 85-96.
   - block: endCard
-    bars: 2
+    bars: 3.6666666666666665
     screen: map
     mark: monogram
     title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
     phone: {scale: 0.8, y: 410, x: 110}
     note: "Proyecto independiente. No oficial."
-    lockupAt: 1.5
-    contactAt: 3
-    hitAt: 5
+    lockupAt: 2.5
+    contactAt: 4.5
+    hitAt: 7
+
+checks:
+  cuts: []
 
 sound: sound.yaml
 

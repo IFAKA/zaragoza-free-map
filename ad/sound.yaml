@@ -1,5 +1,5 @@
 # Zaragoza a mano: every sound is an object of the city or of a hot summer day on foot.
-# Music: the approved jota (20 bars) (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
+# Music: the approved jota (35 bars) (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
 seed: 15
 music: {file: music.json}
 
