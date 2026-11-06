@@ -45,7 +45,23 @@ export default defineConfig({
       },
     }),
   ],
-  // One bundle with all city data baked in; the service worker precaches it, so the 500 kB default only adds noise
-  build: { target: 'es2022', chunkSizeWarningLimit: 1600 },
+  // Leaflet loads as its own chunk (see App.tsx); the rest is app code plus the baked-in city data
+  build: {
+    target: 'es2022',
+    chunkSizeWarningLimit: 600,
+    rolldownOptions: {
+      output: {
+        // Stable vendor and data chunks: an app update re-downloads only the app code, not React or the city data
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 30 },
+            { name: 'motion', test: /node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/, priority: 20 },
+            { name: 'baseui', test: /node_modules[\\/]@base-ui[\\/]/, priority: 20 },
+            { name: 'citydata', test: /src[\\/]data[\\/](bizi|bus|cercanias|civic|fountains|libraries|osm|racks|shelters|tram|toiletsgo|wifi)\.json/, priority: 10 },
+          ],
+        },
+      },
+    },
+  },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 })

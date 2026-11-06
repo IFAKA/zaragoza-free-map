@@ -1,5 +1,5 @@
 import { track } from '../lib/analytics'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withCounts } from '../lib/bizi'
 import { lsGet, lsSet } from '../lib/cache'
 import { loadDuty, madridDate, readDutyCache, todays } from '../lib/duty'
@@ -17,7 +17,9 @@ import { LAYERS, defaultLayer } from '../layers'
 import { dutyItems } from '../layers/build'
 import { LangCtx } from './lang'
 import { LocatingCtx, SheetClosedCtx } from './sheet'
-import { MapView, type FlyRequest, type RouteView } from './MapView'
+import type { FlyRequest, RouteView } from './MapView'
+// Leaflet and its cluster plugin are most of the code; they load as their own chunk so the drawer can paint first
+const MapView = lazy(() => import('./MapView').then(m => ({ default: m.MapView })))
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
 import { VehicleCtx } from './vehicles'
@@ -331,10 +333,10 @@ export function App() {
       <ToastHost>
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
-            <MapView
+            <Suspense fallback={null}><MapView
               layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
               showRange={showRange} desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
-            />
+            /></Suspense>
           </div>
           {desktop ? (
             <aside aria-label={t.panel} data-testid="panel" className="absolute inset-y-0 left-0 z-10 flex w-[400px] flex-col border-r border-line bg-paper shadow-[2px_0_14px_rgb(0_0_0/0.12)]">

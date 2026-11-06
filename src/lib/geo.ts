@@ -25,3 +25,6 @@ export function cleanName(s: string): string {
     .map((w, i) => (i > 0 && small.has(w) ? w : w.replace(/[a-záéíóúüñ]/, c => c.toUpperCase())))
     .join(' ')
 }
+
+/** WiFi range estimate in metres: ~40 m around a city building, ~25 m around an OpenStreetMap venue. */
+export const rangeMetres = (it: { building?: boolean }) => (it.building ? 40 : 25)

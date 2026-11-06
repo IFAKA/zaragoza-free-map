@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import '../lib/leafletGlobal'
 import 'leaflet.markercluster'
 import { useEffect, useRef } from 'react'
-import { CENTER } from '../lib/geo'
+import { CENTER, rangeMetres } from '../lib/geo'
 import { pointAt } from '../lib/transit'
 import { bearingAt } from '../lib/pathBearing'
 import { walkRoute } from '../lib/walkRoute'
@@ -44,8 +44,6 @@ interface Props {
 }
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const dark = () => matchMedia('(prefers-color-scheme: dark)').matches
-/** WiFi range estimate in metres: ~40 m around a city building, ~25 m around an OpenStreetMap venue. */
-export const rangeMetres = (it: { building?: boolean }) => (it.building ? 40 : 25)
 // Esri light/dark gray canvas: keyless, looks like Positron / Dark Matter. CARTO's own tile URLs now answer "API KEY REQUIRED".
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/'
 const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`
