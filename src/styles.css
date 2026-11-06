@@ -60,6 +60,7 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   /* motion tokens: the same values as src/ui/motion.ts (a unit test checks they agree) */
   --dur-press: 120ms;
+  --dur-page-out: 80ms;
   --dur-small: 150ms;
   --dur-card: 120ms;
   --dur-slide: 260ms;
@@ -104,9 +105,10 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 }
 :focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
 
-/* Page turn inside the drawer (Settings, About, Details; never a tab switch): the new page fades in (--dur-small).
+/* Page turn inside the drawer (Settings, About, Details; never a tab switch): the old page fades out (--dur-page-out), then the new page fades in (--dur-small).
    A transition from @starting-style, not a keyframe animation, so a quick second turn retargets instead of restarting. */
 .page-in { transition: opacity var(--dur-small) var(--ease-out); @starting-style { opacity: 0; } }
+.page-out { opacity: 0; transition: opacity var(--dur-page-out) var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   /* only opacity and colour may change: no slide, no scale (press feedback included), the drawer and toasts fade */
   *, *::before, *::after { transition-property: opacity, color, background-color, border-color !important; scale: none !important; }

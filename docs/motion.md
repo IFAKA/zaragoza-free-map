@@ -10,6 +10,7 @@ Calm, quick, physical, "at hand". Think of a sheet of paper that your thumb slid
 |---|---|---|
 | press | 120 ms | a button shrinks to 97% when pressed |
 | small | 150 ms | a page fades in, a switch moves, Settings fades under reduced motion |
+| pageOut | 80 ms | the old page fades out in a page turn |
 | card | 120 ms | the nearest-place card swaps for another |
 | slide | 260 ms | Settings slides in from the right |
 | pick | 300 ms | a ring on the marker you picked |
@@ -23,6 +24,9 @@ Calm, quick, physical, "at hand". Think of a sheet of paper that your thumb slid
 - Live data (Bizi counts, minutes) swaps at once. No fade, no slide, also under reduced motion.
 - Picking a place on the map: the marker grows to 115% and a soft ring fades once (300 ms). Only when a person picks it, never on load. The ring on the selected marker pulses twice, then stops.
 - Service header: the icon and name swap with `cardSwap` when the service changes. The 2x2 button swaps its three icons (the fourth cell is a fixed plus) one at a time (`slotSwap`, every `TEASER_EVERY` ms) through the other services once per service, then settles. No teaser with reduced motion.
+
+## Page turn
+A page turn fades through: the old page fades out in 80 ms (`pageOut`), then the new page mounts and fades in in 150 ms (`small`), while the sheet eases to its new height in 300 ms. The old page stays mounted (and cannot be tapped) until its fade ends. Reduced motion: no fade-out, the page swaps at once.
 
 ## Never animate
 List rows, tab labels, distance text, a repeated tap on the same tab, and anything caused by the keyboard or the back gesture (except the Settings slide itself). Only `transform` and `opacity` move.

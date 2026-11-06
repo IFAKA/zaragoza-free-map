@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Button as BaseButton } from '@base-ui/react/button'
+import { useReducedMotion } from 'motion/react'
+import { MS } from './motion'
 import { Drawer, DrawerContent } from './ui/drawer'
 
 /**
  * Pages inside ONE drawer (same mechanics as the suitkeep menu): a submenu is a page, not a second drawer.
  * - pages form a real stack: `go` pushes, `goUp` pops, so Back returns to the page you came from;
- * - a new page fades in over 150ms (keyed by turn.key);
+ * - fade through: the old page fades out (MS.pageOut) and is only then replaced by the new one, which fades in over 150ms (keyed by turn.key);
  * - the drawer eases to the height the new page needs (snap point change, 300ms) instead of jumping.
  */
 export interface Turn { key: string }
@@ -18,8 +20,6 @@ export function usePages<P extends string>(first: P) {
   const go = useCallback((p: P) => commit([...stackRef.current, p]), [commit])
   /** Back to the first page in one step (a tab was tapped, or the sheet was closed). */
   const reset = useCallback(() => { if (stackRef.current.length > 1) commit([first]) }, [commit, first])
-  // the control that was tapped is gone after a turn: put focus on the new page
-  useEffect(() => { if (turn) pageRef.current?.focus({ preventScroll: true }) }, [turn])
   /** Returns true when it went up a page. */
   const goUp = useCallback((): boolean => {
     if (stackRef.current.length < 2) return false
@@ -74,11 +74,28 @@ function HandleButton({ label, onTap }: { label: string; onTap: () => void }) {
   )
 }
 
-/** One page: fades in when `turn` changes. Shared by the mobile drawer and the desktop side panel. */
+/**
+ * One page, fading through when `turn` changes. Shared by the mobile drawer and the desktop side panel.
+ * `shown` is the turn on screen. After a turn the OLD page (its last children, frozen) fades out for MS.pageOut, then `shown` catches up
+ * (the key changes, so the new page mounts and fades in). A turn during the fade-out only moves the target: nothing restarts, one page at a time.
+ */
 export function PageFrame({ turn, pageRef, children }: { turn?: Turn; pageRef: RefObject<HTMLDivElement | null>; children: ReactNode }) {
+  const reduced = useReducedMotion()
+  const [shown, setShown] = useState(turn) // equal to `turn` on the first render, so it does not fade
+  const latest = useRef(turn); latest.current = turn
+  const kept = useRef(children)
+  const leaving = turn !== shown
+  if (!leaving) kept.current = children
+  useEffect(() => {
+    if (!leaving) return
+    const id = setTimeout(() => setShown(latest.current), reduced ? 0 : MS.pageOut)
+    return () => clearTimeout(id)
+  }, [leaving, reduced])
+  // the control that was tapped is gone after a turn: put focus on the new page
+  useEffect(() => { if (shown) pageRef.current?.focus({ preventScroll: true }) }, [shown, pageRef])
   return (
-    <div key={turn?.key} ref={pageRef} tabIndex={-1} className={`flex min-h-0 flex-1 flex-col outline-none ${turn ? 'page-in' : ''}`}>
-      {children}
+    <div key={shown?.key} ref={pageRef} tabIndex={-1} inert={leaving || undefined} className={`flex min-h-0 flex-1 flex-col outline-none ${shown ? 'page-in' : ''} ${leaving && !reduced ? 'page-out' : ''}`}>
+      {leaving ? kept.current : children}
     </div>
   )
 }

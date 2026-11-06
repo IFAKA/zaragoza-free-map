@@ -25,6 +25,7 @@ describe('motion lives in src/ui/motion.ts', () => {
   it('styles.css repeats the motion tokens exactly', () => {
     const v = (n: string) => css.match(new RegExp(`--${n}:\\s*([^;]+);`))?.[1].trim()
     expect(v('dur-press')).toBe(`${MS.press}ms`)
+    expect(v('dur-page-out')).toBe(`${MS.pageOut}ms`)
     expect(v('dur-small')).toBe(`${MS.small}ms`)
     expect(v('dur-card')).toBe(`${MS.card}ms`)
     expect(v('dur-slide')).toBe(`${MS.slide}ms`)

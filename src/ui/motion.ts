@@ -10,6 +10,8 @@ import type { Transition, Variants } from 'motion/react'
 export const MS = {
   /** Press feedback (scale .97) and colour changes on controls. */
   press: 120,
+  /** The old page fading out in a page turn, before the new one fades in (--dur-small). */
+  pageOut: 80,
   /** A small change in place: a page fading in, a switch, a card swapping. */
   small: 150,
   /** The card of the nearest place swapping for another. */
