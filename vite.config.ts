@@ -45,6 +45,7 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'es2022' },
+  // One bundle with all city data baked in; the service worker precaches it, so the 500 kB default only adds noise
+  build: { target: 'es2022', chunkSizeWarningLimit: 1600 },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 })
