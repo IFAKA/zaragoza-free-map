@@ -75,8 +75,8 @@ scenes:
     steps:
       - {type: screen, at: 1, screen: bus-svc, transition: live}
       - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 4, screen: bus-tab, transition: live}
-      - {type: tap, at: 4.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 4.5, screen: bus-tab, transition: live}
+      - {type: tap, at: 5, element: tab, radius: 22, press: true}
       - {type: screen, at: 8, screen: bus-pin, transition: live}
       - {type: tap, at: 8.5, element: pin, radius: 22, press: true}
     camera:
@@ -94,14 +94,14 @@ scenes:
     steps:
       - {type: screen, at: 1, screen: tram-svc, transition: live}
       - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 4, screen: tram-tab, transition: live}
-      - {type: tap, at: 4.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 4.5, screen: tram-tab, transition: live}
+      - {type: tap, at: 5, element: tab, radius: 22, press: true}
       - {type: screen, at: 8, screen: tram-pin, transition: live}
       - {type: tap, at: 8.5, element: pin, radius: 22, press: true}
       - {type: screen, at: 17, screen: bizi-svc, transition: live}
       - {type: tap, at: 17.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 20, screen: bizi-tab, transition: live}
-      - {type: tap, at: 20.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 20.5, screen: bizi-tab, transition: live}
+      - {type: tap, at: 21, element: tab, radius: 22, press: true}
       - {type: screen, at: 24, screen: bizi-pin, transition: live}
       - {type: tap, at: 24.5, element: pin, radius: 22, press: true}
     camera:
@@ -121,16 +121,16 @@ scenes:
     steps:
       - {type: screen, at: 1, screen: m1-svc, transition: live}
       - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 4, screen: m1-tab, transition: live}
-      - {type: tap, at: 4.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 4.5, screen: m1-tab, transition: live}
+      - {type: tap, at: 5, element: tab, radius: 22, press: true}
       - {type: screen, at: 9.5, screen: m2-svc, transition: live}
       - {type: tap, at: 10, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 12.5, screen: m2-tab, transition: live}
-      - {type: tap, at: 13, element: tab, radius: 22, press: true}
+      - {type: screen, at: 13, screen: m2-tab, transition: live}
+      - {type: tap, at: 13.5, element: tab, radius: 22, press: true}
       - {type: screen, at: 18, screen: m3-svc, transition: live}
       - {type: tap, at: 18.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 21, screen: m3-tab, transition: live}
-      - {type: tap, at: 21.5, element: tab, radius: 22, press: true}
+      - {type: screen, at: 21.5, screen: m3-tab, transition: live}
+      - {type: tap, at: 22, element: tab, radius: 22, press: true}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 

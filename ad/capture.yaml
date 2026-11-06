@@ -109,20 +109,20 @@ sets:
       - name: bus-svc
         steps:
           - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 20}}
+          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
           - {wait: 600}
         settleMs: 800
       - name: bus-tab
         steps:
           - {wait: 300}
-          - {record: {click: '[data-testid=tab-bus]', elements: {tab: '[data-testid=tab-bus]'}, before: 5, frames: 30}}
+          - {record: {click: '[data-testid=tab-bus]', elements: {tab: '[data-testid=tab-bus]'}, before: 5, frames: 24}}
           - {wait: 3000}
         settleMs: 800
       - name: bus-pin
         steps:
           - {wait: {for: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk', timeoutMs: 20000}}
           - {wait: 500}
-          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}, before: 5, frames: 30}}
+          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}, before: 5, frames: 24}}
           - {wait: 2500}
         settleMs: 800
         elements:
@@ -130,20 +130,20 @@ sets:
       - name: tram-svc
         steps:
           - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 20}}
+          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
           - {wait: 600}
         settleMs: 800
       - name: tram-tab
         steps:
           - {wait: 300}
-          - {record: {click: '[data-testid=tab-tram]', elements: {tab: '[data-testid=tab-tram]'}, before: 5, frames: 30}}
+          - {record: {click: '[data-testid=tab-tram]', elements: {tab: '[data-testid=tab-tram]'}, before: 5, frames: 24}}
           - {wait: 3000}
         settleMs: 800
       - name: tram-pin
         steps:
           - {wait: {for: '.mkw[title="Plaza del Pilar - Murallas"] .mk', timeoutMs: 20000}}
           - {wait: 500}
-          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="Plaza del Pilar - Murallas"] .mk'}, before: 5, frames: 30}}
+          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="Plaza del Pilar - Murallas"] .mk'}, before: 5, frames: 24}}
           - {wait: 2500}
         settleMs: 800
         elements:
@@ -151,20 +151,20 @@ sets:
       - name: bizi-svc
         steps:
           - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 20}}
+          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
           - {wait: 600}
         settleMs: 800
       - name: bizi-tab
         steps:
           - {wait: 300}
-          - {record: {click: '[data-testid=tab-bizi]', elements: {tab: '[data-testid=tab-bizi]'}, before: 5, frames: 30}}
+          - {record: {click: '[data-testid=tab-bizi]', elements: {tab: '[data-testid=tab-bizi]'}, before: 5, frames: 24}}
           - {wait: 3000}
         settleMs: 800
       - name: bizi-pin
         steps:
           - {wait: {for: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk', timeoutMs: 20000}}
           - {wait: 500}
-          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}, before: 5, frames: 30}}
+          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}, before: 5, frames: 24}}
           - {wait: 2500}
         settleMs: 800
         elements:
@@ -172,36 +172,36 @@ sets:
       - name: m1-svc
         steps:
           - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 20}}
+          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
           - {wait: 600}
         settleMs: 800
       - name: m1-tab
         steps:
           - {wait: 300}
-          - {record: {click: '[data-testid=tab-toilets]', elements: {tab: '[data-testid=tab-toilets]'}, before: 5, frames: 30}}
+          - {record: {click: '[data-testid=tab-toilets]', elements: {tab: '[data-testid=tab-toilets]'}, before: 5, frames: 24}}
           - {wait: 3000}
         settleMs: 800
       - name: m2-svc
         steps:
           - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 20}}
+          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
           - {wait: 600}
         settleMs: 800
       - name: m2-tab
         steps:
           - {wait: 300}
-          - {record: {click: '[data-testid=tab-wifi]', elements: {tab: '[data-testid=tab-wifi]'}, before: 5, frames: 30}}
+          - {record: {click: '[data-testid=tab-wifi]', elements: {tab: '[data-testid=tab-wifi]'}, before: 5, frames: 24}}
           - {wait: 3000}
         settleMs: 800
       - name: m3-svc
         steps:
           - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 20}}
+          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
           - {wait: 600}
         settleMs: 800
       - name: m3-tab
         steps:
           - {wait: 300}
-          - {record: {click: '[data-testid=tab-charge]', elements: {tab: '[data-testid=tab-charge]'}, before: 5, frames: 30}}
+          - {record: {click: '[data-testid=tab-charge]', elements: {tab: '[data-testid=tab-charge]'}, before: 5, frames: 24}}
           - {wait: 3000}
         settleMs: 800
