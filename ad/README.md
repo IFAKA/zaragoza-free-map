@@ -5,7 +5,7 @@ Made with [adkit](../../../../../adkit) (`node bin/adkit.mjs`). Run from the app
 | Cut | Spec | Capture file | Music | Output |
 |---|---|---|---|---|
 | Long master, 43 s: hook, water, bus, tram + Bizi, 3-service montage, end card | `ad/ad.yaml` | `ad/capture.yaml` (take `take`, 960 frames, 15 actions) | `music.json` (43 bars) | `ad/out/zaragoza-a-mano.mp4` |
-| Short cut, 27 s, early-November dusk: hook ("Anochece. El móvil, al 9 %."), charge, toilets, bus + Av. Valencia detour notice, wifi, Bizi, end card | `ad/ad-short.yaml` | `ad/capture-short.yaml` (take `take-short`, 580 frames, 10 actions) | `music-short.json` (27 bars) | `ad/out/zaragoza-a-mano-short.mp4` |
+| Short cut, 27 s, early-November dusk: hook ("Anochece. El móvil, al 9 %."), charge, toilets, bus + Av. Valencia detour notice, wifi, Bizi, end card | `ad/ad-short.yaml` | `ad/capture-short.yaml` (take `take-short`, 580 frames, 9 actions) | `music-short.json` (27 bars) | `ad/out/zaragoza-a-mano-short.mp4` |
 
 **The long cut (`ad.yaml`, `capture.yaml`) is the old July story (40 °C, water). Do not post it until it is reworked for the season.**
 
