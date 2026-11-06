@@ -77,11 +77,10 @@ scenes:
     start: {screen: take-short, transition: live}
     titles:
       - {lines: ["Y el *bus,*", "en directo."], at: 0, to: 9, size: 90, y: 262}
-      - {lines: ["Y el aviso", "de *obras.*"], at: 11, to: 18, size: 90, y: 262}
+      - {lines: ["Y el aviso", "de *obras.*"], at: 10.5, to: 18.5, size: 90, y: 262}
     steps:
       - {type: tap, at: 1, element: s2, radius: 22}
       - {type: tap, at: 4, element: t2, radius: 22}
-      - {type: tap, at: 11, element: chip, radius: 22}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
@@ -90,7 +89,7 @@ scenes:
     bars: 2.6666666666666665
     start: {screen: take-short, transition: live}
     titles:
-      - {lines: ["Wifi, *Bizi,*", "y más."], at: 1, to: 7, size: 90, y: 262}
+      - {lines: ["Wifi y", "*Bizi.*"], at: 1, to: 7, size: 90, y: 262}
     steps:
       - {type: tap, at: 0.5, element: s3, radius: 22}
       - {type: tap, at: 2.5, element: t3, radius: 22}
@@ -100,7 +99,7 @@ scenes:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
   - block: endCard
-    bars: 4
+    bars: 3.6666666666666665
     screen: take-short
     mark: monogram
     title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
@@ -112,7 +111,7 @@ scenes:
 
 checks:
   # The app fades a page through (old out 80 ms, new in 150 ms); these are its own page swaps (tab, pin card, line page) where content change + drawer height easing still make a small spike. Re-list after each recapture.
-  cuts: [374, 470, 474, 500, 550, 625, 629, 670, 674]
+  cuts: [374, 470, 474, 500, 540, 645, 649, 685, 689]
 
 sound: sound-short.yaml
 

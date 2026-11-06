@@ -106,8 +106,7 @@ sets:
                 - {at: 230, click: '[data-testid=services-open]', elements: {s2: '[data-testid=services-open]'}}
                 - {at: 260, click: '[data-testid=tab-bus]', elements: {t2: '[data-testid=tab-bus]'}}
                 - {at: 290, evaluate: capture/press-short.js, waitFor: '.mkw[title="Don Jaime I / Plaza De La Seo"] .mk', elements: {p2: '.mkw[title="Don Jaime I / Plaza De La Seo"] .mk'}, measure: {rows: '[data-testid=live-times]'}}
-                - {at: 320, evaluate: capture/scroll-chip.js}
-                - {at: 330, click: '[data-testid=bus-line-chip][data-line="35"]', elements: {chip: '[data-testid=bus-line-chip][data-line="35"]'}}
+                - {at: 330, click: '[data-testid=bus-line-chip][data-line="35"]'}
                 - {at: 415, click: '[data-testid=services-open]', elements: {s3: '[data-testid=services-open]'}}
                 - {at: 435, click: '[data-testid=tab-wifi]', elements: {t3: '[data-testid=tab-wifi]'}}
                 - {at: 455, click: '[data-testid=services-open]', elements: {s4: '[data-testid=services-open]'}}
