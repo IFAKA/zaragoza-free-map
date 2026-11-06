@@ -18,6 +18,10 @@ routes:
   - {url: '**/poste-autobus/tuzsa-1099.json', file: capture/live/bus.json}
   - {url: '**/parada-tranvia/*.json', file: capture/live/tram.json}
   - {url: 'https://api.citybik.es/v2/networks/bizi', file: capture/live/bizi.json}
+  # Map tiles: a local copy (ad/tiles, filled the first time, then no network). Anything else a take asks the network for fails `adkit check`.
+  - {url: 'https://server.arcgisonline.com/**', cache: tiles}
+  # The walking routes ("1 min a pie" lines): a local copy too.
+  - {url: 'https://routing.openstreetmap.de/**', cache: routes}
 locale: es-ES
 timezone: Europe/Madrid
 clock: '2026-07-15T17:00:00+02:00'
@@ -104,104 +108,28 @@ sets:
           card: {selector: '[data-testid=nearest]', fixed: true}
           walkline: {selector: '#walkline', fixed: true}
           svcopen: {selector: '[data-testid=services-open]', fixed: true}
-      # ONE continuous drawer: every screen below continues from the page state of the one before (no goto), and the real animation of
-      # each action is filmed at 30 fps (the page fade and the drawer height ease of the app), so the video shows the app's own motion.
-      - name: bus-svc
+      # ONE take: one page session, recorded in one go, 30 fps. The page clock is stepped one frame at a time (slow motion only while an
+      # action's animation runs, real time everywhere else), nothing is reloaded or reset between the actions: one drawer, one map, one ripple.
+      # It continues from the `map` page (water layer, 8 pins). Frame 0 here = the first frame of the `near` block.
+      - name: take
         steps:
-          - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
-          - {wait: 600}
-        settleMs: 800
-      - name: bus-tab
-        steps:
-          - {wait: 300}
-          - {record: {click: '[data-testid=tab-bus]', elements: {tab: '[data-testid=tab-bus]'}, before: 5, frames: 24}}
-          - {wait: 3000}
-        settleMs: 800
-      - name: bus-pin
-        steps:
-          - {wait: {for: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk', timeoutMs: 20000}}
-          - {wait: 500}
-          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}, before: 5, frames: 24}}
-          - {wait: 2500}
-        settleMs: 800
-        elements:
-          rows: {selector: '[data-testid=live-times]', fixed: true}
-      - name: tram-svc
-        steps:
-          - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
-          - {wait: 600}
-        settleMs: 800
-      - name: tram-tab
-        steps:
-          - {wait: 300}
-          - {record: {click: '[data-testid=tab-tram]', elements: {tab: '[data-testid=tab-tram]'}, before: 5, frames: 24}}
-          - {wait: 3000}
-        settleMs: 800
-      - name: tram-pin
-        steps:
-          - {wait: {for: '.mkw[title="Plaza del Pilar - Murallas"] .mk', timeoutMs: 20000}}
-          - {wait: 500}
-          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="Plaza del Pilar - Murallas"] .mk'}, before: 5, frames: 24}}
-          - {wait: 2500}
-        settleMs: 800
-        elements:
-          card: {selector: '[data-testid=nearest]', fixed: true}
-      - name: bizi-svc
-        steps:
-          - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
-          - {wait: 600}
-        settleMs: 800
-      - name: bizi-tab
-        steps:
-          - {wait: 300}
-          - {record: {click: '[data-testid=tab-bizi]', elements: {tab: '[data-testid=tab-bizi]'}, before: 5, frames: 24}}
-          - {wait: 3000}
-        settleMs: 800
-      - name: bizi-pin
-        steps:
-          - {wait: {for: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk', timeoutMs: 20000}}
-          - {wait: 500}
-          - {record: {evaluate: capture/press.js, elements: {pin: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}, before: 5, frames: 24}}
-          - {wait: 2500}
-        settleMs: 800
-        elements:
-          card: {selector: '[data-testid=nearest]', fixed: true}
-      - name: m1-svc
-        steps:
-          - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
-          - {wait: 600}
-        settleMs: 800
-      - name: m1-tab
-        steps:
-          - {wait: 300}
-          - {record: {click: '[data-testid=tab-toilets]', elements: {tab: '[data-testid=tab-toilets]'}, before: 5, frames: 24}}
-          - {wait: 3000}
-        settleMs: 800
-      - name: m2-svc
-        steps:
-          - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
-          - {wait: 600}
-        settleMs: 800
-      - name: m2-tab
-        steps:
-          - {wait: 300}
-          - {record: {click: '[data-testid=tab-wifi]', elements: {tab: '[data-testid=tab-wifi]'}, before: 5, frames: 24}}
-          - {wait: 3000}
-        settleMs: 800
-      - name: m3-svc
-        steps:
-          - {wait: 400}
-          - {record: {click: '[data-testid=services-open]', elements: {svcopen: '[data-testid=services-open]'}, before: 5, frames: 24}}
-          - {wait: 600}
-        settleMs: 800
-      - name: m3-tab
-        steps:
-          - {wait: 300}
-          - {record: {click: '[data-testid=tab-charge]', elements: {tab: '[data-testid=tab-charge]'}, before: 5, frames: 24}}
-          - {wait: 3000}
+          - record:
+              frames: 960
+              slow: 0.5
+              actions:
+                - {at: 185, click: '[data-testid=services-open]', elements: {s1: '[data-testid=services-open]', me: '.me'}}
+                - {at: 220, click: '[data-testid=tab-bus]', elements: {t1: '[data-testid=tab-bus]'}}
+                - {at: 255, evaluate: capture/press.js, waitFor: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk', elements: {p1: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}, measure: {rows: '[data-testid=live-times]'}}
+                - {at: 365, click: '[data-testid=services-open]', elements: {s2: '[data-testid=services-open]'}}
+                - {at: 400, click: '[data-testid=tab-tram]', elements: {t2: '[data-testid=tab-tram]'}}
+                - {at: 435, evaluate: capture/press.js, waitFor: '.mkw[title="Plaza del Pilar - Murallas"] .mk', elements: {p2: '.mkw[title="Plaza del Pilar - Murallas"] .mk'}, measure: {cardt: '[data-testid=nearest]'}}
+                - {at: 525, click: '[data-testid=services-open]', elements: {s3: '[data-testid=services-open]'}}
+                - {at: 560, click: '[data-testid=tab-bizi]', elements: {t3: '[data-testid=tab-bizi]'}}
+                - {at: 595, evaluate: capture/press.js, waitFor: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk', elements: {p3: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}, measure: {cardb: '[data-testid=nearest]'}}
+                - {at: 705, click: '[data-testid=services-open]', elements: {s4: '[data-testid=services-open]'}}
+                - {at: 740, click: '[data-testid=tab-toilets]', elements: {t4: '[data-testid=tab-toilets]'}}
+                - {at: 790, click: '[data-testid=services-open]', elements: {s5: '[data-testid=services-open]'}}
+                - {at: 825, click: '[data-testid=tab-wifi]', elements: {t5: '[data-testid=tab-wifi]'}}
+                - {at: 875, click: '[data-testid=services-open]', elements: {s6: '[data-testid=services-open]'}}
+                - {at: 910, click: '[data-testid=tab-charge]', elements: {t6: '[data-testid=tab-charge]'}}
         settleMs: 800

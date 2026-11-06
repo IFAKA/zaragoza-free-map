@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=/Users/faka/code/projects/adkit/schema/ad.schema.json
-# 43 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s. Story: water, bus, tram+Bizi, montage, end card; every tap step plays a live recording of the app.
+# 43 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s. Story: water, bus, tram+Bizi, montage, end card; the whole app part is ONE take (one page session, never reset); blocks only choose a time range of it.
 meta: {fps: 30, width: 1080, height: 1920, bars: 43}
 
 brief:
@@ -49,94 +49,79 @@ scenes:
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
-  # The nearest fountain, one minute away. The camera stays at the wide pose: the phone is readable.
+  # THE TAKE. From here to the end card the phone is one recording (capture.yaml, screen "take": 960 frames, one page session, nothing
+  # reset). Each block below shows a time range of it; none has a cut, fade or still inside. A tap step sits on the frame of the action
+  # it shows. Take frame = block start (frame 210 + ...) minus 210.
+  # The nearest fountain, one minute away. The camera stays at the wide pose: the phone is readable. The map lives (blue dot, tiles).
   - block: tapFlow
     id: near
     bars: 5.666666666666667
-    start: {screen: map}
+    start: {screen: take, transition: live, enter: fade}
     titles:
       - {lines: ["La más cercana,", "*primero.*"], at: 0, to: 6.5, size: 90, y: 262}
       - {lines: ["A un minuto,", "*a_pie.*"], at: 8.5, to: 16, size: 90, y: 262}
     steps:
-      - {type: pop, at: 0.5, elements: [pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8], stagger: 0.5, style: pin, under: map-bare}
       - {type: pulse, at: 9, element: me, count: 1}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
-  # One interaction in one phone, recorded live: services button, Bus tab, a stop on the map. Every screen step plays the real app motion
-  # (150 ms page fade, 300 ms drawer height ease, map pan); the tap lands half a beat in, where the recording starts to move.
-  # The only push-in reads the live minutes that just appeared, holds 1.5 s, then pulls back.
+  # Services button, Bus tab, a stop on the map: three real taps, no cut. The only push-in reads the live minutes, holds 1.5 s, then pulls back.
   - block: tapFlow
     id: bus
     bars: 6
-    start: {screen: map}
+    start: {screen: take, transition: live}
     titles:
       - {lines: ["Y el *bus,*", "en directo."], at: 0, to: 11, size: 90, y: 262}
     steps:
-      - {type: screen, at: 1, screen: bus-svc, transition: live}
-      - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 4.5, screen: bus-tab, transition: live}
-      - {type: tap, at: 5, element: tab, radius: 22, press: true}
-      - {type: screen, at: 8, screen: bus-pin, transition: live}
-      - {type: tap, at: 8.5, element: pin, radius: 22, press: true}
+      - {type: tap, at: 1.5, element: s1, radius: 22}
+      - {type: tap, at: 5, element: t1, radius: 22}
+      - {type: tap, at: 8.5, element: p1, radius: 22}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 10.5, zoom: {fit: rows, fraction: 0.88}, focus: {y: 330}, qy: 1000, why: 'reads: "3 min"'}
+      - {at: 10.5, zoom: {fit: rows, fraction: 0.88}, focus: {y: 762}, qy: 1000, why: 'reads: "3 min"'}
       - {at: 16, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
 
   # Tram, then Bizi: the same three taps, one block, one drawer.
   - block: tapFlow
     id: transport
     bars: 11.333333333333334
-    start: {screen: bus-pin}
+    start: {screen: take, transition: live}
     titles:
       - {lines: ["Tranvía", "y *Bizi.*"], at: 0, to: 16, size: 90, y: 262}
     steps:
-      - {type: screen, at: 1, screen: tram-svc, transition: live}
-      - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 4.5, screen: tram-tab, transition: live}
-      - {type: tap, at: 5, element: tab, radius: 22, press: true}
-      - {type: screen, at: 8, screen: tram-pin, transition: live}
-      - {type: tap, at: 8.5, element: pin, radius: 22, press: true}
-      - {type: screen, at: 17, screen: bizi-svc, transition: live}
-      - {type: tap, at: 17.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 20.5, screen: bizi-tab, transition: live}
-      - {type: tap, at: 21, element: tab, radius: 22, press: true}
-      - {type: screen, at: 24, screen: bizi-pin, transition: live}
-      - {type: tap, at: 24.5, element: pin, radius: 22, press: true}
+      - {type: tap, at: 1.5, element: s2, radius: 22}
+      - {type: tap, at: 5, element: t2, radius: 22}
+      - {type: tap, at: 8.5, element: p2, radius: 22}
+      - {type: tap, at: 17.5, element: s3, radius: 22}
+      - {type: tap, at: 21, element: t3, radius: 22}
+      - {type: tap, at: 24.5, element: p3, radius: 22}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
-      - {at: 10.5, zoom: {fit: card, fraction: 0.88}, focus: {y: 267}, qy: 1000, why: 'reads: "2 min"'}
+      - {at: 10.5, zoom: {fit: cardt, fraction: 0.88}, focus: {y: 724}, qy: 1000, why: 'reads: "2 min"'}
       - {at: 16, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
-      - {at: 26.5, zoom: {fit: card, fraction: 0.78}, focus: {y: 640}, qy: 1000, why: 'reads: "7 bicis"'}
+      - {at: 26.5, zoom: {fit: cardb, fraction: 0.78}, focus: {y: 738}, qy: 1000, why: 'reads: "7 bicis"'}
       - {at: 32, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
 
-  # One service after another, each one a tap on its tab, then its map with its pins held. The end card follows at once.
+  # One service after another, each one a tap on its tab. The end card follows at once.
   - block: tapFlow
     id: montage
     bars: 9
-    start: {screen: bizi-pin}
+    start: {screen: take, transition: live}
     titles:
       - {lines: ["Todo, *cerca.*"], at: 0, to: 12, size: 90, y: 262}
     steps:
-      - {type: screen, at: 1, screen: m1-svc, transition: live}
-      - {type: tap, at: 1.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 4.5, screen: m1-tab, transition: live}
-      - {type: tap, at: 5, element: tab, radius: 22, press: true}
-      - {type: screen, at: 9.5, screen: m2-svc, transition: live}
-      - {type: tap, at: 10, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 13, screen: m2-tab, transition: live}
-      - {type: tap, at: 13.5, element: tab, radius: 22, press: true}
-      - {type: screen, at: 18, screen: m3-svc, transition: live}
-      - {type: tap, at: 18.5, element: svcopen, radius: 22, press: true}
-      - {type: screen, at: 21.5, screen: m3-tab, transition: live}
-      - {type: tap, at: 22, element: tab, radius: 22, press: true}
+      - {type: tap, at: 1.5, element: s4, radius: 22}
+      - {type: tap, at: 5, element: t4, radius: 22}
+      - {type: tap, at: 10, element: s5, radius: 22}
+      - {type: tap, at: 13.5, element: t5, radius: 22}
+      - {type: tap, at: 18.5, element: s6, radius: 22}
+      - {type: tap, at: 22, element: t6, radius: 22}
     camera:
       - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
 
   - block: endCard
     bars: 4
-    screen: m3-tab
+    screen: take
     mark: monogram
     title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
     phone: {scale: 0.8, y: 410, x: 110}
@@ -146,7 +131,10 @@ scenes:
     hitAt: 7
 
 checks:
-  cuts: []
+  # The 8 video frames where the app itself swaps a whole drawer page in one frame (the old page vanishes at once, the new one fades in
+  # from 0; real 16 ms in the app, 33 ms here): the first frame of the six tab taps (430, 610, 770, 950, 1035, 1120), of the bus stop tap
+  # (465, the card becomes the live times) and of the 4th services tap (915). Everything else in the take flows. Removing them needs a cross-fade in the app (PagedDrawer), not in the ad.
+  cuts: [430, 465, 610, 770, 915, 950, 1035, 1120]
 
 sound: sound.yaml
 
