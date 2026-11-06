@@ -1,5 +1,5 @@
 # Photographs "Zaragoza a mano" (the app one folder up): a build in .adkit/work, served by vite preview.
-# Fixed place (Plaza del Pilar), fixed Madrid summer afternoon, fresh storage. The map tiles come from arcgisonline.com.
+# Fixed place (Plaza del Pilar), fixed Madrid early-November dusk (2026-11-06 17:40, CET), fresh storage. The map tiles come from arcgisonline.com.
 app:
   dir: ..
   isolate: copy
@@ -13,9 +13,8 @@ viewport: {width: 390, height: 844, scale: 3}
 safeArea: {top: 47, bottom: 34}
 # Live data answered with fixed files, so every capture is the same: a bus stop, the tram stops, Bizi.
 routes:
-  - {url: '**/hook*', file: capture/hook/page.html, contentType: text/html}
-  - {url: '**/poste-autobus/*.json', file: capture/live/bus36.json}
-  - {url: '**/poste-autobus/tuzsa-1099.json', file: capture/live/bus.json}
+  - {url: '**/hook*', file: capture/hook/short.html, contentType: text/html}
+  - {url: '**/poste-autobus/*.json', file: capture/live/short-bus433.json}
   - {url: '**/parada-tranvia/*.json', file: capture/live/tram.json}
   - {url: 'https://api.citybik.es/v2/networks/bizi', file: capture/live/bizi.json}
   # Map tiles: a local copy (ad/tiles, filled the first time, then no network). Anything else a take asks the network for fails `adkit check`.
@@ -24,14 +23,14 @@ routes:
   - {url: 'https://routing.openstreetmap.de/**', cache: routes}
 locale: es-ES
 timezone: Europe/Madrid
-clock: '2026-07-15T17:00:00+02:00'
+clock: '2026-11-06T17:40:00+01:00'
 geolocation: {latitude: 41.6563, longitude: -0.8790}
 inputs: [capture]
 
 sets:
   main:
     screens:
-      # The hook: a plain, generic phone browser (capture/hook/page.html, served by a route).
+      # The hook: a plain, generic phone browser (capture/hook/short.html, served by a route).
       - name: hook-empty
         steps:
           - {goto: '/hook?v=empty&n=1'}
@@ -42,7 +41,7 @@ sets:
           tabbtn: {selector: '.tabbtn', fixed: true}
       - name: hook-r1
         steps:
-          - {goto: '/hook?v=results&q=fuente%20agua%20potable%20cerca&n=1'}
+          - {goto: '/hook?v=results&q=d%C3%B3nde%20cargo%20el%20m%C3%B3vil&n=1'}
           - {wait: 700}
         settleMs: 400
         elements:
@@ -50,20 +49,6 @@ sets:
       - name: hook-r2
         steps:
           - {goto: '/hook?v=results&q=ba%C3%B1os%20p%C3%BAblicos%20zaragoza&n=4'}
-          - {wait: 700}
-        settleMs: 400
-        elements:
-          tabbtn: {selector: '.tabbtn', fixed: true}
-      - name: hook-r3
-        steps:
-          - {goto: '/hook?v=results&q=refugio%20clim%C3%A1tico%20abierto&n=8'}
-          - {wait: 700}
-        settleMs: 400
-        elements:
-          tabbtn: {selector: '.tabbtn', fixed: true}
-      - name: hook-r4
-        steps:
-          - {goto: '/hook?v=results&q=%C2%BFcu%C3%A1ndo%20pasa%20el%2035%3F&n=12'}
           - {wait: 700}
         settleMs: 400
         elements:
@@ -77,7 +62,7 @@ sets:
       - name: map-bare
         steps:
           - {goto: /}
-          - {evaluate: {file: capture/state.js}}
+          - {evaluate: {file: capture/state-short.js}}
           - {goto: /}
           - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
           - {wait: 5000}
@@ -88,7 +73,7 @@ sets:
       - name: map
         steps:
           - {goto: /}
-          - {evaluate: {file: capture/state.js}}
+          - {evaluate: {file: capture/state-short.js}}
           - {goto: /}
           - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
           - {wait: 5000}
@@ -108,7 +93,7 @@ sets:
           card: {selector: '[data-testid=nearest]', fixed: true}
           walkline: {selector: '#walkline', fixed: true}
           svcopen: {selector: '[data-testid=services-open]', fixed: true}
-      # SHORT CUT take (27 s): water, bus, Bizi. Its own capture file: a take leaves Playwright's fake clock installed, which stalls the app's
+      # SHORT CUT take (27 s): charge, toilets, bus (+ line 35 detour page), wifi, Bizi. Its own capture file: a take leaves Playwright's fake clock installed, which stalls the app's
       # own fades in any screen shot after it, so the short take runs right after `map`, with no long take before it. Frame 0 = video frame 210.
       - name: take-short
         steps:
@@ -116,10 +101,15 @@ sets:
               frames: 580
               slow: 0.5
               actions:
-                - {at: 180, click: '[data-testid=services-open]', elements: {s1: '[data-testid=services-open]', me: '.me'}}
-                - {at: 210, click: '[data-testid=tab-bus]', elements: {t1: '[data-testid=tab-bus]'}}
-                - {at: 240, evaluate: capture/press.js, waitFor: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk', elements: {p1: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}, measure: {rows: '[data-testid=live-times]'}}
-                - {at: 340, click: '[data-testid=services-open]', elements: {s2: '[data-testid=services-open]'}}
-                - {at: 370, click: '[data-testid=tab-bizi]', elements: {t2: '[data-testid=tab-bizi]'}}
-                - {at: 400, evaluate: capture/press.js, waitFor: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk', elements: {p2: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}, measure: {cardb: '[data-testid=nearest]'}}
+                - {at: 130, click: '[data-testid=services-open]', elements: {s1: '[data-testid=services-open]', me: '.me'}}
+                - {at: 160, click: '[data-testid=tab-toilets]', elements: {t1: '[data-testid=tab-toilets]'}, measure: {cardt: '[data-testid=nearest]'}}
+                - {at: 230, click: '[data-testid=services-open]', elements: {s2: '[data-testid=services-open]'}}
+                - {at: 260, click: '[data-testid=tab-bus]', elements: {t2: '[data-testid=tab-bus]'}}
+                - {at: 290, evaluate: capture/press-short.js, waitFor: '.mkw[title="Don Jaime I / Plaza De La Seo"] .mk', elements: {p2: '.mkw[title="Don Jaime I / Plaza De La Seo"] .mk'}, measure: {rows: '[data-testid=live-times]'}}
+                - {at: 320, evaluate: capture/scroll-chip.js}
+                - {at: 330, click: '[data-testid=bus-line-chip][data-line="35"]', elements: {chip: '[data-testid=bus-line-chip][data-line="35"]'}}
+                - {at: 415, click: '[data-testid=services-open]', elements: {s3: '[data-testid=services-open]'}}
+                - {at: 435, click: '[data-testid=tab-wifi]', elements: {t3: '[data-testid=tab-wifi]'}}
+                - {at: 455, click: '[data-testid=services-open]', elements: {s4: '[data-testid=services-open]'}}
+                - {at: 475, click: '[data-testid=tab-bizi]', elements: {t4: '[data-testid=tab-bizi]'}}
         settleMs: 800

@@ -1,4 +1,4 @@
-# Zaragoza a mano: every sound is an object of the city or of a hot summer day on foot.
+# Zaragoza a mano: every sound is an object of the city or of a cold November dusk on foot.
 # Music: the approved jota (26 bars, short cut) (3/4 at 180 bpm): 3 tense bars with the cierzo, the tram bell on bar 4, the jota, a cadence on the tonic.
 seed: 15
 music: {file: music-short.json}
@@ -20,29 +20,21 @@ sounds:
       - {type: delay, time: 0.2, feedback: 0.35, wet: 0.3}
       - {type: reverb, rt60: 0.9, wet: 0.18, damp_hz: 6000}
 
-  water_pin:
-    meaning: "A tuned drop of water, because each pin on the map is a drinking fountain"
-    tune: chord
-    layers:
-      - {model: drop, note: A5, params: {rise: 1.6, damping: 0.6, plink: 0.4}, gain: -4}
-      - {model: drop, note: E6, at: 0.1, params: {rise: 1.2, damping: 0.7, velocity: 0.6}, gain: -13}
-    fx: [{type: reverb, rt60: 0.7, wet: 0.14, damp_hz: 8000}]
-
   glass_tap:
     meaning: "A fingertip tapping the glass of the phone, the light touch on a button of the app"
     layers:
       - {model: modal, preset: glass, note: C7, params: {decay: 0.05, hardness: 0.8}, gain: -12}
       - {model: modal, preset: wood_block, note: A4, params: {decay: 0.02, hardness: 0.6}, gain: -20}
 
-  cool_air:
-    meaning: "A cool breath from a fan in a climate shelter, the map switching to places with air conditioning"
+  cold_gust:
+    meaning: "A thin, cold gust of the cierzo between two buildings, the drawer turning to the next page"
     layers:
       - {model: wind, params: {dur: 0.7, strength: 0.5, gustiness: 0.2, centre: 1200, brightness: 0.3, whistle: 0.0}, gain: -9}
       - {model: whoosh, params: {dur: 0.5, f_start: 2400, f_end: 700, width: 1.0, shape: fall}, gain: -17}
     fx: [{type: widen, amount: 0.4}]
 
   cierzo_breath:
-    meaning: "A short gust of the cierzo wind across the plaza, the map or the end card opening outdoors"
+    meaning: "A short gust of the cierzo wind across the plaza at dusk, the map or the end card opening outdoors"
     layers:
       - {model: wind, params: {dur: 0.8, strength: 0.7, gustiness: 0.3, centre: 800, brightness: 0.5, whistle: 0.1}, gain: -10}
     fx: [{type: widen, amount: 0.3}]
@@ -66,10 +58,9 @@ cues:
   type-tick: {sound: keyboard_tap, reason: "typing the search is the same dry keyboard tap"}
   drop: silent
   app-open: cierzo_breath
-  pop-in: {sound: water_pin, variations: 4}
   pulse: {sound: bell_echo, reason: "the blue dot answers with a soft echo of the bell"}
   tap: glass_tap
-  screen-swap: {sound: cool_air, gain: -8, reason: "a soft breath when the screen changes; the glass tap already marks the touch"}
+  screen-swap: {sound: cold_gust, gain: -8, reason: "a soft breath when the screen changes; the glass tap already marks the touch"}
   title-in: palma_flick
   title-out: silent
   cut: silent
