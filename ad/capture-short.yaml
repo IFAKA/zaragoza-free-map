@@ -1,0 +1,125 @@
+# Photographs "Zaragoza a mano" (the app one folder up): a build in .adkit/work, served by vite preview.
+# Fixed place (Plaza del Pilar), fixed Madrid summer afternoon, fresh storage. The map tiles come from arcgisonline.com.
+app:
+  dir: ..
+  isolate: copy
+  setup: ['npm ci --no-audit --no-fund']
+  build: ['npm run build']
+  start: 'npx vite preview --port {port} --strictPort'
+  ready: {path: /, timeoutSeconds: 120}
+
+viewport: {width: 390, height: 844, scale: 3}
+# A real phone's safe areas (status bar and home indicator), so the app lays out as on a device.
+safeArea: {top: 47, bottom: 34}
+# Live data answered with fixed files, so every capture is the same: a bus stop, the tram stops, Bizi.
+routes:
+  - {url: '**/hook*', file: capture/hook/page.html, contentType: text/html}
+  - {url: '**/poste-autobus/*.json', file: capture/live/bus36.json}
+  - {url: '**/poste-autobus/tuzsa-1099.json', file: capture/live/bus.json}
+  - {url: '**/parada-tranvia/*.json', file: capture/live/tram.json}
+  - {url: 'https://api.citybik.es/v2/networks/bizi', file: capture/live/bizi.json}
+  # Map tiles: a local copy (ad/tiles, filled the first time, then no network). Anything else a take asks the network for fails `adkit check`.
+  - {url: 'https://server.arcgisonline.com/**', cache: tiles}
+  # The walking routes ("1 min a pie" lines): a local copy too.
+  - {url: 'https://routing.openstreetmap.de/**', cache: routes}
+locale: es-ES
+timezone: Europe/Madrid
+clock: '2026-07-15T17:00:00+02:00'
+geolocation: {latitude: 41.6563, longitude: -0.8790}
+inputs: [capture]
+
+sets:
+  main:
+    screens:
+      # The hook: a plain, generic phone browser (capture/hook/page.html, served by a route).
+      - name: hook-empty
+        steps:
+          - {goto: '/hook?v=empty&n=1'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          field: {selector: '.pill', fixed: true}
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r1
+        steps:
+          - {goto: '/hook?v=results&q=fuente%20agua%20potable%20cerca&n=1'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r2
+        steps:
+          - {goto: '/hook?v=results&q=ba%C3%B1os%20p%C3%BAblicos%20zaragoza&n=4'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r3
+        steps:
+          - {goto: '/hook?v=results&q=refugio%20clim%C3%A1tico%20abierto&n=8'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-r4
+        steps:
+          - {goto: '/hook?v=results&q=%C2%BFcu%C3%A1ndo%20pasa%20el%2035%3F&n=12'}
+          - {wait: 700}
+        settleMs: 400
+        elements:
+          tabbtn: {selector: '.tabbtn', fixed: true}
+      - name: hook-tabs
+        steps:
+          - {goto: '/hook?v=tabs&n=12'}
+          - {wait: 700}
+        settleMs: 400
+      # The same page with no pins.
+      - name: map-bare
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 5000}
+          - {evaluate: {file: capture/bare.js}}
+          - {wait: 600}
+        settleMs: 800
+      # The water layer with 8 fountain pins around the user and the nearest card.
+      - name: map
+        steps:
+          - {goto: /}
+          - {evaluate: {file: capture/state.js}}
+          - {goto: /}
+          - {wait: {for: '[data-testid=nearest]', timeoutMs: 20000}}
+          - {wait: 5000}
+          - {evaluate: {file: capture/pins.js}}
+          - {wait: 600}
+        settleMs: 800
+        elements:
+          pin1: '#pin1'
+          pin2: '#pin2'
+          pin3: '#pin3'
+          pin4: '#pin4'
+          pin5: '#pin5'
+          pin6: '#pin6'
+          pin7: '#pin7'
+          pin8: '#pin8'
+          me: '.me'
+          card: {selector: '[data-testid=nearest]', fixed: true}
+          walkline: {selector: '#walkline', fixed: true}
+          svcopen: {selector: '[data-testid=services-open]', fixed: true}
+      # SHORT CUT take (27 s): water, bus, Bizi. Its own capture file: a take leaves Playwright's fake clock installed, which stalls the app's
+      # own fades in any screen shot after it, so the short take runs right after `map`, with no long take before it. Frame 0 = video frame 210.
+      - name: take-short
+        steps:
+          - record:
+              frames: 580
+              slow: 0.5
+              actions:
+                - {at: 180, click: '[data-testid=services-open]', elements: {s1: '[data-testid=services-open]', me: '.me'}}
+                - {at: 210, click: '[data-testid=tab-bus]', elements: {t1: '[data-testid=tab-bus]'}}
+                - {at: 240, evaluate: capture/press.js, waitFor: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk', elements: {p1: '.mkw[title="Arquitecto La Figuera / Zalmedina"] .mk'}, measure: {rows: '[data-testid=live-times]'}}
+                - {at: 340, click: '[data-testid=services-open]', elements: {s2: '[data-testid=services-open]'}}
+                - {at: 370, click: '[data-testid=tab-bizi]', elements: {t2: '[data-testid=tab-bizi]'}}
+                - {at: 400, evaluate: capture/press.js, waitFor: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk', elements: {p2: '.mkw[title="9-Echegaray. Pte. Piedra"] .mk'}, measure: {cardb: '[data-testid=nearest]'}}
+        settleMs: 800

@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=/Users/faka/code/projects/adkit/schema/ad.schema.json
+# SHORT CUT, 27 s, of the 43 s master (ad.yaml). 27 s vertical ad for "Zaragoza a mano" (independent city map PWA). Music 3/4 at 180 bpm: 1 beat = 10 frames, 1 bar = 1 s. Story: hook, water, bus, Bizi, one service, end card; the whole app part is ONE take (take-short, never reset).
+meta: {fps: 30, width: 1080, height: 1920, bars: 27}
+
+brief:
+  audience: People in Zaragoza on foot (locals, families, visitors) in summer.
+  message: "Lo que necesitas, cerca de ti: abres la app y lo más cercano ya está ahí, sin buscar."
+  language: es-ES
+  tone: warm, local, calm confidence. Not a tech demo.
+
+brand:
+  name: Zaragoza a mano
+  tagline: Lo que necesitas, cerca de ti
+  contact: "zaragoza-free-map.vercel.app"
+  colors: {paper: "#FFFFFF", paperDeep: "#F1F1F0", ink: "#3C3C3B", glow: "#FFD9D4", accent: "#D92A22", night: "#262625"}
+  fonts: {sans: Montserrat, serif: Montserrat, mark: Montserrat}
+  icon: {text: Z, color: "#D92A22", textColor: "#FFFFFF", image: ../public/pwa-512.png}
+
+capture: capture-short.yaml
+
+scenes:
+  - block: reveal
+    bars: 0.6666666666666666
+    screen: hook-empty
+    open: rise
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+    titles:
+      - {lines: ["Julio.", "*40_°C.*"], at: 0, size: 110, y: 262, accent: "#D92A22", instant: true}
+
+  # 19 beats: the search, two results pages, the tab overview, then the app opens.
+  - block: tapFlow
+    id: hook
+    bars: 6.333333333333333
+    start: {screen: hook-empty}
+    titles:
+      - {lines: ["Julio.", "*40_°C.*"], at: 0, to: 2.5, size: 110, y: 262, accent: "#D92A22", instant: true}
+      - {lines: ["¿Dónde hay", "*agua* cerca?"], at: 4.5, to: 11, size: 110, y: 262}
+      - {lines: ["Zaragoza", "*a_mano.*"], at: 13, size: 110, y: 262}
+    steps:
+      - {type: type, at: 0, element: field, text: "fuente agua potable cerca", beats: 2.5, fontSize: 19, color: "#202124"}
+      - {type: screen, at: 3, screen: hook-r1, transition: fade}
+      - {type: screen, at: 7, screen: hook-r2, transition: fade}
+      - {type: tap, at: 10, element: tabbtn, radius: 22}
+      - {type: screen, at: 10.5, screen: hook-tabs, transition: zoom}
+      - {type: screen, at: 13, screen: map-bare, transition: zoom}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+
+  # THE TAKE (take-short, 580 frames, take frame 0 = video frame 210): each block shows a range of it.
+  - block: tapFlow
+    id: near
+    bars: 5.666666666666667
+    start: {screen: take-short, transition: live, enter: fade}
+    titles:
+      - {lines: ["La más cercana,", "*primero.*"], at: 0, to: 6.5, size: 90, y: 262}
+      - {lines: ["A un minuto,", "*a_pie.*"], at: 8.5, to: 16, size: 90, y: 262}
+    steps:
+      - {type: pulse, at: 9, element: me, count: 1}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+
+  - block: tapFlow
+    id: bus
+    bars: 5.333333333333333
+    start: {screen: take-short, transition: live}
+    titles:
+      - {lines: ["Y el *bus,*", "en directo."], at: 0, to: 10, size: 90, y: 262}
+    steps:
+      - {type: tap, at: 1, element: s1, radius: 22}
+      - {type: tap, at: 4, element: t1, radius: 22}
+      - {type: tap, at: 7, element: p1, radius: 22}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 9, zoom: {fit: rows, fraction: 0.88}, focus: {y: 762}, qy: 1000, why: 'reads: "3 min"'}
+      - {at: 15, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
+
+  - block: tapFlow
+    id: bizi
+    bars: 5
+    start: {screen: take-short, transition: live}
+    titles:
+      - {lines: ["Y también", "*Bizi.*"], at: 0, to: 11, size: 90, y: 262}
+    steps:
+      - {type: tap, at: 1, element: s2, radius: 22}
+      - {type: tap, at: 4, element: t2, radius: 22}
+      - {type: tap, at: 7, element: p2, radius: 22}
+    camera:
+      - {at: 0, zoom: 0.85, focus: {y: 422}, qy: 1050}
+      - {at: 8.5, zoom: {fit: cardb, fraction: 0.78}, focus: {y: 738}, qy: 1000, why: 'reads: "7 bicis"'}
+      - {at: 14, zoom: 0.85, focus: {y: 422}, qy: 1050, spring: slow}
+
+  - block: endCard
+    bars: 4
+    screen: take-short
+    mark: monogram
+    title: {lines: ["Lo que necesitas,", "*cerca_de_ti.*"], at: 0, y: 560, size: 100}
+    phone: {scale: 0.8, y: 410, x: 110}
+    note: "Proyecto independiente. No oficial."
+    lockupAt: 2.5
+    contactAt: 4.5
+    hitAt: 7
+
+checks:
+  # App-made one-frame page swaps (the old drawer page vanishes at once): video frames of the first frame of each tab, stop and services tap.
+  cuts: [420, 450, 580]
+
+sound: sound-short.yaml
+
+output: {file: out/zaragoza-a-mano-short.mp4, crf: 18}
