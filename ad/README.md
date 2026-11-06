@@ -23,7 +23,7 @@ All data in the take is mocked: every network request is answered by a fixed fil
 `ad/tiles`, routes in `ad/routes`), the clock is fixed (Europe/Madrid, 2026-07-15 17:00, moving only with the stepped frames), the
 position is fixed (41.6563, -0.8790), the saved state is a preset, service workers are blocked. `adkit check` (unmocked) fails a take
 that asks the network for anything else. Live values on screen: bus "3 min", Bizi "7 bicis (3 eléctricas) · 22 anclajes", tram "2 min" (long cut only).
-`checks.cuts` in each spec lists the video frames where the app swaps a drawer page in one frame (not removable in the ad).
+The app fades a drawer page through (cherry-picked app commit: old out 80 ms, new in 150 ms), so there is no empty-drawer flash longer than 3 frames. `checks.cuts` in each spec lists the few video frames where the content change plus drawer height still make a small spike.
 
 Files: `ad.yaml` (story, copy), `capture.yaml` + `capture/*.js` (fixed place, Madrid summer afternoon, 8 fountain pins, live data answered by fixed files in capture/live),
 `sound.yaml` (sound map: every cue is an object of Zaragoza), `music.json` (the approved jota extended to 43 bars, 3/4 at 180 bpm), `sound-short.yaml` + `music-short.json` (the short cut: same sounds, jota sections 1, 2, 6, 6, 7 and the cadence, ends on the tonic Dm).

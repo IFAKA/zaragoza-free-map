@@ -102,8 +102,8 @@ scenes:
     hitAt: 7
 
 checks:
-  # App-made one-frame page swaps (the old drawer page vanishes at once): video frames of the first frame of each tab, stop and services tap.
-  cuts: [420, 450, 580]
+  # The app fades a page through (old out 80 ms, new in 150 ms). Residual peaks (11.1 to 13.8) at the bus tab (420, 424) and the Bizi tab (580): content swap + drawer height easing.
+  cuts: [420, 424, 580]
 
 sound: sound-short.yaml
 

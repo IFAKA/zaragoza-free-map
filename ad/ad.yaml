@@ -131,10 +131,10 @@ scenes:
     hitAt: 7
 
 checks:
-  # The 8 video frames where the app itself swaps a whole drawer page in one frame (the old page vanishes at once, the new one fades in
-  # from 0; real 16 ms in the app, 33 ms here): the first frame of the six tab taps (430, 610, 770, 950, 1035, 1120), of the bus stop tap
-  # (465, the card becomes the live times) and of the 4th services tap (915). Everything else in the take flows. Removing them needs a cross-fade in the app (PagedDrawer), not in the ad.
-  cuts: [430, 465, 610, 770, 915, 950, 1035, 1120]
+  # The app now fades a page through (old page out 80 ms, new in 150 ms), so the 8 one-frame swaps are gone. What remains is the drawer
+  # re-laying out at the tab tap (the whole page content changes while the drawer height eases): video frames of the fade out and the
+  # fade in of the 4 tab taps, the bus tab and the end of the montage; peaks 10.6 to 14.1 (before the fade 14 to 25).
+  cuts: [430, 434, 610, 950, 954, 1035, 1039, 1120]
 
 sound: sound.yaml
 
