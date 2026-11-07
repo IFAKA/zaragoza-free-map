@@ -23,7 +23,7 @@ export function FavButton({ layer, item }: { layer: LayerConfig; item: Item }) {
   const { t } = useT()
   const favs = useFavs()
   const [saved, setSaved] = useState(false) // true only after a tap that saves, so opening an already saved place stays still
-  if (!canFav(layer, item)) return null
+  if (!canFav(layer)) return null
   const on = favs.includes(favKey(layer.id, item.id))
   const press = () => {
     const first = favs.length === 0 && !lsGet('favFirst')

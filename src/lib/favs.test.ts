@@ -43,10 +43,10 @@ describe('favs', () => {
     expect(parseFavs('{"a":1}')).toEqual([])
     expect(parseFavs('["bus:u1","bus:u1",3,"bad"]')).toEqual(['bus:u1'])
   })
-  it('never stars fountains or live pharmacies', () => {
-    expect(canFav({ id: 'water' }, { type: 'fountain' })).toBe(false)
-    expect(canFav({ id: 'pharmacy', live: true }, { type: 'pharmacy' })).toBe(false)
-    expect(canFav({ id: 'bus' }, { type: 'bus' })).toBe(true)
+  it('stars every place except the live pharmacy list', () => {
+    expect(canFav({})).toBe(true)
+    expect(canFav({ live: false })).toBe(true)
+    expect(canFav({ live: true })).toBe(false)
   })
   it('keeps labels in their own map, trimmed and capped; empty clears', () => {
     setLabel('bus:a', '  Home   stop '); expect(getLabels()['bus:a']).toBe('Home stop')

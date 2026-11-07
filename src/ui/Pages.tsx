@@ -439,7 +439,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
   const favBtn = <>
-    {canFav(layer, item) && <FavButton layer={layer} item={item} />}
+    {canFav(layer) && <FavButton layer={layer} item={item} />}
     {hasDetails(layer, item) && <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>}
   </>
   return (

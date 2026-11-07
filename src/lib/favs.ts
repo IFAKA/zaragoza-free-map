@@ -2,12 +2,12 @@ import { useSyncExternalStore } from 'react'
 import { lsGet, lsSet } from './cache'
 import { dist } from './geo'
 import type { LatLon } from './types'
-// Favourite places, kept on this device as `layerId:itemId` keys (ids repeat across layers). Fountain ids ('f' + row number) and live pharmacy ids are not stable, so they are never starred (see canFav).
+// Favourite places, kept on this device as `layerId:itemId` keys (ids repeat across layers). The live pharmacy list changes every day, so a pharmacy is never starred (see canFav).
 const KEY = 'favs'
 export const favKey = (layer: string, id: string) => `${layer}:${id}`
 export const splitFav = (k: string): [string, string] => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)] }
-/** Stops, stations and the like can be starred; fountains and the live pharmacy list cannot. */
-export const canFav = (layer: { id: string; live?: boolean }, item: { type: string }) => !layer.live && layer.id !== 'water' && item.type !== 'fountain'
+/** Every place can be starred except the live pharmacy list (only today's duty pharmacies exist in it, so a saved one would have nothing true to show on most days). */
+export const canFav = (layer: { live?: boolean }) => !layer.live
 
 export function parseFavs(s: string | null): string[] {
   try { const v = JSON.parse(s ?? '[]'); return Array.isArray(v) ? [...new Set<string>(v.filter((x): x is string => typeof x === 'string' && x.includes(':')))] : [] } catch { return [] }

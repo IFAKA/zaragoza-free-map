@@ -48,8 +48,9 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
   const buzOsm = o.buz.map(r => ({ lat: r[2], lon: r[3] }))
   for (const it of lib) it.buz = !NOT_BUZ.test(it.name) && (BUZ_NAME.test(it.name) || buzOsm.some(b => near(b, it, 100)))
 
-  const fountains: Item[] = d.fountains.rows.map((r, i) => ({
-    id: 'f' + i, part: 'city' as const, type: 'fountain', name: r[2], note: r[3], lat: r[0], lon: r[1], yr: r[4], upd: d.fountains.updated ?? undefined,
+  // the id is the place (lat,lon at ~1 m), not the row number, so a saved fountain stays the same one when the city file is refreshed
+  const fountains: Item[] = d.fountains.rows.map(r => ({
+    id: 'f' + r[0].toFixed(5) + '_' + r[1].toFixed(5), part: 'city' as const, type: 'fountain', name: r[2], note: r[3], lat: r[0], lon: r[1], yr: r[4], upd: d.fountains.updated ?? undefined,
   }))
   const waterOsm = without(osmItems(o.water, ou, () => ({ type: 'fountain' })), fountains, 25)
 
