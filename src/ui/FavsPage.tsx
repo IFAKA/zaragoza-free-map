@@ -29,7 +29,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   const remove = (key: string) => {
     const i = removeFav(key)
     if (i < 0) return
-    toasts.add({ title: t('favRemoved'), timeout: 5000, data: { action: t('undo'), onAction: () => restoreFav(key, i), close: t('close') } })
+    toasts.add({ title: t('favRemoved'), timeout: 5000, data: { action: t('undo'), onAction: () => restoreFav(key, i), close: '', top: true } })
   }
   const editBtn = all.length > 0 && (
     <m.button {...tap} type="button" onClick={() => setEdit(e => !e)} aria-pressed={edit} data-testid="fav-edit"
