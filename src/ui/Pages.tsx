@@ -127,7 +127,7 @@ function Occupancy({ item }: { item: RankedItem }) {
   const { t } = useT()
   if (item.type !== 'lib') return null
   if (item.buz) {
-    return <a href={BUZ_URL} target="_blank" rel="noopener" className="inline-flex min-h-[44px] items-center gap-1 font-bold text-brand-text underline-offset-2 hov:underline">{t('occLive')} <ArrowUpRight size="1em" weight="bold" aria-hidden /></a>
+    return <a href={BUZ_URL} target="_blank" rel="noopener" className="-my-3 inline-flex min-h-[44px] items-center gap-1 font-bold text-brand-text underline-offset-2 hov:underline">{t('occLive')} <ArrowUpRight size="1em" weight="bold" aria-hidden /></a>
   }
   return <span className="inline-flex items-center"><span className={sub}>{t('occNone')}</span><InfoPop label={t('occInfoTitle')} title={t('occInfoTitle')}>{t('occInfo')}</InfoPop></span>
 }
@@ -536,7 +536,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       </div>
       </div>
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
-      {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
+      {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pt-3"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} origin={origin} fav={favBtn} onLine={onLine} lineOk={line => !!routes?.lines[line]} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} fav={favBtn} /> : <Actions fav={favBtn} />}
@@ -557,7 +557,7 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
       <p className="m-0 mt-1" data-testid="off-reason">{why}</p>
       {item.off === 'notOnDuty' && <p className={cn(sub, 'm-0 mt-0.5')}>{[item.addr, item.phone].filter(Boolean).join(' · ')}</p>}
       {hours && <p className={cn(sub, 'm-0 mt-0.5')}>{t('hours')}: {hours}</p>}
-      <div className="flex items-start gap-1"><div className={cn(sub, 'flex-1 pt-2')} data-testid="off-source">{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
+      <div className="flex items-center gap-1"><div className={cn(sub, 'flex-1')} data-testid="off-source">{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
     </m.section>
   )
 }
@@ -601,7 +601,7 @@ function Notes({ layer, cat, bizi }: { layer: LayerConfig; cat: string; bizi: Pi
   const { t } = useT()
   if (layer.id !== 'pharmacy' && layer.id !== 'bizi') return null
   return (
-    <div className="px-4 pb-2">
+    <div className="px-4 pb-2 pt-2">
       {cat !== 'mine' && (
         <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
           {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
@@ -624,7 +624,7 @@ function Locate({ hasPos, locating, denied, onLocate }: { hasPos: boolean; locat
   const { t } = useT()
   if (hasPos) return null
   return (
-    <div className="px-4 pb-3" data-testid="from-centre">
+    <div className="px-4 pb-3 pt-3" data-testid="from-centre">
       <p className={cn(sub, 'm-0 font-semibold')}>{t('distCentre')}</p>
       {denied
         ? <p className={cn(sub, 'm-0 mt-1')} data-testid="loc-denied">{t('locDenied')}</p>
@@ -791,7 +791,7 @@ export function PlacePage({ layer, item, hasPos, onBack, locked, peekRef }: { la
           {field('ssid', item.ssid)}
           {layer.id === 'wifi' && <div className={sub}>{t('rangeEst')} {item.building ? t('rangeCity') : t('rangeOsm')} ({rangeMetres(item)} m).</div>}
           <Occupancy item={item} />
-          <div className="flex items-start gap-1"><div className={cn(sub, 'flex-1 pt-3')}>{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
+          <div className="flex items-center gap-1"><div className={cn(sub, 'flex-1')}>{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
         </div>
       </Scroll>
     </>

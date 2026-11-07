@@ -85,7 +85,7 @@ export function Scroll({ children, locked, className, viewportRef }: { children:
 export function InfoPop({ label, title, children }: { label: string; title?: string; children: ReactNode }) {
   return (
     <Popover.Root>
-      <Popover.Trigger render={<m.button {...tap} />} aria-label={label} className="inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info">
+      <Popover.Trigger render={<m.button {...tap} />} aria-label={label} className="-my-3 inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-info">
         <Info size="1.25em" weight="bold" aria-hidden />
       </Popover.Trigger>
       <Popover.Portal>
