@@ -1,10 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { biziRows, busRows, dutyRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
+import { equipSched, biziRows, busRows, dutyRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
 
 describe('city normalisers', () => {
   it('wifi: swaps lon/lat and skips records without geometry', () => {
     const rows = cityWifiRows({ result: [{ id: 1, title: 'SEDE X', geometry: { coordinates: [-0.88, 41.65] } }, { id: 2, title: 'none' }] })
     expect(rows).toEqual([[1, 'SEDE X', 41.65, -0.88]])
+  })
+  it('wifi: takes the hours of the city building it belongs to (internal_id), only when readable', () => {
+    const g = { coordinates: [-0.88, 41.65] as [number, number] }
+    const rows = cityWifiRows({ result: [{ id: 1, internal_id: '7', title: 'SEDE X', geometry: g }, { id: 2, internal_id: '8', title: 'JUNTA', geometry: g }, { id: 3, title: 'NO LINK', geometry: g }] },
+      { 7: { title: 'Sala', horario: '<p>De lunes a viernes de 9 a 14 h.</p>' }, 8: { title: 'Junta', horario: '<p>De 8,30 a 13,30 h.</p>' } })
+    expect(rows[0][4]).toEqual({ r: 'Mo-Fr 09:00-14:00; Sa-Su off' })
+    expect(rows[1]).toHaveLength(4)
+    expect(rows[2]).toHaveLength(4)
+  })
+  it('equipSched: senior centres read as every day, a room note in brackets is ignored, booking notes are not', () => {
+    expect(equipSched({ title: 'Centro de Convivencia para Mayores X', horario: '<p>De 10 a 21 h.</p>' })?.r).toBe('Mo-Su 10:00-21:00')
+    expect(equipSched({ title: 'Centro Cívico X', horario: '<ul><li>Lunes a viernes: de 8,30 a 21,30h.</li><li>Sábado y domingo de 9,30 a 20,30h. (La sala de estudio permanecerá cerrada de 14 a 15h)</li></ul>' })?.r).toBe('Mo-Fr 08:30-21:30; Sa-Su 09:30-20:30')
+    expect(equipSched({ title: 'Junta', horario: '<p>De 8,30 a 13,30 h.</p>' })).toBeNull()
+    expect(equipSched({ title: 'X', horario: '<p>Lunes a viernes de 9 a 14 h (solo con cita)</p>' })).toBeNull()
   })
   it('libraries: tel object, year, parsed hours', () => {
     const r = cityEquipRows({ result: [{ id: 20360, title: 'Biblioteca CAI ', calle: 'Calle  X ', tel: { tel: '976 290 521' }, lastUpdated: '2023-09-26T12:48:29', horario: 'Lunes a viernes 9 - 13:30 h', geometry: { coordinates: [-0.885, 41.65] } }] })[0]

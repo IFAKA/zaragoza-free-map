@@ -2,6 +2,7 @@
 //   node scripts/build-data.mjs            all sources
 //   node scripts/build-data.mjs --no-osm   skip Overpass (keeps the existing src/data/osm.json)
 //   node scripts/build-data.mjs --transit-only    rebuild only busroutes.json, tram.json, cercanias.json (see scripts/transit.mjs; --no-transit skips them)
+//   node scripts/build-data.mjs --hours-only      rebuild only the files that carry opening hours: wifi, libraries, civic, shelters, toiletsgo
 //   node scripts/build-data.mjs --shelters-only   rebuild only src/data/shelters.json (add --shelters PATH to read a local GeoJSON)
 // The app itself makes NO runtime data requests: it only reads these files. Re-run (the refresh-data workflow does) to update.
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -55,9 +56,35 @@ function write(name, src, rows, extra = {}) {
 }
 const must = (name, rows) => { if (!rows.length) throw new Error(`${name}: 0 rows, refusing to overwrite the committed file`); return rows }
 
+// WiFi points (`internal_id`) and the toiletsgo places are records of the city equipment catalogue: their opening hours are in equipamiento/{id}.json.
+async function equipHours(ids) {
+  const out = {}
+  const queue = [...new Set(ids.map(String))]
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    for (let id; (id = queue.pop());) {
+      try { const j = await get(`${ZGZ}equipamiento/${id}.json`); out[id] = { title: j.title, horario: j.horario } }
+      catch (e) { console.warn(`equipment ${id}: no record (${e}), its hours stay unknown`) }
+    }
+  }))
+  return out
+}
+const TGO_URL = 'https://raw.githubusercontent.com/IFAKA/toiletsgo/HEAD/src/data.ts'
+const tgoIds = text => [...text.matchAll(/\bid:\s*(\d+)\s*,\s*name:/g)].map(m => m[1])
+
 const getShelters = () => (sheltersFile ? JSON.parse(readFileSync(sheltersFile, 'utf8')) : get(SHELTERS_URL))
 if (process.argv.includes('--shelters-only')) {
   write('shelters', 'city', must('shelters', shelterRows(await getShelters())))
+  process.exit(0)
+}
+
+if (process.argv.includes('--hours-only')) {
+  const [wifi, libs, civic, tgo, shelters] = await Promise.all([get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`), get(catalog('title==Biblioteca*')), get(catalog('title==Centro Cívico*')), get(TGO_URL, 'text'), getShelters()])
+  const hours = await equipHours([...(wifi.result || []).map(r => r.internal_id).filter(Boolean), ...tgoIds(tgo)])
+  write('wifi', 'city', must('wifi', cityWifiRows(wifi, hours)))
+  write('libraries', 'city', must('libraries', cityEquipRows(libs)))
+  write('civic', 'city', must('civic', cityEquipRows(civic)))
+  write('shelters', 'city', must('shelters', shelterRows(shelters)))
+  write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo, hours)))
   process.exit(0)
 }
 
@@ -72,10 +99,11 @@ const [wifi, libs, civic, bizi, racks, bus, fount, tgo, shelters] = await Promis
   getAll(`${ZGZ}urbanismo-infraestructuras/equipamiento/aparcamiento-bicicleta.json?srsname=wgs84`),
   getAll(`${ZGZ}urbanismo-infraestructuras/transporte-urbano/poste-autobus.json?srsname=wgs84`),
   fountainsFile ? JSON.parse(readFileSync(fountainsFile, 'utf8')) : get('https://zenodo.org/records/8141704/files/fuentes.json?download=1', 'json', 60000, { headers: { 'user-agent': 'Mozilla/5.0 (zgz-free-services data build)' } }),
-  get('https://raw.githubusercontent.com/IFAKA/toiletsgo/HEAD/src/data.ts', 'text'),
+  get(TGO_URL, 'text'),
   getShelters(),
 ])
-write('wifi', 'city', must('wifi', cityWifiRows(wifi)))
+const hours = await equipHours([...(wifi.result || []).map(r => r.internal_id).filter(Boolean), ...tgoIds(tgo)])
+write('wifi', 'city', must('wifi', cityWifiRows(wifi, hours)))
 write('libraries', 'city', must('libraries', cityEquipRows(libs)))
 write('civic', 'city', must('civic', cityEquipRows(civic)))
 if (bizi) write('bizi', 'city', must('bizi', biziRows(bizi)))
@@ -84,7 +112,7 @@ write('bus', 'city', must('bus', busRows(bus)))
 const f = fountainRows(fount)
 write('fountains', 'city', must('fountains', f.rows), { dropped: f.dropped })
 write('shelters', 'city', must('shelters', shelterRows(shelters)))
-write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo)))
+write('toiletsgo', 'toiletsgo', must('toiletsgo', parseTgo(tgo, hours)))
 
 // bus routes, tram and Cercanías: if a source fails, keep the committed files and say so
 if (!process.argv.includes('--no-transit')) await writeTransit(OUT).catch(e => { console.error('transit: source failed, keeping the committed files:', String(e)); process.exitCode = 1 })

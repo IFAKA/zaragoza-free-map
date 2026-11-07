@@ -30,12 +30,20 @@ const T = "(\\d{1,2})(?:[.,:'’](\\d{2}))?"
 const RANGE = `(?:de\\s+)?${T}\\s*(?:h(?:oras?|rs?)?\\.?)?\\s*(?:a|-)\\s*${T}`
 const SEG_SPLIT = new RegExp(`(?<=[\\d.]|\\dh|horas)\\s+y\\s+(?=(?:de\\s+)?${DAY}\\b)`, 'g')
 
+// "... 22 h. Domingos de 8 a 15 h." / "... 23 horas Sabados de ..." / "... 19.00- Sabado de ...": a new day spec starts right after a time
+const SENT_SPLIT = new RegExp(`(?:(?<=\\d\\s*(?:h|hs|horas)?\\.)\\s+|(?<=\\d\\s*(?:h|hs|horas))\\s+|(?<=\\d)\\s*[-–]\\s*)(?=(?:de\\s+)?(?:${DAY}|laborables)\\b)`, 'g')
+const MON = '(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)'
+/** A line about fixed dates ("24 y 31 diciembre: de 10 a 14h", "Dias 25 de diciembre y 1 de enero, cerrado", "Horario especial:"). Fixed-date exceptions are not modelled (the card says hours can differ on holidays). */
+const DATE_LINE = new RegExp(`^(?:horario especial:?$|el acceso del publico se interrumpe\\b|(?:dias?\\s+)?\\d{1,2}(?:\\s+(?:de\\s+)?${MON})?(?:\\s*(?:,|y)\\s*\\d{1,2}(?:\\s+(?:de\\s+)?${MON})?)*\\s+(?:de\\s+)?${MON}\\b(?!.*${DAY}))`)
+const ALL_DAY = /^(?:servicio\s+(?:las\s+)?)?24\s+horas(?:\s+al\s+dia)?(?:,?\s+todos\s+los\s+dias(?:\s+del\s+ano)?)?\.?$/
+
 type Wins = [number, number][]
 const toMin = (h: string, m?: string) => +h * 60 + (m ? +m : 0)
 
 /** One schedule segment such as "de lunes a viernes de 8.30 a 14.30 horas". Returns day -> windows, or null. */
 function parseSegment(raw: string): Map<number, Wins> | null {
-  let s = strip(raw).replace(/\s+y\s+festivos\b/g, '').replace(/^horario:?\s*/, '').replace(/\s+/g, ' ').trim()
+  let s = strip(raw).replace(/\s+y\s+festivos\b/g, '').replace(/\blaborables\b/g, 'lunes a viernes')
+    .replace(/^(?:el\s+)?horario(?:\s+de\s+apertura)?(?:\s+del?\s+centro)?,?(?:\s+es)?(?:\s+de)?\s+(?=lunes|martes|miercoles|jueves|viernes|sabado|domingo)/, '').replace(/^horario:?\s*/, '').replace(/\s+/g, ' ').trim()
   s = s.replace(/[.;]+$/, '').trim()
   const dm = new RegExp(`^(${DAYSPEC})\\s*[:,]?\\s*(.*)$`).exec(s)
   if (!dm) return null
@@ -87,7 +95,13 @@ function parseSection(lines: string[]): Map<number, Wins> | null {
   const byDay = new Map<number, Wins>()
   let any = false
   for (const line of lines) {
-    for (const seg of strip(line).split(';').flatMap(x => x.split(SEG_SPLIT))) {
+    const sl = strip(line)
+    if (ALL_DAY.test(sl)) { // open round the clock, every day
+      any = true
+      for (let d = 0; d < 7; d++) byDay.set(d, [[0, 1440]])
+      continue
+    }
+    for (const seg of sl.split(';').flatMap(x => x.split(SEG_SPLIT)).flatMap(x => x.split(SENT_SPLIT))) {
       if (!seg.trim()) continue
       const r = parseSegment(seg)
       if (!r) return null
@@ -119,7 +133,15 @@ export function parseCityHorario(html: string | undefined | null): CitySched | n
       cur = sum
       continue
     }
-    if (/^horario:?$/.test(l)) continue
+    if (/^horario:?$/.test(l) || DATE_LINE.test(l)) continue
+    // a yearly closed period: "Cerrada del 1 al 16 de agosto", "Cerrada del 31 de julio al 14 de agosto"
+    const cp = new RegExp(`^cerrad[oa]s?\\s+del\\s+(\\d{1,2})(?:\\s+de\\s+(${MON}))?\\s+al\\s+(\\d{1,2})\\s+de\\s+(${MON})\\.?$`).exec(l)
+    if (cp) {
+      const m2 = MONTHS[cp[4]], m1 = cp[2] ? MONTHS[cp[2]] : m2
+      if (u) return null
+      u = [m1 * 100 + +cp[1], m2 * 100 + +cp[3]]
+      continue
+    }
     if (/^cerrado[s]?:/.test(l) || /^fines de semana de julio y agosto\.?$/.test(l)) {
       // fixed public-holiday closures are not modelled (the card says hours can differ on holidays); a closed summer weekend is
       if (/julio/.test(l)) u = [701, 831]

@@ -9,19 +9,39 @@ const inCity = (la: number, lo: number) => la > 41.5 && la < 41.8 && lo > -1.1 &
 
 // ---------- City open data (zaragoza.es/sede) ----------
 interface CityRecord {
-  id: number | string; title?: string; calle?: string; tel?: string | { tel?: string }; lastUpdated?: string; horario?: string
+  id: number | string; internal_id?: string; title?: string; calle?: string; tel?: string | { tel?: string }; lastUpdated?: string; horario?: string
   geometry?: { coordinates?: [number, number] }
 }
 export interface CityResponse { result?: CityRecord[] }
 const yearOf = (s?: string) => { const m = /^(\d{4})-/.exec(s || ''); return m ? +m[1] : 0 }
 
-/** [id, title, lat, lon] */
-export type WifiRow = [number | string, string, number, number]
-export function cityWifiRows(j: CityResponse | undefined): WifiRow[] {
+/** Raw `horario` text of city equipment records, by record id (fetched from equipamiento/{id}.json by the build script). */
+export type EquipHours = Record<string, { title?: string; horario?: string } | undefined>
+/**
+ * Hours of one city equipment record. Same reader as libraries and civic centres, so anything it does not fully understand stays unknown (null).
+ * Senior centres write one sentence ("De 10 a 21 h.", every day), read the way the climate-shelter list is read.
+ */
+export function equipSched(rec: { title?: string; horario?: string } | undefined): CitySched | null {
+  if (!rec?.horario) return null
+  const direct = parseCityHorario(rec.horario)
+  if (direct) return direct
+  // a side note in brackets about one room ("(La sala de estudio permanecerá cerrada de 14 a 15h)"), read the way the shelter list is read; a note about booking or limits keeps the hours unknown
+  const bare = rec.horario.replace(/\([^)]*\)/g, m => (/cita|previa|solo|excepto|salvo|unicamente/i.test(m.normalize('NFD').replace(/[\u0300-\u036f]/g, '')) ? m : ' '))
+  if (bare !== rec.horario) { const s = parseCityHorario(bare); if (s) return s }
+  return /^centro de convivencia para mayores/i.test(rec.title || '') ? parseCityHorario(shelterHours(rec.horario)) : null
+}
+/** [id, title, lat, lon, parsed hours (only when the linked city record publishes readable hours)].
+ *  Each WiFi point is a city building: `internal_id` is the id of its record in the equipment catalogue, which holds the building's opening hours. */
+export type WifiRow = [number | string, string, number, number, CitySched?]
+export function cityWifiRows(j: CityResponse | undefined, hours: EquipHours = {}): WifiRow[] {
   const out: WifiRow[] = []
   for (const r of j?.result || []) {
     const c = r.geometry?.coordinates
-    if (c && okCoord(c[1], c[0]) && inCity(c[1], c[0])) out.push([r.id, r.title || '', +c[1].toFixed(6), +c[0].toFixed(6)])
+    if (!c || !okCoord(c[1], c[0]) || !inCity(c[1], c[0])) continue
+    const row: WifiRow = [r.id, r.title || '', +c[1].toFixed(6), +c[0].toFixed(6)]
+    const s = r.internal_id ? equipSched(hours[r.internal_id]) : null
+    if (s) row[4] = s
+    out.push(row)
   }
   return out
 }
@@ -166,10 +186,10 @@ export function fountainRows(src: { data?: { features?: Feature[] } }): { rows: 
 }
 
 // ---------- toiletsgo ----------
-/** [id, name, address, phone, lat, lon] */
-export type TgoRow = [number, string, string, string, number, number]
+/** [id, name, address, phone, lat, lon, parsed hours]. Every id is a record of the city equipment catalogue; the hours are that record's, when readable. */
+export type TgoRow = [number, string, string, string, number, number, CitySched?]
 /** Parse the RAW array in toiletsgo's src/data.ts: {id, name, address, tel, utm:[E,N]}. Rows outside Zaragoza are dropped. */
-export function parseTgo(text: string): TgoRow[] {
+export function parseTgo(text: string, hours: EquipHours = {}): TgoRow[] {
   const re = /\{\s*id:\s*(\d+)\s*,\s*name:\s*'((?:[^'\\]|\\.)*)'\s*,\s*address:\s*'((?:[^'\\]|\\.)*)'\s*,\s*tel:\s*(null|'[^']*')\s*,\s*utm:\s*\[\s*([\d.]+)\s*,\s*([\d.]+)\s*\]/g
   const un = (s: string) => s.replace(/\\(.)/g, '$1')
   const rows: TgoRow[] = []
@@ -177,7 +197,10 @@ export function parseTgo(text: string): TgoRow[] {
   while ((m = re.exec(text))) {
     const [lat, lon] = utm30ToLatLon(+m[5], +m[6])
     if (!inCity(lat, lon)) continue
-    rows.push([+m[1], un(m[2]), un(m[3]), m[4] === 'null' ? '' : m[4].slice(1, -1), +lat.toFixed(6), +lon.toFixed(6)])
+    const row: TgoRow = [+m[1], un(m[2]), un(m[3]), m[4] === 'null' ? '' : m[4].slice(1, -1), +lat.toFixed(6), +lon.toFixed(6)]
+    const s = equipSched(hours[m[1]])
+    if (s) row[6] = s
+    rows.push(row)
   }
   return rows
 }

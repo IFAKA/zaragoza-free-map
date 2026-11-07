@@ -57,3 +57,28 @@ describe('schedFor + openState', () => {
     expect(schedFor(w, 915)).toBe(w.r)
   })
 })
+
+describe('parseCityHorario (more real strings: sports halls, museums, fire stations)', () => {
+  it('sentences with Laborables / Sabados / Domingos y festivos', () => {
+    expect(parseCityHorario('<p>Laborables de 08 a 23 horas Sábados de 08 a 23 horas Domingos y festivos de 08 a 15 horas</p>')?.r).toBe('Mo-Sa 08:00-23:00; Su 08:00-15:00')
+    expect(parseCityHorario('<p>De lunes a sabado de 8 a 22 h. Domingos de 8 a 15 h.</p>')?.r).toBe('Mo-Sa 08:00-22:00; Su 08:00-15:00')
+  })
+  it('dash between days, and a lead-in sentence', () => {
+    expect(parseCityHorario('<p>Lunes a viernes de 8.00 a 19.00- Sábado de 8.00 a 14.00</p>')?.r).toBe('Mo-Fr 08:00-19:00; Sa 08:00-14:00; Su off')
+    expect(parseCityHorario('<p>El horario de apertura de centro, es de lunes a viernes de 8:30 a 21:00 y sábados de 8:30 a 14:00.</p>')?.r).toBe('Mo-Fr 08:30-21:00; Sa 08:30-14:00; Su off')
+  })
+  it('fixed-date exception lines are skipped, a closed period is kept', () => {
+    const museum = '<ul><li>De martes a viernes de 10 a 14 h y de 17 a 21 h</li><li>Domingos y festivos: de 10 a 14:30 h.</li><li>Lunes, cerrado</li><li>Días 24 y 31 de diciembre, abierto de 10 a 14 h</li><li>Días 25 de diciembre y 1 de enero, cerrado.</li></ul>'
+    expect(parseCityHorario(museum)?.r).toBe('Mo off; Tu-Fr 10:00-14:00,17:00-21:00; Sa off; Su 10:00-14:30')
+    expect(parseCityHorario('<ul><li>Horario: miércoles, jueves y viernes, de 16,30 a 20,30 h</li><li>Cerrada del 1 al 16 de agosto</li></ul>')).toEqual({ r: 'Mo-Tu off; We-Fr 16:30-20:30; Sa-Su off', u: [801, 816] })
+  })
+  it('24 hours every day', () => {
+    expect(parseCityHorario('<p>24 horas al día, todos los días del año.</p>')?.r).toBe('Mo-Su 00:00-24:00')
+    expect(openState('Mo-Su 00:00-24:00', 6, 1439)).toBe(true)
+  })
+  it('stays unknown when the text has no days, only booking, or only "tardes"', () => {
+    expect(parseCityHorario('<p>De 8,30 a 13,30 h.</p>')).toBeNull()
+    expect(parseCityHorario('<p>Atención con cita previa.</p>')).toBeNull()
+    expect(parseCityHorario('<ul><li>De martes a domingo en horario de tardes</li><li>Lunes cerradas</li></ul>')).toBeNull()
+  })
+})

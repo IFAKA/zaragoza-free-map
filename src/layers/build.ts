@@ -54,12 +54,12 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
   const waterOsm = without(osmItems(o.water, ou, () => ({ type: 'fountain' })), fountains, 25)
 
   const wifiCity: Item[] = d.wifi.rows.map(r => ({
-    id: 'm' + r[0], part: 'city' as const, type: 'muni', cat: 'muni', name: cleanName(r[1]), lat: r[2], lon: r[3], building: true, upd: d.wifi.updated ?? undefined,
+    id: 'm' + r[0], part: 'city' as const, type: 'muni', cat: 'muni', name: cleanName(r[1]), lat: r[2], lon: r[3], building: true, upd: d.wifi.updated ?? undefined, ...(r[4] ? { sched: r[4] } : {}),
   }))
   const wifiOsm = osmItems(o.wifi, ou, r => ({ type: r[4], cat: isFood(r[4]) ? 'food' : 'other', hours: r[5], ssid: r[6] }))
 
   const toilets = [
-    ...d.toiletsgo.rows.map(r => ({ id: 't' + r[0], part: 'tgo' as const, type: tgoType(r[1]), name: r[1], addr: r[2], phone: r[3], lat: r[4], lon: r[5], upd: d.toiletsgo.updated ?? undefined })),
+    ...d.toiletsgo.rows.map(r => ({ id: 't' + r[0], part: 'tgo' as const, type: tgoType(r[1]), name: r[1], addr: r[2], phone: r[3], lat: r[4], lon: r[5], upd: d.toiletsgo.updated ?? undefined, ...(r[6] ? { sched: r[6] } : {}) })),
     ...osmItems(o.toilets, ou, r => ({ type: 'toilet', hours: r[5], cust: r[6] === 'c' })),
   ]
   const chargers = osmItems(o.charge, ou, r => ({ type: 'charger', hours: r[5], always: !r[5] }))
