@@ -454,8 +454,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center">
-      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3.5 text-left text-ink">
-        <FavButton layer={layer} item={item} />
+      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left text-ink">
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <span className="block"><span className={h2} data-testid="nearest-name">{name}</span>{hasDetails(layer, item) && (
@@ -467,6 +466,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
           <span className="block font-bold" data-closed-edge>{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
           <span className="block"><Status item={item} layer={layer} /></span>
         </span>
+        <FavButton layer={layer} item={item} />
         <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
       </div>
       </div>
