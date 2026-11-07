@@ -2,6 +2,7 @@ import { m } from 'motion/react'
 import { ListMagnifyingGlass, SlidersHorizontal, Star } from '@phosphor-icons/react'
 import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
+import { cn } from './cn'
 import { useT } from './lang'
 import { ICONS } from './icons'
 import { tap } from './motion'
@@ -16,11 +17,13 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
  * The header of the home page (about 64 px): two equal text buttons (Favourites, Services with a magnifier so it is clear it is for finding a service). The service you are on is named in the card below, above the place.
  * The Services button turns the drawer to the Services page (same drawer, new page).
  */
-export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersActive }: { onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
+/** Height of the phone footer bar (px), without the bottom safe area. The home page keeps this much room at its end, and the closed sheet ends above it. */
+export const FOOTER_PX = 72
+export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersActive, bar }: { bar?: boolean; onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
   const { t } = useT()
   return (
-    <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="-mt-2 shrink-0">
-      <div className="flex items-center gap-2 px-4 pb-3 pt-0">
+    <div role="group" aria-label={t('tabsLabel')} data-testid="services" className={bar ? 'fixed inset-x-0 bottom-0 z-[51] bg-paper pb-[env(safe-area-inset-bottom)]' : '-mt-2 shrink-0'}>
+      <div className={cn('flex items-center gap-2 px-4', bar ? 'h-[72px]' : 'pb-3 pt-0')}>
         {onFilters && (
           <m.button {...tap} type="button" onClick={onFilters} aria-label={t('filtersLabel')} data-testid="filters-open"
             className="relative grid size-14 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">

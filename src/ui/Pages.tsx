@@ -17,7 +17,7 @@ import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
-import { ServiceGroups, ServiceHeader } from './ServiceBar'
+import { FOOTER_PX, ServiceGroups, ServiceHeader } from './ServiceBar'
 import { Tick } from './Tick'
 import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
@@ -586,13 +586,14 @@ export function HomePage(p: {
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
-        <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
+        {p.desktop && <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />}
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <div ref={setMore} />
         {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
+        {!p.desktop && <div aria-hidden style={{ height: FOOTER_PX }} />}
       </Scroll>
     </MoreCtx.Provider>
   )

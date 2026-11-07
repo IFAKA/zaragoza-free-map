@@ -24,7 +24,9 @@ const MapView = lazy(() => import('./MapView').then(m => ({ default: m.MapView }
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { useBackLayer } from './back'
 import { FavsPage } from './FavsPage'
-import { FiltersPage, HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
+import { createPortal } from 'react-dom'
+import { FOOTER_PX, ServiceHeader } from './ServiceBar'
+import { FiltersPage, HomePage, filtersOn, hasFilters, PlacePage, ServicesPage, type LineView } from './Pages'
 import { VehicleCtx } from './vehicles'
 import type { Vehicle } from '../lib/vehicles'
 import { SettingsView, useSettingsView } from './SettingsView'
@@ -58,9 +60,9 @@ function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-testid=services]')
+      const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-closed-edge]')
       if (!pop || !edge) return
-      const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 4 + safeBottom())
+      const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 1 + FOOTER_PX + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
     }
     measure()
@@ -419,6 +421,7 @@ export function App() {
               <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} onShown={onShown} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
                 {pageEl}
               </PagedDrawer>
+              {livePage === 'home' && createPortal(<ServiceHeader bar onOpen={openServices} favLayers={favKeys.map(k => splitFav(k)[0] as LayerId)} onFavs={openFavs} onFilters={hasFilters(layer) && !liveState && !lineData ? openFilters : undefined} filtersActive={filtersOn(layer, cat)} />, document.body)}
             </SheetClosedCtx.Provider>
           )}
         </div>
