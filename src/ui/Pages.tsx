@@ -576,7 +576,7 @@ export function HomePage(p: {
   const favLayers = useFavs().map(k => splitFav(k)[0] as LayerId)
   return (
     <MoreCtx.Provider value={more}>
-      <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
+      <ServiceHeader layer={p.layer.id} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
