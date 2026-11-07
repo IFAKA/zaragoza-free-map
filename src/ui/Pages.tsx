@@ -4,6 +4,7 @@ import { RadioGroup } from '@base-ui/react/radio-group'
 import { ChatCircleText, ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { ICONS } from './icons'
 import { Skel, SkelRows } from './Skel'
 import { DATA, dataRefreshed } from '../data'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
@@ -445,7 +446,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void
   onDetails: () => void; onWalk: () => void
 }) {
-  const { t, type } = useT()
+  const { t, type, lang } = useT()
+  const Icon = ICONS[layer.icon]
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
@@ -458,6 +460,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       <div className="flex items-center">
       <div className="flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
         <span className="min-w-0 flex-1">
+          <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
           <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
           <span className="block"><Status item={item} layer={layer} /></span>
@@ -577,7 +580,7 @@ export function HomePage(p: {
   const favLayers = useFavs().map(k => splitFav(k)[0] as LayerId)
   return (
     <MoreCtx.Provider value={more}>
-      <ServiceHeader layer={p.layer.id} onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
+      <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />

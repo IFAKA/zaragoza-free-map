@@ -4,7 +4,7 @@ import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
 import { useT } from './lang'
 import { ICONS } from './icons'
-import { cardSwap, tap } from './motion'
+import { tap } from './motion'
 
 export const GROUPS: { id: string; label: { en: string; es: string }; ids: LayerId[] }[] = [
   { id: 'basics', label: { en: 'Basics', es: 'Básicos' }, ids: ['toilets', 'water', 'pharmacy', 'shelter'] },
@@ -13,12 +13,11 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
 ]
 
 /**
- * The header of the home page (about 64 px): two equal text buttons (Favourites, Services with a magnifier so it is clear it is for finding a service), and under them one line naming the service you are on (small icon and name).
+ * The header of the home page (about 64 px): two equal text buttons (Favourites, Services with a magnifier so it is clear it is for finding a service). The service you are on is named in the card below, above the place.
  * The Services button turns the drawer to the Services page (same drawer, new page).
  */
-export function ServiceHeader({ layer, onOpen, favLayers, onFavs, onFilters, filtersActive }: { layer: LayerId; onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
-  const { lang, t } = useT()
-  const cur = LAYERS[layer], I = ICONS[cur.icon]
+export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersActive }: { onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
+  const { t } = useT()
   return (
     <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="shrink-0">
       <div className="flex items-center gap-2 px-4 pb-1.5 pt-1">
@@ -38,10 +37,6 @@ export function ServiceHeader({ layer, onOpen, favLayers, onFavs, onFilters, fil
           <MagnifyingGlass size="1.3em" weight="bold" aria-hidden />{t('tabsLabel')}
         </m.button>
       </div>
-      <m.div key={layer} {...cardSwap} className="flex items-center gap-2 px-4 pb-1" data-testid="service-on">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-md text-on-brand" style={{ background: cur.color }}><I size="1em" weight="fill" aria-hidden /></span>
-        <span className="min-w-0 truncate font-title text-[0.95em] font-bold text-ink">{cur.label[lang]}</span>
-      </m.div>
     </div>
   )
 }
