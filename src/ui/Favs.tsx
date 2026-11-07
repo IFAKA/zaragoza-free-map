@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICONS } from './icons'
 import { LAYERS } from '../layers'
 import { lsGet, lsSet } from '../lib/cache'
-import { LABEL_MAX, canFav, favKey, favTitle, nearestFavs, setLabel, splitFav, toggleFav, useFavLabels, useFavs } from '../lib/favs'
+import { LABEL_MAX, canFav, favKey, favTitle, setLabel, splitFav, toggleFav, useFavLabels, useFavs } from '../lib/favs'
 import { loadBus, loadTram } from '../lib/live'
 import type { Live } from '../lib/live'
 import { dist, fmtDist } from '../lib/geo'
@@ -162,21 +162,5 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
         className={cn('flex min-h-16 min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent py-2 pl-4 text-left text-ink', trailing ? 'pr-1' : 'pr-4')}>{body}</m.button>
       {trailing}
     </li>
-  )
-}
-
-/** The Favourites row of the home page: ONE row (64 px) with the nearest favourite OF THE SERVICE ON SHOW: star, layer icon, name, distance and the next arrival. The way to the full page is the star button in the page header. Nothing when this service has no favourite. */
-export function FavSection({ layer, onOpen, pos }: { layer: string; onOpen: (layer: string, id: string) => void; pos: LatLon | null }) {
-  const { t } = useT()
-  const list = resolveFavs(useFavs()).filter(f => f.layer.id === layer)
-  const steady = useSteadyPos(pos)
-  if (!list.length) return null
-  const [f] = nearestFavs(list, steady, 1)
-  return (
-    <section className="shrink-0 border-t border-line" aria-label={t('favsTitle')} data-testid="fav-section">
-      <ul className="m-0 list-none p-0" aria-label={t('favsLabel')}>
-        <FavRow fav={f} pos={steady} onOpen={onOpen} compact />
-      </ul>
-    </section>
   )
 }

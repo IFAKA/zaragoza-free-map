@@ -38,7 +38,7 @@ import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav, splitFav, useFavs } from '../lib/favs'
-import { FavButton, FavSection } from './Favs'
+import { FavButton } from './Favs'
 
 const h2 = 'font-title text-[1.4em] font-semibold leading-tight text-brand-text'
 const overline = 'text-[0.8em] font-semibold uppercase tracking-wide text-ink-soft'
@@ -55,7 +55,7 @@ function More({ children }: { children: ReactNode }) {
 function Actions({ item, onWalk, fav, times, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; times?: { url: string; label: string; onClick: () => void; testId: string }; extra?: ReactNode }) {
   const { t } = useT()
   return (
-    <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&>*]:shrink-0 [&>*]:whitespace-nowrap [&::-webkit-scrollbar]:hidden" data-testid="actions">
+    <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&>*]:shrink-0 [&>*]:whitespace-nowrap [&::-webkit-scrollbar]:hidden" data-testid="actions">
       {fav}
       <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       {times && <Button variant="secondary" {...linkProps(times.url)} onClick={times.onClick} data-testid={times.testId}><Clock size="1.2em" aria-hidden />{times.label}</Button>}
@@ -550,7 +550,7 @@ export function HomePage(p: {
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
-  onOpenFav: (layer: string, id: string) => void; onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
+  onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -559,8 +559,6 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} />
-      {/* only on the plain home state (the nearest place chosen by itself), and only a favourite of the service on show (a saved bus stop does not belong above the toilets): not when a place was picked, a greyed-out place is shown, or a line route is open */}
-      {!p.selected && !p.off && !p.lineView && <FavSection layer={p.layer.id} onOpen={p.onOpenFav} pos={p.hasPos ? p.origin : null} />}
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
