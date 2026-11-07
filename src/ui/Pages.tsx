@@ -5,7 +5,6 @@ import { ChatCircleText, ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, C
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
-import { track } from '../lib/analytics'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import { installEnv, installWay, promptInstall } from '../lib/install'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
