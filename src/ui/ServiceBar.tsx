@@ -1,5 +1,5 @@
 import { AnimatePresence, m } from 'motion/react'
-import { Plus, SlidersHorizontal, Star } from '@phosphor-icons/react'
+import { MagnifyingGlass, SlidersHorizontal, Star } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
@@ -54,14 +54,17 @@ export function ServiceHeader({ layer, order, onOpen, onShow, favLayers, onFavs,
           </m.button>
         )}
         <FavGrid layers={favLayers} onClick={onFavs} />
-        <m.button {...tap} type="button" onClick={onOpen} aria-label={t('tabsLabel')} data-testid="services-open"
-          className="relative grid size-14 shrink-0 grid-cols-2 grid-rows-2 place-items-center gap-0.5 rounded-[14px] border-[1.5px] border-line bg-paper p-[5px] text-ink shadow-md">
-          {shown.map((id, k) => { const J = ICONS[LAYERS[id].icon]; return (
-            <span key={k} className="relative grid size-full place-items-center">
-              <AnimatePresence initial={false}><m.span key={id} data-layer={id} {...slotSwap} className="absolute inset-0 grid place-items-center"><J size="1.15em" weight="fill" aria-hidden /></m.span></AnimatePresence>
-            </span>) })}
-          <span className="grid size-full place-items-center rounded-full bg-brand text-on-brand"><Plus size="1em" weight="bold" aria-hidden /></span>
-        </m.button>
+        <div className="flex shrink-0 flex-col items-center gap-0.5">
+          <m.button {...tap} type="button" onClick={onOpen} aria-label={t('tabsLabel')} data-testid="services-open"
+            className="relative grid size-14 shrink-0 grid-cols-2 grid-rows-2 place-items-center gap-0.5 rounded-[14px] border-[1.5px] border-line bg-paper p-[5px] text-ink shadow-md">
+            {shown.map((id, k) => { const J = ICONS[LAYERS[id].icon]; return (
+              <span key={k} className="relative grid size-full place-items-center">
+                <AnimatePresence initial={false}><m.span key={id} data-layer={id} {...slotSwap} className="absolute inset-0 grid place-items-center"><J size="1.15em" weight="fill" aria-hidden /></m.span></AnimatePresence>
+              </span>) })}
+            <span className="grid size-full place-items-center rounded-full bg-brand text-on-brand"><MagnifyingGlass size="1em" weight="bold" aria-hidden /></span>
+          </m.button>
+          <span aria-hidden className="text-[0.72em] font-bold leading-none text-ink-soft">{t('tabsLabel')}</span>
+        </div>
       </div>
     </div>
   )
@@ -90,18 +93,21 @@ function FavGrid({ layers, onClick }: { layers: LayerId[]; onClick: () => void }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
   return (
-    <m.button {...tap} type="button" onClick={onClick} aria-label={`${t('favsTitle')}${layers.length ? `: ${t('favsSee').replace('{n}', String(layers.length))}` : ''}`} data-testid="fav-all"
-      className="relative grid size-14 shrink-0 grid-cols-2 grid-rows-2 place-items-center gap-0.5 rounded-[14px] border-[1.5px] border-line bg-paper p-[5px] text-ink shadow-md">
-      {[0, 1, 2].map(k => { const id = shown[k], J = id ? ICONS[LAYERS[id].icon] : null; return (
-        <span key={k} className="relative grid size-full place-items-center">
-          <AnimatePresence initial={false}>
-            <m.span key={id ?? 'empty'} data-layer={id} {...slotSwap} className="absolute inset-0 grid place-items-center">
-              {J ? <J size="1.15em" weight="fill" aria-hidden /> : <Star size="1.15em" className="text-line-strong" aria-hidden />}
-            </m.span>
-          </AnimatePresence>
-        </span>) })}
-      <span className="grid size-full place-items-center rounded-full bg-brand text-on-brand"><Star size="1em" weight="fill" aria-hidden /></span>
-    </m.button>
+    <div className="flex shrink-0 flex-col items-center gap-0.5">
+      <m.button {...tap} type="button" onClick={onClick} aria-label={`${t('favsTitle')}${layers.length ? `: ${t('favsSee').replace('{n}', String(layers.length))}` : ''}`} data-testid="fav-all"
+        className="relative grid size-14 shrink-0 grid-cols-2 grid-rows-2 place-items-center gap-0.5 rounded-[14px] border-[1.5px] border-line bg-paper p-[5px] text-ink shadow-md">
+        {[0, 1, 2].map(k => { const id = shown[k], J = id ? ICONS[LAYERS[id].icon] : null; return (
+          <span key={k} className="relative grid size-full place-items-center">
+            <AnimatePresence initial={false}>
+              <m.span key={id ?? 'empty'} data-layer={id} {...slotSwap} className="absolute inset-0 grid place-items-center">
+                {J ? <J size="1.15em" weight="fill" aria-hidden /> : <Star size="1.15em" className="text-line-strong" aria-hidden />}
+              </m.span>
+            </AnimatePresence>
+          </span>) })}
+        <span className="grid size-full place-items-center rounded-full bg-brand text-on-brand"><Star size="1em" weight="fill" aria-hidden /></span>
+      </m.button>
+      <span aria-hidden className="text-[0.72em] font-bold leading-none text-ink-soft">{t('favsTitle')}</span>
+    </div>
   )
 }
 
