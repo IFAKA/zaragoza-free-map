@@ -117,7 +117,7 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
           ))}
         </span>
       ) : open !== null && (
-        <span className={cn('shrink-0 text-right text-[0.88em] font-semibold', open ? 'text-success-ink' : 'text-ink-soft')} data-testid="fav-open">{open ? t('open') : t('closed')}</span>
+        <span className={cn('flex shrink-0 items-center gap-1.5 text-[0.88em] font-semibold', open ? 'text-success-ink' : 'text-ink-soft')} data-testid="fav-open"><span aria-hidden className={cn('size-2 rounded-full', open ? 'bg-success-ink' : 'bg-line-strong')} />{open ? t('openShort') : t('closedShort')}</span>
       )}
     </>
   )

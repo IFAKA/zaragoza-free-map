@@ -22,7 +22,7 @@ import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from '../lib/geo'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
-import { BUZ_URL, biziLine, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, biziLine, clockMadrid, fmtHours, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
 import { busAlternatives, ensureBakedBad, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
@@ -54,7 +54,7 @@ function More({ children }: { children: ReactNode }) {
 function Actions({ item, onWalk, fav, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; extra?: ReactNode }) {
   const { t } = useT()
   return (
-    <div className="mt-2 flex flex-wrap gap-2 pb-3 [&>*]:whitespace-nowrap" data-testid="actions">
+    <div className="mt-2 flex gap-2 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:whitespace-nowrap" data-testid="actions">
       <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       {fav}
       {extra}
@@ -707,7 +707,6 @@ export function PlacePage({ layer, item, hasPos, onBack, locked, peekRef }: { la
           {field('ssid', item.ssid)}
           {layer.id === 'wifi' && <div className={sub}>{t('rangeEst')} {item.building ? t('rangeCity') : t('rangeOsm')} ({rangeMetres(item)} m).</div>}
           <Occupancy item={item} />
-          <Button variant="secondary" {...linkProps(reportUrl(item))} onClick={() => track('report')} data-testid="report" className="self-start">{t('report')}</Button>
           <div className="flex items-start gap-1"><div className={cn(sub, 'flex-1 pt-3')}>{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
         </div>
       </Scroll>
