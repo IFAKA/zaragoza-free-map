@@ -11,7 +11,7 @@ import { installEnv, installWay, promptInstall } from '../lib/install'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
 import detours from '../data/detours.json'
 import routecheck from '../data/routecheck.json'
-import { chipSplit, nextDepartures, type BusRoutes } from '../lib/transit'
+import { nextDepartures, type BusRoutes } from '../lib/transit'
 import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
@@ -173,10 +173,10 @@ function VehNote({ show }: { show: boolean }) {
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
  */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line, onLine }: {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line, onLine, lineOk }: {
   kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
   title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon; line?: string
-  /** Bus stop: tapping a row opens that line (same as its chip). */ onLine?: (line: string) => void
+  /** Bus stop: tapping a row opens that line. */ onLine?: (line: string) => void; lineOk?: (line: string) => boolean
 }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
@@ -204,6 +204,16 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
   const first = rows[0]
+  const rowCls = 'flex items-center gap-2'
+  const rowBody = (r: Arrival, i: number) => (
+    <>
+      <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
+      <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span></span>
+      {i === 0
+        ? <span className="shrink-0 tabular-nums" data-testid="live-first"><span className="text-[1.6em] font-bold leading-none">{min(r.mins[0])}</span>{r.mins.length > 1 && <span className="font-bold text-ink-soft"> · {r.mins.slice(1).map(min).join(' · ')}</span>}</span>
+        : <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>}
+    </>
+  )
   const viaText = live?.via ? t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d)) : ''
   return (
     <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
@@ -221,12 +231,8 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
           {!first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
             <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
               {rows.map((r, i) => (
-                <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row" {...(onLine ? { onClick: () => onLine(r.line), role: 'button', tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') onLine(r.line) } } : {})}>
-                  <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
-                  <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span></span>
-                  {i === 0
-                    ? <span className="shrink-0 tabular-nums" data-testid="live-first"><span className="text-[1.6em] font-bold leading-none">{min(r.mins[0])}</span>{r.mins.length > 1 && <span className="font-bold text-ink-soft"> · {r.mins.slice(1).map(min).join(' · ')}</span>}</span>
-                    : <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>}
+                <li key={r.line + r.dest} data-testid="live-row">
+                  {onLine && lineOk?.(r.line) ? <BaseButton onClick={() => onLine(r.line)} render={<m.button {...tap} />} data-testid="live-row-open" data-line={r.line} aria-label={t('lineChip').replace('{n}', r.line)} className={cn(rowCls, 'w-full min-h-9 border-0 bg-transparent p-0 text-left text-inherit')}>{rowBody(r, i)}<CaretRight size="1em" weight="bold" className="shrink-0 text-ink-soft" aria-hidden /></BaseButton> : <div className={rowCls}>{rowBody(r, i)}</div>}
                 </li>
               ))}
             </ul>
@@ -242,7 +248,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
 }
 
 /** Bus stop: live next buses (city stops only).  */
-function BusActions({ item, origin, onWalk, fav, onLine }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode; onLine?: (line: string) => void }) {
+function BusActions({ item, origin, onWalk, fav, onLine, lineOk }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode; onLine?: (line: string) => void; lineOk?: (line: string) => boolean }) {
   const { t } = useT()
   const stop = item.stop
   const live = !!stop && /^\d+$/.test(stop)
@@ -253,7 +259,7 @@ function BusActions({ item, origin, onWalk, fav, onLine }: { item: RankedItem; o
   }, [stop, item.lines, item.lat, item.lon, origin])
   return (
     <>
-      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} onLine={onLine} />}
+      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} onLine={onLine} lineOk={lineOk} />}
       {!live && !stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
       <Actions item={item} onWalk={onWalk} fav={fav} />
     </>
@@ -369,31 +375,6 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
 /** What the line mode needs to show: the line, the direction on show, the stops in order and the place of the current one in them (-1 = none). */
 export interface LineView { line: string; dir: number; dirs: number; to?: string; stops: { post: string; name: string; lat: number; lon: number }[]; idx: number; stop?: string }
 
-const LINE_ROWS = 2, LINE_COLS = 6 // the lines on a stop card: at most two rows of six, then a "+N" chip that opens the rest
-/** The lines a stop serves, as chips. A line with a known route is a button (draws it); the others are plain. */
-function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes | null; onLine: (line: string) => void }) {
-  const { t } = useT()
-  const [all, setAll] = useState(false)
-  const list = lines.split(',')
-  const { shown, more } = all ? { shown: list, more: 0 } : chipSplit(list, LINE_ROWS * LINE_COLS)
-  const chip = 'flex h-8 min-w-[2.75rem] items-center justify-center rounded-btn px-2.5 text-[0.87em] font-bold'
-  return (
-    <div className="pb-2 pt-1" data-testid="bus-lines">
-      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label={t('lines')}>
-        {shown.map(l => (
-          <li key={l}>
-            {routes?.lines[l]
-              ? <BaseButton onClick={() => onLine(l)} render={<m.button {...tap} />} aria-label={t('lineChip').replace('{n}', l)} data-testid="bus-line-chip" data-line={l} className={cn(chip, 'border-0 bg-bus text-on-brand')}>{l}</BaseButton>
-              : <span className={cn(chip, 'bg-surface text-ink-soft')} data-testid="bus-line-plain">{l}</span>}
-          </li>
-        ))}
-        {more > 0 && <li><BaseButton onClick={() => setAll(true)} render={<m.button {...tap} />} data-testid="bus-line-more" className={cn(chip, 'w-full border border-line-strong bg-transparent text-brand-text')}>{t('lineMore').replace('{n}', String(more))}</BaseButton></li>}
-        {all && list.length > LINE_ROWS * LINE_COLS && <li className=""><BaseButton onClick={() => setAll(false)} render={<m.button {...tap} />} className={cn(chip, 'w-full border-0 bg-transparent text-brand-text')}>{t('lineLess')}</BaseButton></li>}
-      </ul>
-    </div>
-  )
-}
-
 /** A bus line chosen: "Line 38 · toward X", a way to flip direction, the stops still to come in order, and the link to the next buses. */
 export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; origin: LatLon; onBack: () => void; onDir: () => void }) {
   const { t, lang } = useT()
@@ -470,12 +451,11 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
       </BaseButton>
       </div>
-      {item.lines && <Above><LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} /></Above>}
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} onLine={line => routes?.lines[line] && onLine(line)} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} onLine={onLine} lineOk={line => !!routes?.lines[line]} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
     </m.section>
     </AboveCtx.Provider>
   )
