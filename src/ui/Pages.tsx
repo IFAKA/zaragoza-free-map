@@ -463,8 +463,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
               <InfoIcon size="1.5em" weight="bold" aria-hidden />
             </m.button>
           )}</span>
-          <span className="block font-bold" data-closed-edge>{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
-          <span className="block"><Status item={item} layer={layer} /></span>
+          <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
+          <span className="block" data-closed-edge><Status item={item} layer={layer} /></span>
         </span>
         <FavButton layer={layer} item={item} />
         <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
