@@ -77,14 +77,13 @@ export function useFavLive(fav: Fav, on: boolean): { live: Live | null; text: st
 }
 
 let seen = false // the chips enter once per visit to the app, not on every return to Home
-function Chip({ fav, i, enter, tight, onOpen }: { fav: Fav; i: number; enter: boolean; tight: boolean; onOpen: (layer: string, id: string) => void }) {
-  const { text: t0, line } = useFavLive(fav, isLiveFav(fav.item))
-  const text = tight ? '' : t0 // four chips in a row leave no room for the minutes: they are on the Favourites page
+function Chip({ fav, i, enter, onOpen }: { fav: Fav; i: number; enter: boolean; onOpen: (layer: string, id: string) => void }) {
+  const { text, line } = useFavLive(fav, isLiveFav(fav.item))
   return (
     <li className={cn('flex min-w-0 flex-1', enter && 'fav-in')} data-i={i}>
       <m.button {...tap} type="button" onClick={() => onOpen(fav.layer.id, fav.item.id)} data-testid="fav-chip" aria-label={text ? `${fav.item.name}: ${line} ${text}` : fav.item.name}
         className="flex h-11 w-full min-w-0 select-none items-center gap-1.5 rounded-full border-0 bg-surface px-2.5 text-[0.9em] font-semibold text-ink">
-        {!tight && <span className="size-2.5 shrink-0 rounded-full" style={{ background: fav.layer.color }} aria-hidden />}
+        <span className="size-2.5 shrink-0 rounded-full" style={{ background: fav.layer.color }} aria-hidden />
         <span className="min-w-0 flex-1 truncate text-left">{fav.item.name.replace(/^P\.\s+/, '')}</span>
         {text && <span className="shrink-0 text-[0.88em] tabular-nums text-brand-text">{text.replace(' min', "'")}</span>}
       </m.button>
@@ -92,14 +91,14 @@ function Chip({ fav, i, enter, tight, onOpen }: { fav: Fav; i: number; enter: bo
   )
 }
 
-/** The favourites strip at the top of the home page: one fixed-height row, at most 3 chips (the ones opened last), then an "All (N)" chip that opens the Favourites page. With 3 or fewer, a star at the start opens the page. Places that are no longer in the data are skipped. Empty: nothing. */
+/** The favourites strip at the top of the home page: one fixed-height row, at most 2 chips (the ones opened last), then an "All (N)" chip as the third slot that opens the Favourites page. With 2 or fewer, a star at the start opens the page. Places that are no longer in the data are skipped. Empty: nothing. */
 export function FavStrip({ onOpen, onAll }: { onOpen: (layer: string, id: string) => void; onAll: () => void }) {
   const { t } = useT()
   const list = resolveFavs(useFavs())
   const [enter] = useState(!seen)
   useEffect(() => { seen = true }, [])
   if (!list.length) return null
-  const more = list.length > 3
+  const more = list.length > 2
   return (
     <div className="flex h-11 shrink-0 items-center gap-2 mb-2 px-4" data-testid="fav-strip">
       {!more && (
@@ -107,12 +106,12 @@ export function FavStrip({ onOpen, onAll }: { onOpen: (layer: string, id: string
           <Star size="1.3em" weight="fill" aria-hidden />
         </m.button>
       )}
-      <ul className="m-0 flex min-w-0 flex-1 list-none gap-2 p-0" aria-label={t('favsLabel')}>
-        {list.slice(0, 3).map((f, i) => <Chip key={f.key} fav={f} i={i} enter={enter} tight={more} onOpen={onOpen} />)}
+      <ul className={cn('m-0 flex min-w-0 list-none gap-2 p-0', more ? 'flex-[2]' : 'flex-1')} aria-label={t('favsLabel')}>
+        {list.slice(0, 2).map((f, i) => <Chip key={f.key} fav={f} i={i} enter={enter} onOpen={onOpen} />)}
       </ul>
       {more && (
         <m.button {...tap} type="button" onClick={onAll} data-testid="fav-all" aria-label={t('favsOpen')}
-          className="flex h-11 shrink-0 select-none items-center gap-1 rounded-full border-0 bg-brand-tint px-2.5 text-[0.9em] font-bold text-brand-text">
+          className="flex h-11 min-w-0 flex-1 select-none items-center justify-center gap-1 rounded-full border-0 bg-brand-tint px-2.5 text-[0.9em] font-bold text-brand-text">
           <Star size="1.1em" weight="fill" aria-hidden />{t('favsAll').replace('{n}', String(list.length))}
         </m.button>
       )}
