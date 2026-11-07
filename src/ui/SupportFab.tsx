@@ -26,7 +26,7 @@ export function SupportFab({ inert }: { inert?: boolean }) {
           <Popover.Popup data-testid="support-card" className="max-w-64 rounded-card border border-line bg-paper p-3 text-[0.93em] text-ink shadow-[0_4px_16px_rgb(0_0_0/0.2)] origin-(--transform-origin) outline-none [transition:opacity_var(--dur-small)_var(--ease-out)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             <p className="m-0 mb-3">{t('supportAsk')}</p>
             <m.button {...tap} type="button" onClick={() => { window.open('https://ko-fi.com/zfaka', '_blank', 'noopener'); setOpen(false) }} data-testid="support-kofi"
-              className="min-h-11 w-full rounded-btn border-0 bg-brand px-4 font-bold text-on-brand">{t('support')}</m.button>
+              className="min-h-11 w-full rounded-btn border-0 bg-brand px-4 font-bold text-on-brand">{t('supportBtn')}</m.button>
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>
