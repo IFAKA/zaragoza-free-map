@@ -51,12 +51,12 @@ function safeBottom(): number {
   probe.remove()
   return inset
 }
-/** Height of the closed sheet: the handle and the service header, plus the phone's bottom safe area. Measured, so it follows the real layout. */
+/** Height of the closed sheet: the handle, the service header and the filter row, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-testid=services]')
+      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-testid=filters]') ?? pop?.querySelector('[data-testid=services]')
       if (!pop || !head) return
       const next = Math.ceil(head.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
@@ -65,7 +65,8 @@ function useClosedPx(dep: unknown) {
     const id = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
     return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measure) }
-  }, [dep])
+  }) // after every render: the filter row comes and goes with the service
+  void dep
   return px
 }
 

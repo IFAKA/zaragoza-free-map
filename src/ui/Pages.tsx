@@ -517,7 +517,7 @@ export function FilterRow({ layer, openOnly, setOpenOnly, showRange, setShowRang
   const cats = layer.cats && layer.id !== 'bizi'
   if (!layer.hours && !cats) return null
   return (
-    <div className="-mt-1 flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={t('filtersLabel')} data-testid="filters">
+    <div className="flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={t('filtersLabel')} data-testid="filters">
       {layer.hours && <FilterChip on={openOnly} onChange={setOpenOnly} label={t('openNow')} testId="switch-open" />}
       {layer.id === 'wifi' && <FilterChip on={showRange} onChange={setShowRange} label={t('showRange')} testId="switch-range" />}
       {cats && <FilterMenu value={cat} onChange={setCat} label={t('typeLabel')} testId="filter-type" options={[{ value: 'all', label: t('all') }, ...layer.cats!.map(c => ({ value: c, label: t(c as Key) }))]} />}
