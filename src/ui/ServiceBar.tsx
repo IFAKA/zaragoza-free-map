@@ -1,5 +1,5 @@
 import { m } from 'motion/react'
-import { MagnifyingGlass, SlidersHorizontal, Star } from '@phosphor-icons/react'
+import { ListStar, MagnifyingGlass, SlidersHorizontal } from '@phosphor-icons/react'
 import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
 import { useT } from './lang'
@@ -36,7 +36,7 @@ export function ServiceHeader({ layer, onOpen, onShow, favLayers, onFavs, onFilt
         )}
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
           className="grid size-12 shrink-0 place-items-center rounded-full border-[1.5px] border-line bg-paper text-ink shadow-md">
-          <Star size="1.4em" weight={favLayers.length ? 'fill' : 'regular'} aria-hidden />
+          <ListStar size="1.5em" weight="bold" aria-hidden />
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
           className="flex h-12 shrink-0 items-center gap-2 rounded-full border-0 bg-brand px-4 font-bold text-on-brand shadow-md">

@@ -1,6 +1,7 @@
 import { Check, PencilSimple, Star } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Skel } from './Skel'
 import { ICONS } from './icons'
 import { LAYERS } from '../layers'
 import { lsGet, lsSet } from '../lib/cache'
@@ -87,7 +88,7 @@ export function FavRow({ fav, pos, onOpen, mode, checked, onToggle, onRename, fu
     io.observe(el)
     return () => io.disconnect()
   }, [live])
-  const { arrs: all } = useFavLive(fav, vis)
+  const { live: liveData, arrs: all } = useFavLive(fav, vis)
   const arrs = compact ? all.slice(0, 1) : all // the home row has room for one arrival
   const I = ICONS[fav.layer.icon]
   const name = fav.item.name || type(fav.item.type) // some map places have no name: their kind
@@ -106,6 +107,7 @@ export function FavRow({ fav, pos, onOpen, mode, checked, onToggle, onRename, fu
       </span>
       {live ? (
         <span className="flex min-h-10 w-[7rem] shrink-0 flex-col items-end justify-center gap-0.5" data-testid="fav-times">
+          {!liveData && vis && <span className="flex items-center gap-1.5" role="status"><span className="sr-only">{t('liveLoading')}</span><Skel className="h-5 w-9" /><Skel className="h-4 w-12" /></span>}
           {arrs.map(a => (
             <span key={a.line + a.text} className="fav-fade flex items-center gap-1.5 text-[0.88em] leading-none" data-testid="fav-time">
               <span className={cn('min-w-[2.2em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', fav.item.type === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{a.line}</span>

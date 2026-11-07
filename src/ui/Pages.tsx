@@ -4,6 +4,7 @@ import { RadioGroup } from '@base-ui/react/radio-group'
 import { ChatCircleText, ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { Skel, SkelRows } from './Skel'
 import { DATA, dataRefreshed } from '../data'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import { installEnv, installWay, promptInstall } from '../lib/install'
@@ -224,7 +225,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   return (
     <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
       {title && <div className={overline}>{title}</div>}
-      {!live ? <div className="mt-1 flex min-h-[44px] items-center justify-between gap-2"><p className={cn(sub, 'm-0')}>{t('liveLoading')}</p></div> : (
+      {!live ? <div className="mt-1" role="status"><span className="sr-only">{t('liveLoading')}</span><SkelRows /></div> : (
         <>
           {live.via && (live.via.side ? (
             <div className="m-0 mt-1 leading-snug" data-testid="live-via" data-side={live.via.side}>
@@ -322,7 +323,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
   return (
     <>
       <div className="mt-1" data-testid="train-next">
-        {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : two ? (
+        {!times ? <div role="status"><span className="sr-only">{t('trainLoading')}</span><SkelRows /></div> : two ? (
           <DirRows testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({
             id: x.g.id, label: DATA.cercanias.dests[x.g.far], empty: empty.has(x.g.id),
             sub: empty.has(x.g.id) ? t('dirNoMore') : x.deps[0] && !x.deps[0].tomorrow ? t('trainIn').replace('{n}', String(x.deps[0].inMin)) : undefined,
@@ -369,7 +370,7 @@ function PharmacyActions({ item, onWalk, fav }: { item: RankedItem; onWalk: () =
 /** The live list could not be loaded (or is still loading): say so plainly, offer a retry and the city page. Never an old list. */
 function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry: () => void }) {
   const { t } = useT()
-  if (state === 'loading') return <div className="px-4 py-5" role="status" data-testid="duty-loading"><p className={cn(sub, 'm-0')}>{t('dutyLoading')}</p></div>
+  if (state === 'loading') return <div className="px-4 py-5" role="status" data-testid="duty-loading"><span className="sr-only">{t('dutyLoading')}</span><SkelRows rows={3} /></div>
   return (
     <section className="px-4 pb-3 pt-4" role="alert" data-testid="duty-failed">
       <h2 className={h2}>{t('dutyFail')}</h2>
@@ -533,7 +534,7 @@ function Notes({ layer, cat, bizi }: { layer: LayerConfig; cat: string; bizi: Pi
       {cat !== 'mine' && (
         <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
           {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
-          {bizi.state === 'loading' && <p className={cn(sub, 'm-0')} role="status"><span className="sr-only">{t('biziLoading')}</span><span aria-hidden className="inline-block h-[0.8em] w-40 rounded-sm bg-surface align-middle" /></p>}
+          {bizi.state === 'loading' && <p className={cn(sub, 'm-0')} role="status"><span className="sr-only">{t('biziLoading')}</span><Skel className="h-[0.8em] w-40 align-middle" /></p>}
           {bizi.state === 'failed' && (
             <>
               <p className={cn(sub, 'm-0 min-w-0')} role="alert"><span className="font-bold text-warn-ink">{t('biziFail')}</span></p>
