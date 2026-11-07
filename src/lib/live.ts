@@ -98,7 +98,7 @@ function defaultGet(url: string, signal?: AbortSignal): Promise<unknown> {
   })
 }
 
-// Stops the city server answers with HTTP 400 "(500)Internal Server Error" (about 10%, a known city bug) are remembered for 10 minutes, so a refresh does not ask them again.
+// Stops (and tram platforms) the city server answers with HTTP 400 "(500)Internal Server Error" (about 10%, a known city bug) are remembered for 10 minutes, so a refresh does not ask them again.
 export const BAD_STOP_MS = 10 * 60_000
 const badStops = new Map<string, number>()
 export const markBad = (stop: string, at: number) => { badStops.set(stop, at) }
@@ -184,6 +184,11 @@ export async function loadBus(stop: string, signal?: AbortSignal, get: Get = def
 /** Live times for a tram stop (one request per platform, so both directions show). Null when none answered. */
 export async function loadTram(ids: string[], signal?: AbortSignal, get: Get = defaultGet, now: () => number = Date.now): Promise<Live | null> {
   if (!ids.length) return null
-  const js = await Promise.all(ids.map(id => get(`${LIVE_BASE}parada-tranvia/${id}.json`, signal).catch(() => null)))
+  // a platform the city answers with HTTP 400 / 404 (no data) is not asked again for 10 minutes: it counts as "no data" and the console stays quiet
+  const js = await Promise.all(ids.map(id => {
+    const key = 'tram' + id
+    if (isBad(key, now())) return null
+    return get(`${LIVE_BASE}parada-tranvia/${id}.json`, signal).catch(e => { if (/^HTTP (400|404)\b/.test(String((e as Error)?.message))) markBad(key, now()); return null })
+  }))
   return parseTram(js, now())
 }

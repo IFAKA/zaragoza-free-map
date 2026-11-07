@@ -80,6 +80,52 @@ describe('loaders', () => {
   })
 })
 
+describe('no-data answers (HTTP 400 / 404) are remembered', () => {
+  beforeEach(() => clearBad())
+  const ok = { destinos: [{ linea: 'L1', destino: 'A', minutos: 4 }] }
+  it('tram: a platform that answered 400 is not asked again for 10 minutes', async () => {
+    let t = 1_000, n = 0
+    const get = async (u: string) => { n++; if (u.includes('1101')) throw new Error('HTTP 400'); return ok }
+    const a = await loadTram(['1101', '1102'], undefined, get, () => t)
+    expect(a!.arrivals).toHaveLength(1)
+    expect(n).toBe(2)
+    t += 30_000
+    await loadTram(['1101', '1102'], undefined, get, () => t)
+    expect(n).toBe(3) // only 1102 was asked again
+    t += BAD_STOP_MS
+    await loadTram(['1101', '1102'], undefined, get, () => t)
+    expect(n).toBe(5) // after 10 minutes both are asked
+  })
+  it('tram: 404 counts too, a timeout or offline does not', async () => {
+    let n = 0
+    await loadTram(['1'], undefined, async () => { n++; throw new Error('HTTP 404') }, () => 5)
+    await loadTram(['1'], undefined, async () => { n++; throw new Error('HTTP 404') }, () => 6)
+    expect(n).toBe(1)
+    clearBad()
+    await loadTram(['2'], undefined, async () => { n++; throw new Error('timeout') }, () => 5)
+    await loadTram(['2'], undefined, async () => { n++; throw new Error('timeout') }, () => 6)
+    expect(n).toBe(3)
+  })
+  it('tram: every platform bad gives null without a request', async () => {
+    let n = 0
+    const get = async () => { n++; throw new Error('HTTP 400') }
+    expect(await loadTram(['1101', '1102'], undefined, get, () => 1)).toBeNull()
+    expect(await loadTram(['1101', '1102'], undefined, get, () => 2)).toBeNull()
+    expect(n).toBe(2)
+  })
+  it('bus: a stop that answered 400 is not asked again for 10 minutes', async () => {
+    let t = 1_000, n = 0
+    const get = async () => { n++; throw new Error('HTTP 400') }
+    expect(await loadBus('479', undefined, get, () => t)).toBeNull()
+    t += 30_000
+    expect(await loadBus('479', undefined, get, () => t)).toBeNull()
+    expect(n).toBe(1)
+    t += BAD_STOP_MS
+    await loadBus('479', undefined, get, () => t)
+    expect(n).toBe(2)
+  })
+})
+
 describe('bus fallback to a neighbour stop', () => {
   const ok = { destinos: [{ linea: '35', destino: 'CENTRO', primero: '4 minutos.', segundo: '' }] }
   const empty = { destinos: [] }
