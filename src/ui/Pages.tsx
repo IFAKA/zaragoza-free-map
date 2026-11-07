@@ -35,7 +35,7 @@ import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
-import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
+import { Button, FilterChip, FilterMenu, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav, splitFav, useFavs } from '../lib/favs'
 import { FavButton } from './Favs'
@@ -362,8 +362,8 @@ function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => vo
   const { t } = useT()
   const options = LAYERS.bizi.cats!.map(c => ({ value: c, label: t(c as Key) }))
   return (
-    <div className="px-4 pb-1 pt-3" data-testid="bizi-bar">
-      <Chips value={cat} onChange={setCat} label={t('typeLabel')} options={options} allValue={LAYERS.bizi.catDefault} />
+    <div className="px-4 pb-1" data-testid="bizi-bar">
+      <FilterMenu value={cat} onChange={setCat} label={t('typeLabel')} options={options} allValue={LAYERS.bizi.catDefault} neutral={false} testId="filter-type" />
       {cat !== 'mine' && (
         <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
           {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
@@ -509,20 +509,27 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
   )
 }
 
-export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange, cat, setCat }: {
+/** The filters of a service, ONE row of compact chips under the header: on/off ones turn red when on; one with several options has an arrow and opens its list. */
+export function FilterRow({ layer, openOnly, setOpenOnly, showRange, setShowRange, cat, setCat }: {
   layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {
   const { t } = useT()
-  if (!layer.hours && !layer.cats && layer.id !== 'pharmacy') return null
+  const cats = layer.cats && layer.id !== 'bizi'
+  if (!layer.hours && !cats) return null
   return (
-    <div className="px-4 pb-2">
-      {layer.id === 'pharmacy' && <p className={cn(sub, 'm-0 py-1')}>{t('dutyNote')} ({madridDate()})</p>}
-      {layer.hours && <Switch checked={openOnly} onCheckedChange={setOpenOnly} label={t('openNow')} hint={t('openNowHint')} testId="switch-open" />}
-      {layer.id === 'wifi' && <Switch checked={showRange} onCheckedChange={setShowRange} label={t('showRange')} hint={t('showRangeHint')} testId="switch-range" />}
-      {layer.cats && layer.id !== 'bizi' && <div className="mt-1"><Chips value={cat} onChange={setCat} label={t('typeLabel')} options={[{ value: 'all', label: t('all') }, ...layer.cats.map(c => ({ value: c, label: t(c as Key) }))]} /></div>}
-      {layer.id === 'bizi' && <p className={cn(sub, 'm-0 py-1')}>{t('bizi')}</p>}
+    <div className="-mt-1 flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={t('filtersLabel')} data-testid="filters">
+      {layer.hours && <FilterChip on={openOnly} onChange={setOpenOnly} label={t('openNow')} testId="switch-open" />}
+      {layer.id === 'wifi' && <FilterChip on={showRange} onChange={setShowRange} label={t('showRange')} testId="switch-range" />}
+      {cats && <FilterMenu value={cat} onChange={setCat} label={t('typeLabel')} testId="filter-type" options={[{ value: 'all', label: t('all') }, ...layer.cats!.map(c => ({ value: c, label: t(c as Key) }))]} />}
     </div>
   )
+}
+
+/** The notes under the card that are not filters. */
+function Notes({ layer }: { layer: LayerConfig }) {
+  const { t } = useT()
+  if (layer.id !== 'pharmacy' && layer.id !== 'bizi') return null
+  return <div className="px-4 pb-2">{layer.id === 'pharmacy' ? <p className={cn(sub, 'm-0 py-1')}>{t('dutyNote')} ({madridDate()})</p> : <p className={cn(sub, 'm-0 py-1')}>{t('bizi')}</p>}</div>
 }
 
 /** Whose distances these are. Without a position: the plain truth and one big button; blocked: one calm line. With a position: nothing (the card says "from you"). */
@@ -555,6 +562,7 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} />
+      {!p.liveState && !p.lineView && <FilterRow layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
@@ -566,7 +574,7 @@ export function HomePage(p: {
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <div ref={setMore} />
-        {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
+        {!p.liveState && <Notes layer={p.layer} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
       </Scroll>
     </MoreCtx.Provider>

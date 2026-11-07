@@ -8,7 +8,7 @@ import { tap } from './motion'
 import { FavRow, resolveFavs, useSteadyPos } from './Favs'
 import { PageHeader } from './Pages'
 import { toasts } from './ToastHost'
-import { Chips, Scroll } from './ui/kit'
+import { FilterMenu, Scroll } from './ui/kit'
 
 const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
@@ -48,7 +48,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
           )}
           {both && (
             <div className="px-4 pb-2" data-testid="fav-kinds">
-              <Chips value={kind} onChange={v => setKind(v as FavKind)} label={t('favsKinds')} options={[{ value: 'all', label: t('favsKindAll') }, { value: 'stops', label: t('favsStops') }, { value: 'places', label: t('favsPlaces') }]} />
+              <FilterMenu value={kind} onChange={v => setKind(v as FavKind)} label={t('favsKinds')} options={[{ value: 'all', label: t('favsKindAll') }, { value: 'stops', label: t('favsStops') }, { value: 'places', label: t('favsPlaces') }]} />
             </div>
           )}
           {!all.length ? (

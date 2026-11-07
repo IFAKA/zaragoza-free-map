@@ -3,12 +3,9 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Popover } from '@base-ui/react/popover'
 import { ScrollArea } from '@base-ui/react/scroll-area'
 import { Separator as BaseSeparator } from '@base-ui/react/separator'
-import { Switch as BaseSwitch } from '@base-ui/react/switch'
-import { Toggle } from '@base-ui/react/toggle'
-import { ToggleGroup } from '@base-ui/react/toggle-group'
-import { Info } from '@phosphor-icons/react'
+import { CaretDown, Check, Info } from '@phosphor-icons/react'
 import { m } from 'motion/react'
-import type { ComponentProps, ReactNode } from 'react'
+import { useState, type ComponentProps, type ReactNode } from 'react'
 import { cn } from '../cn'
 import { tap } from '../motion'
 import { useSheetClosed } from '../sheet'
@@ -28,35 +25,40 @@ export function Button({ variant = 'primary', className, ...p }: ComponentProps<
 /** A Button that is really a link (opens a page): use `render` with an <a>. */
 export const linkProps = (href: string) => ({ render: <m.a {...tap} href={href} target="_blank" rel="noopener" />, nativeButton: false as const })
 
-/** Labelled switch: red when on, light grey when off. */
-export function Switch({ checked, onCheckedChange, label, hint, testId }: { checked: boolean; onCheckedChange: (v: boolean) => void; label: string; hint?: string; testId?: string }) {
-  return (
-    <label className="flex min-h-[44px] cursor-pointer items-center gap-3 py-1">
-      <span className="min-w-0 flex-1">
-        <span className="block font-bold leading-tight">{label}</span>
-        {hint && <span className="block text-[0.87em] leading-tight text-ink-soft">{hint}</span>}
-      </span>
-      <BaseSwitch.Root render={<m.button {...tap} />} nativeButton
-        checked={checked} onCheckedChange={onCheckedChange} data-testid={testId}
-        className="relative inline-flex h-[1.6em] w-[2.8em] shrink-0 items-center rounded-full border border-line-strong bg-surface p-[0.15em] [transition:background-color_var(--dur-small),border-color_var(--dur-small)] data-[checked]:border-brand data-[checked]:bg-brand"
-      >
-        <BaseSwitch.Thumb className="block size-[1.1em] rounded-full bg-line-strong [transition:translate_var(--dur-small)_var(--ease-out),background-color_var(--dur-small)] data-[checked]:translate-x-[1.2em] data-[checked]:bg-on-brand" />
-      </BaseSwitch.Root>
-    </label>
-  )
+const FILTER = 'inline-flex h-8 shrink-0 select-none items-center gap-1 whitespace-nowrap rounded-btn border-0 px-3 text-[0.87em] font-semibold [transition:background-color_var(--dur-press)] '
+const filterTone = (on: boolean) => (on ? 'bg-brand text-on-brand' : 'bg-surface text-ink')
+
+/** A filter that is on or off: one compact chip, red when on. */
+export function FilterChip({ on, onChange, label, testId }: { on: boolean; onChange: (v: boolean) => void; label: string; testId?: string }) {
+  return <m.button {...tap} type="button" aria-pressed={on} onClick={() => onChange(!on)} data-testid={testId} className={FILTER + filterTone(on)}>{label}</m.button>
 }
 
-/** One-of chips: selected = red with white text, unselected = light grey. Pressing the selected chip clears to `allValue`. */
-export function Chips({ value, onChange, options, label, allValue = 'all' }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; label: string; allValue?: string }) {
+/** A filter with several options: a chip with an arrow that opens the list. Red when something other than the default is chosen. */
+export function FilterMenu({ value, onChange, options, label, allValue = 'all', neutral = true, testId }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; label: string; allValue?: string; neutral?: boolean; testId?: string }) {
+  const on = neutral && value !== allValue
+  const shown = !neutral || on ? options.find(o => o.value === value)?.label ?? label : label
+  const [open, setOpen] = useState(false)
   return (
-    <ToggleGroup value={[value]} onValueChange={v => onChange(v[0] ?? allValue)} aria-label={label} className="flex flex-wrap gap-2">
-      {options.map(o => (
-        <Toggle
-          key={o.value} value={o.value} render={<m.button {...tap} />}
-          className="min-h-[44px] select-none rounded-btn bg-surface px-3.5 text-[0.93em] font-semibold text-ink [transition:background-color_var(--dur-press)] data-[pressed]:bg-brand data-[pressed]:text-on-brand"
-        >{o.label}</Toggle>
-      ))}
-    </ToggleGroup>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger render={<m.button {...tap} />} data-testid={testId} aria-label={label} className={FILTER + filterTone(on)}>
+        {neutral ? shown : options.find(o => o.value === value)?.label ?? label}
+        <CaretDown size="1em" weight="bold" aria-hidden />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner sideOffset={6} align="start" className="z-[60]">
+          <Popover.Popup className="min-w-40 rounded-card border border-line bg-paper py-1 text-[0.93em] text-ink shadow-[0_4px_16px_rgb(0_0_0/0.2)] origin-(--transform-origin) outline-none [transition:opacity_var(--dur-small)_var(--ease-out)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+            <div role="radiogroup" aria-label={label}>
+              {options.map(o => (
+                <button key={o.value} type="button" role="radio" aria-checked={o.value === value} onClick={() => { onChange(o.value); setOpen(false) }}
+                  className="flex min-h-[44px] w-full items-center justify-between gap-3 border-0 bg-transparent px-3 text-left font-semibold text-ink hov:bg-surface">
+                  {o.label}{o.value === value && <Check size="1.1em" weight="bold" className="text-brand-text" aria-hidden />}
+                </button>
+              ))}
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
