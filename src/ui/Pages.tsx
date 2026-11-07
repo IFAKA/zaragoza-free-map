@@ -481,7 +481,7 @@ function NameButton({ name, open, onToggle, onNeed }: { name: string; open: bool
   )
 }
 
-const fade = 'shrink-0 overflow-hidden [transition:opacity_var(--dur-small)_var(--ease-out),max-width_var(--dur-small)_var(--ease-out)]' // star / walk button leaving: fade and give the room back
+const fade = '[transition:opacity_var(--dur-small)_var(--ease-out)]' // star / walk button leaving: they only fade, they do not move
 // ---------- the block with the nearest (or selected) place ----------
 /** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
 /** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
@@ -499,12 +499,13 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
+  const hideStar = wide === item.id, hideWalk = hideStar && need > 44 // the opened name takes the room of the star first, of the walk button only when that is not enough
   const favBtn = null // the Details button is the (i) next to the name
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" data-closed-edge aria-label={kind}>
       <div className="flex items-center">
-      <div className="flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
-        <span className="min-w-0 flex-1">
+      <div className="relative flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
+        <span className="min-w-0 flex-1 [transition:padding-right_var(--dur-small)_var(--ease-out)]" style={{ paddingRight: (hideStar ? 0 : 44) + (hideWalk ? 0 : 52) }}>
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <NameButton name={name} open={wide === item.id} onNeed={setNeed} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
           <span className="flex items-center">
@@ -518,12 +519,10 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
             )}
           </span>
         </span>
-        {/* the name, opened, takes only the room it needs: first the star, and the walk button only when the star is not enough (36 px + 8 px gap) */}
-        <div className={cn(fade, wide === item.id ? 'pointer-events-none max-w-0 opacity-0' : 'max-w-11 opacity-100')} aria-hidden={wide === item.id} inert={wide === item.id}>
-          <div className="pl-2"><FavButton layer={layer} item={item} /></div>
-        </div>
-        <div className={cn(fade, wide === item.id && need > 44 ? 'pointer-events-none max-w-0 opacity-0' : 'max-w-14 opacity-100')} aria-hidden={wide === item.id && need > 44} inert={wide === item.id && need > 44}>
-          <div className="pl-2">
+        {/* star and walk button stay where they are and only fade; the name's right padding gives its room back (36 px + 8 px gap, 44 px + 8 px gap) */}
+        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center">
+          <div className={cn(fade, 'pl-2', hideStar && 'pointer-events-none opacity-0')} aria-hidden={hideStar} inert={hideStar}><FavButton layer={layer} item={item} /></div>
+          <div className={cn(fade, 'pl-2', hideWalk && 'pointer-events-none opacity-0')} aria-hidden={hideWalk} inert={hideWalk}>
             <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
           </div>
         </div>
