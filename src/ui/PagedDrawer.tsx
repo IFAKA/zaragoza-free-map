@@ -38,6 +38,8 @@ interface Props {
   /** Called for a hard downward flick (Base UI reports it as a dismissal, snap point null). The sheet never unmounts: the caller lowers it one step. */
   onFlickDown: () => void
   turn?: Turn
+  /** The new page is on screen (the old one has faded out). */
+  onShown?: () => void
   pageRef: RefObject<HTMLDivElement | null>
   /** Drag handle label for assistive tech. */
   handleLabel: string
@@ -47,7 +49,7 @@ interface Props {
   children: ReactNode
 }
 /** Mobile: a bottom drawer that is always open, non-modal (the map stays usable), with snap points. */
-export function PagedDrawer({ snapPoints, snap, onSnap, onEscape, onFlickDown, turn, pageRef, handleLabel, title, onHandle, children }: Props) {
+export function PagedDrawer({ snapPoints, snap, onSnap, onEscape, onFlickDown, turn, onShown, pageRef, handleLabel, title, onHandle, children }: Props) {
   return (
     <Drawer
       open modal={false} disablePointerDismissal showSwipeHandle
@@ -55,7 +57,7 @@ export function PagedDrawer({ snapPoints, snap, onSnap, onEscape, onFlickDown, t
       onOpenChange={(o, d) => { if (!o) { d.cancel(); if (d.reason === 'escape-key' || d.reason === 'close-watcher') onEscape() } }}
     >
       <DrawerContent aria-label={title} initialFocus={false} handleSlot={<HandleButton label={handleLabel} onTap={onHandle} />}>
-        <PageFrame turn={turn} pageRef={pageRef}>{children}</PageFrame>
+        <PageFrame turn={turn} onShown={onShown} pageRef={pageRef}>{children}</PageFrame>
       </DrawerContent>
     </Drawer>
   )
@@ -79,7 +81,7 @@ function HandleButton({ label, onTap }: { label: string; onTap: () => void }) {
  * `shown` is the turn on screen. After a turn the OLD page (its last children, frozen) fades out for MS.pageOut, then `shown` catches up
  * (the key changes, so the new page mounts and fades in). A turn during the fade-out only moves the target: nothing restarts, one page at a time.
  */
-export function PageFrame({ turn, pageRef, children }: { turn?: Turn; pageRef: RefObject<HTMLDivElement | null>; children: ReactNode }) {
+export function PageFrame({ turn, onShown, pageRef, children }: { turn?: Turn; onShown?: () => void; pageRef: RefObject<HTMLDivElement | null>; children: ReactNode }) {
   const reduced = useReducedMotion()
   const [shown, setShown] = useState(turn) // equal to `turn` on the first render, so it does not fade
   const latest = useRef(turn); latest.current = turn
@@ -91,8 +93,9 @@ export function PageFrame({ turn, pageRef, children }: { turn?: Turn; pageRef: R
     const id = setTimeout(() => setShown(latest.current), reduced ? 0 : MS.pageOut)
     return () => clearTimeout(id)
   }, [leaving, reduced])
+  const shownCb = useRef(onShown); shownCb.current = onShown
   // the control that was tapped is gone after a turn: put focus on the new page
-  useEffect(() => { if (shown) pageRef.current?.focus({ preventScroll: true }) }, [shown, pageRef])
+  useEffect(() => { if (shown) { pageRef.current?.focus({ preventScroll: true }); shownCb.current?.() } }, [shown, pageRef])
   return (
     <div key={shown?.key} ref={pageRef} tabIndex={-1} inert={leaving || undefined} className={`flex min-h-0 flex-1 flex-col outline-none ${shown ? 'page-in' : ''} ${leaving && !reduced ? 'page-out' : ''}`}>
       {leaving ? kept.current : children}

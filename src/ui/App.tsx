@@ -185,13 +185,14 @@ export function App() {
   useEffect(() => { const i = setInterval(() => setTick(x => x + 1), 60_000); return () => clearInterval(i) }, [])
 
   const { page, go, goUp, reset, turn, pageRef } = usePages<Page>('home')
+  const [livePage, setLivePage] = useState<Page>('home') // the page on screen: it follows `page` once the old one has faded out
   const view = useSettingsView()
   // the order of the service chips: decided once, when the app opens, from this person's own tap counts (kept on this device). It never changes while the app is open.
   const [chipOrder] = useState<LayerId[]>(() => rankByTaps(serviceOrder(), parseTaps(lsGet('taps'))))
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
-  const peekPx = usePeekPx(peekEl, page === 'home' ? MAP_SHARE : PAGE_MAP_SHARE)
-  const fullPx = useFullPx(viewport, page === 'home' && !desktop)
+  const peekPx = usePeekPx(peekEl, livePage === 'home' ? MAP_SHARE : PAGE_MAP_SHARE)
+  const fullPx = useFullPx(viewport, livePage === 'home' && !desktop)
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', fullPx], [closedPx, peekPx, fullPx])
   const mobileClosed = !desktop && level === CLOSED
   // a closed sheet shows only the chip row, so it always closes onto the first page
@@ -345,12 +346,25 @@ export function App() {
   }
   // a page that is not home (details, services) sizes the sheet to its own content (peek height) and gives back the size you had when you leave
   const levelBefore = useRef(PEEK)
-  const turnTo = (p: Page) => { levelBefore.current = level; go(p); setLevel(PEEK) }
-  const back = () => { if (goUp() && page !== 'home') setLevel(levelBefore.current) }
+  // The sheet changes size once per page turn, when the new page is on screen (not while the old one still fades out): see onShown below.
+  const pendingLevel = useRef<number | null>(null)
+  const turningTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const pageNow = useRef(page); pageNow.current = page
+  const onShown = useCallback(() => {
+    // the sheet takes its new size at once, under the fading-in page: no tall blank sheet that then shrinks, no bounce
+    const root = document.documentElement
+    root.dataset.turning = '1'
+    clearTimeout(turningTimer.current)
+    turningTimer.current = setTimeout(() => { delete root.dataset.turning }, 300)
+    if (pendingLevel.current != null) { setLevel(pendingLevel.current); pendingLevel.current = null }
+    setLivePage(pageNow.current)
+  }, [])
+  const turnTo = (p: Page) => { levelBefore.current = level; go(p); pendingLevel.current = PEEK }
+  const back = () => { if (goUp() && page !== 'home') pendingLevel.current = levelBefore.current }
   const openServices = () => turnTo('services')
-  const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) setLevel(FULL) }
+  const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) pendingLevel.current = FULL }
   // Escape and the back gesture: up one page, then lower the sheet one step
-  const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') setLevel(levelBefore.current) } else setLevel(l => Math.max(CLOSED, l - 1)) }
+  const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') pendingLevel.current = levelBefore.current } else setLevel(l => Math.max(CLOSED, l - 1)) }
   const cycle = () => setLevel(l => (l === CLOSED ? PEEK : l === PEEK ? FULL : PEEK))
   const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
@@ -387,11 +401,11 @@ export function App() {
           </div>
           {desktop ? (
             <aside aria-label={t.panel} data-testid="panel" className="absolute inset-y-0 left-0 z-10 flex w-[400px] flex-col border-r border-line bg-paper shadow-[2px_0_14px_rgb(0_0_0/0.12)]">
-              <PageFrame turn={turn} pageRef={pageRef}>{pageEl}</PageFrame>
+              <PageFrame turn={turn} onShown={onShown} pageRef={pageRef}>{pageEl}</PageFrame>
             </aside>
           ) : (
             <SheetClosedCtx.Provider value={mobileClosed}>
-              <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
+              <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} onShown={onShown} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
                 {pageEl}
               </PagedDrawer>
             </SheetClosedCtx.Provider>

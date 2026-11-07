@@ -108,6 +108,7 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 /* Page turn inside the drawer (Settings, About, Details; never a tab switch): the old page fades out (--dur-page-out), then the new page fades in (--dur-small).
    A transition from @starting-style, not a keyframe animation, so a quick second turn retargets instead of restarting. */
 .page-in { transition: opacity var(--dur-small) var(--ease-out); @starting-style { opacity: 0; } }
+:root[data-turning] [data-slot=drawer-popup] { transition-duration: 0ms !important; }
 .page-out { opacity: 0; transition: opacity var(--dur-page-out) var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   /* only opacity and colour may change: no slide, no scale (press feedback included), the drawer and toasts fade */
