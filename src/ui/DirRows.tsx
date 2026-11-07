@@ -24,7 +24,6 @@ export function DirRows({ chips, value, onPick, label, testId }: { chips: DirChi
             render={<m.button {...(c.empty ? {} : tap)} />}
             className={cn('-mx-2 flex min-h-11 w-[calc(100%+1rem)] select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left leading-tight', on ? 'bg-brand-tint' : 'bg-transparent', c.empty ? 'text-ink-soft' : 'text-ink')}
           >
-            <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full border-2', c.empty ? 'border-line-strong' : 'border-brand', on ? 'bg-brand' : 'bg-paper')} />
             {c.badge}
             <span className="flex min-w-0 flex-1 items-baseline gap-1.5"><span className={cn('truncate', on && 'font-bold')}>{c.label}</span>{c.sub && <span className="shrink-0 text-[0.87em] font-normal text-ink-soft">{c.sub}</span>}</span>
             <span className={cn('shrink-0 tabular-nums', on ? 'font-extrabold' : 'font-bold', c.empty && 'font-normal')}>{c.times}</span>
