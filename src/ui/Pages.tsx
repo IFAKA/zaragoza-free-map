@@ -450,7 +450,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
-  const favBtn = hasDetails(layer, item) ? <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button> : null
+  const favBtn = null // the Details button is the (i) next to the name
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center">
@@ -458,7 +458,12 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         <FavButton layer={layer} item={item} />
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
-          <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
+          <span className="block"><span className={h2} data-testid="nearest-name">{name}</span>{hasDetails(layer, item) && (
+            <m.button {...tap} type="button" onClick={onDetails} data-testid="details" aria-label={t('details')} title={t('details')}
+              className="relative -my-1 ml-1.5 inline-flex size-8 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 align-middle text-ink-soft before:absolute before:-inset-1.5 before:content-['']">
+              <InfoIcon size="1.5em" weight="bold" aria-hidden />
+            </m.button>
+          )}</span>
           <span className="block font-bold" data-closed-edge>{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
           <span className="block"><Status item={item} layer={layer} /></span>
         </span>
