@@ -468,7 +468,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
           <span className={cn(h2, 'block truncate')} data-testid="nearest-name">{name}</span>
           <span className="flex items-center">
             {statusDot(item, layer, t)}
-            <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
+            <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</span>
             {hasDetails(layer, item) && (
               <m.button {...tap} type="button" onClick={onDetails} data-testid="details" aria-label={t('details')} title={t('details')}
                 className="relative -my-1 ml-1.5 inline-flex size-8 shrink-0 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-soft before:absolute before:-inset-1.5 before:content-['']">
@@ -499,7 +499,7 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
     <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="off-card" aria-label={t('offTitle')}>
       <div className={overline}>{t('offTitle')}</div>
       <h2 className={cn(h2, 'mt-1')} data-testid="off-name">{item.name || type(item.type)}</h2>
-      <div className="mt-1 font-bold">{walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
+      <div className="mt-1 font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</div>
       <p className="m-0 mt-1" data-testid="off-reason">{why}</p>
       {item.off === 'notOnDuty' && <p className={cn(sub, 'm-0 mt-0.5')}>{[item.addr, item.phone].filter(Boolean).join(' · ')}</p>}
       {hours && <p className={cn(sub, 'm-0 mt-0.5')}>{t('hours')}: {hours}</p>}
@@ -727,7 +727,7 @@ export function PlacePage({ layer, item, hasPos, onBack, locked, peekRef }: { la
       <Scroll locked={locked}>
         <div ref={peekRef} className="flex flex-col gap-3 px-4 pb-8 pt-1">
           <div className={sub}>{type(item.type)}{item.cust ? ` · ${t('cust')}` : ''}{item.note ? ` · ${item.note}` : ''}</div>
-          <div className="font-bold">{walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
+          <div className="font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</div>
           <div><Status item={item} layer={layer} /></div>
           {item.shelter && <ShelterNote />}
           <Separator />
