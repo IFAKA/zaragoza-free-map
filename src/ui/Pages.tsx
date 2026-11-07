@@ -34,7 +34,7 @@ import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
-import { Button, FilterChip, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
+import { Button, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav, splitFav, useFavs } from '../lib/favs'
 import { FavButton } from './Favs'
@@ -196,8 +196,8 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   usePublishVehicles(tramShown)
   const [north, south] = DATA.tram.ends
   const picker = dirsOn && <Above><DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
-    { id: 'n', label: t('dirTo').replace('{to}', north) },
-    { id: 's', label: t('dirTo').replace('{to}', south) },
+    { id: 'n', label: north },
+    { id: 's', label: south },
   ]} /></Above>
   if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}>{picker}<p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p></div>
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
@@ -310,7 +310,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
   return (
     <>
       <div className="mt-1" data-testid="train-next">
-        {two && <Above><DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} /></Above>}
+        {two && <Above><DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: DATA.cercanias.dests[x.g.far], empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} /></Above>}
         {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
           <ul className={cn('m-0 flex list-none flex-col p-0', two && 'mt-2')}>
             {next.slice(0, 2).map((n, i) => (
@@ -531,10 +531,9 @@ export function FiltersPage({ layer, cat, setCat, onBack, peekRef }: {
   )
 }
 
-/** The notes under the card that are not filters: the WiFi range switch, the Bizi live line, the duty and Bizi hints. */
-function Notes({ layer, cat, bizi, showRange, setShowRange }: { layer: LayerConfig; cat: string; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'>; showRange: boolean; setShowRange: (v: boolean) => void }) {
+/** The notes under the card that are not filters: the Bizi live line, the duty and Bizi hints. */
+function Notes({ layer, cat, bizi }: { layer: LayerConfig; cat: string; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'> }) {
   const { t } = useT()
-  if (layer.id === 'wifi') return <div className="flex px-4 pb-2 pt-1"><FilterChip on={showRange} onChange={setShowRange} label={t('showRange')} testId="switch-range" /></div>
   if (layer.id !== 'pharmacy' && layer.id !== 'bizi') return null
   return (
     <div className="px-4 pb-2">
@@ -574,7 +573,7 @@ export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
   peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
-  showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
+  cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
   onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
@@ -595,7 +594,7 @@ export function HomePage(p: {
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <div ref={setMore} />
-        {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} showRange={p.showRange} setShowRange={p.setShowRange} />}
+        {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
       </Scroll>
     </MoreCtx.Provider>

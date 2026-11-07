@@ -25,7 +25,6 @@ interface Props {
   fly: FlyRequest | null
   /** Pixels at the bottom of the map that the drawer covers. */
   inset: () => number
-  showRange: boolean
   desktop: boolean
   onSelect: (id: string) => void
   onBackgroundClick: () => void
@@ -74,7 +73,7 @@ function lineArrow(bearing: number, to: LatLon, color: string, up = 33): L.Marke
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
 const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
 
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, showRange, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.MarkerClusterGroup | null>(null)
@@ -90,8 +89,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
   const routeGroup = useRef<L.LayerGroup | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
   cb.current = { onSelect, onBackgroundClick, inset, onRouteStop, desktop }
-  const live = useRef({ layer, items, selected, showRange, vehicles })
-  live.current = { layer, items, selected, showRange, vehicles }
+  const live = useRef({ layer, items, selected, vehicles })
+  live.current = { layer, items, selected, vehicles }
 
   // the zoom buttons are made once by Leaflet: follow a language change here
   useEffect(() => {
@@ -108,8 +107,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
     const m = map.current, g = rings.current
     if (!m || !g) return
     g.clearLayers()
-    const { layer, items, selected, showRange } = live.current
-    if (layer.id !== 'wifi' || !showRange) return
+    const { layer, items, selected } = live.current
+    if (layer.id !== 'wifi') return
     const col = getComputedStyle(document.documentElement).getPropertyValue('--color-wifi').trim() // canvas needs a real colour, not var()
     const style = (r: number, c: L.LatLng) => L.circle(c, { radius: r, color: col, weight: 1.5, dashArray: '5 4', fillColor: col, fillOpacity: 0.08, interactive: false })
     const view = m.getBounds().pad(0.3), z = m.getZoom()
@@ -173,7 +172,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, sho
       mk.setZIndexOffset(id === selected ? 1000 : 0)
     })
     drawRings()
-  }, [layer, items, selected, showRange])
+  }, [layer, items, selected])
 
   // the pick moment: only when the person picked (pick counts up), on the marker that is now selected
   useEffect(() => {
