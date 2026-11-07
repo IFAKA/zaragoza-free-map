@@ -39,6 +39,7 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
           className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-line bg-paper px-3 font-bold text-ink shadow-md">
           <span className="text-brand-text"><ListFilledStar /></span>{t('favsTitle')}
+          {favLayers.length > 0 && <span className="min-w-[1.6em] rounded-full bg-brand px-1.5 py-0.5 text-center text-[0.8em] font-bold leading-none text-on-brand" data-testid="fav-count">{favLayers.length}</span>}
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
           className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-line bg-paper px-3 font-bold text-ink shadow-md">
