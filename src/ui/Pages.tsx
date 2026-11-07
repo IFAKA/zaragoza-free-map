@@ -210,7 +210,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
       <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
       <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span></span>
       {i === 0
-        ? <span className="shrink-0 tabular-nums" data-testid="live-first"><span className="text-[1.6em] font-bold leading-none">{min(r.mins[0])}</span>{r.mins.length > 1 && <span className="font-bold text-ink-soft"> · {r.mins.slice(1).map(min).join(' · ')}</span>}</span>
+        ? <span className="shrink-0 tabular-nums" data-testid="live-first"><span className="font-extrabold">{min(r.mins[0])}</span>{r.mins.length > 1 && <span className="font-bold text-ink-soft"> · {r.mins.slice(1).map(min).join(' · ')}</span>}</span>
         : <span className="shrink-0 font-bold tabular-nums">{r.mins.map(min).join(' · ')}</span>}
     </>
   )
@@ -229,9 +229,9 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
           ) : <p className="m-0 mt-1 truncate font-semibold" data-testid="live-via" title={viaText} aria-label={viaText}>{viaText}</p>)}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
           {!first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
-            <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
+            <ul className="m-0 mt-1 flex list-none flex-col divide-y divide-line p-0">
               {rows.map((r, i) => (
-                <li key={r.line + r.dest} data-testid="live-row">
+                <li key={r.line + r.dest} className="py-1.5 first:pt-0 last:pb-0" data-testid="live-row">
                   {onLine && lineOk?.(r.line) ? <BaseButton onClick={() => onLine(r.line)} render={<m.button {...tap} />} data-testid="live-row-open" data-line={r.line} aria-label={t('lineChip').replace('{n}', r.line)} className={cn(rowCls, 'w-full min-h-9 border-0 bg-transparent p-0 text-left text-inherit')}>{rowBody(r, i)}<CaretRight size="1em" weight="bold" className="shrink-0 text-ink-soft" aria-hidden /></BaseButton> : <div className={rowCls}>{rowBody(r, i)}</div>}
                 </li>
               ))}
