@@ -390,13 +390,13 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
   }, [post, view.stops, view.idx, origin, view.line])
   const toEnd = useCallback((a: Arrival[]) => towardEnd(a, view.to), [view.to])
   const title = [t('busLine').replace('{n}', view.line), view.to && t('toward').replace('{to}', view.to)].filter(Boolean).join(' · ')
-  const from = Math.max(0, view.idx), upcoming = view.stops.slice(from, from + 4), left = view.stops.length - (from + upcoming.length)
+  const [allStops, setAllStops] = useState(false)
+  const from = Math.max(0, view.idx), upcoming = view.stops.slice(from, allStops ? undefined : from + 3), left = view.stops.length - (from + upcoming.length)
   return (
     <m.section key={view.line + view.dir} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="line-block" aria-label={title}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className={overline}>{t('routeOf')}</div>
-          <h2 className={cn(h2, 'mt-1')} data-testid="line-title">{title}</h2>
+          <h2 className={h2} data-testid="line-title">{title}</h2>
         </div>
         <BaseButton onClick={onBack} aria-label={t('lineBack')} title={t('lineBack')} data-testid="line-back" render={<m.button {...tap} />} className="-mr-2 -mt-2 inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
           <CloseIcon size="1.4em" weight="bold" aria-hidden />
@@ -405,6 +405,7 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
       <div className="mt-2 flex flex-wrap gap-2">
         {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
       </div>
+      {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
       <ol className="m-0 mt-2 list-none p-0" aria-label={t('stepsLabel')} data-testid="line-steps">
         {upcoming.map((s, i) => {
           const here = view.idx >= 0 && i === 0
@@ -416,10 +417,9 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
             </li>
           )
         })}
-        {left > 0 && <li className={cn(sub, 'py-0.5 pl-[1.15rem]')}>{t('stepMore').replace('{n}', String(left))}</li>}
+        {(left > 0 || allStops) && <li className="pt-1"><BaseButton onClick={() => setAllStops(v => !v)} aria-expanded={allStops} data-testid="line-more" render={<m.button {...tap} />} className="inline-flex min-h-9 items-center gap-1 rounded-btn border-0 bg-transparent p-0 text-[0.93em] font-bold text-brand-text">{allStops ? t('lineLess') : t('stepMore').replace('{n}', String(left))}<CaretRight size="1em" weight="bold" className={allStops ? '-rotate-90' : 'rotate-90'} aria-hidden /></BaseButton></li>}
       </ol>
-      {detour && <p className={cn(sub, 'm-0 mt-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p>}
-      {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
+      {detour && <More><p className={cn(sub, 'm-0 px-4 pb-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p></More>}
     </m.section>
   )
 }
