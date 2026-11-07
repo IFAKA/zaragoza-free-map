@@ -1,5 +1,5 @@
 import { AnimatePresence, m } from 'motion/react'
-import { Plus, Star } from '@phosphor-icons/react'
+import { Plus, SlidersHorizontal, Star } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
@@ -17,7 +17,7 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
  * The header of the home page (about 64 px): the service you are on (left, plain: icon and name, no subtitle) and one button (right) that shows four of the other services.
  * The button turns the drawer to the Services page (same drawer, new page). `order` is the person's own order, so the four are the ones they use most.
  */
-export function ServiceHeader({ layer, order, onOpen, onShow, favLayers, onFavs }: { layer: LayerId; order: LayerId[]; onOpen: () => void; onShow: () => void; favLayers: LayerId[]; onFavs: () => void }) {
+export function ServiceHeader({ layer, order, onOpen, onShow, favLayers, onFavs, onFilters, filtersActive }: { layer: LayerId; order: LayerId[]; onOpen: () => void; onShow: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
   const { lang, t } = useT()
   const cur = LAYERS[layer], I = ICONS[cur.icon]
   const others = order.filter(id => id !== layer)
@@ -46,6 +46,13 @@ export function ServiceHeader({ layer, order, onOpen, onShow, favLayers, onFavs 
           <span className="line-clamp-2 break-words font-title text-[1.15em] font-bold leading-tight text-ink">{cur.label[lang]}</span>
         </m.span>
         </button>
+        {onFilters && (
+          <m.button {...tap} type="button" onClick={onFilters} aria-label={t('filtersLabel')} data-testid="filters-open"
+            className="relative grid size-14 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">
+            <SlidersHorizontal size="1.5em" weight="bold" aria-hidden />
+            {filtersActive && <span aria-hidden className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-brand" />}
+          </m.button>
+        )}
         <FavGrid layers={favLayers} onClick={onFavs} />
         <m.button {...tap} type="button" onClick={onOpen} aria-label={t('tabsLabel')} data-testid="services-open"
           className="relative grid size-14 shrink-0 grid-cols-2 grid-rows-2 place-items-center gap-0.5 rounded-[14px] border-[1.5px] border-line bg-paper p-[5px] text-ink shadow-md">

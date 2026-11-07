@@ -23,7 +23,7 @@ import type { FlyRequest, RouteView } from './MapView'
 const MapView = lazy(() => import('./MapView').then(m => ({ default: m.MapView })))
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
 import { FavsPage } from './FavsPage'
-import { HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
+import { FiltersPage, HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
 import { VehicleCtx } from './vehicles'
 import type { Vehicle } from '../lib/vehicles'
 import { SettingsView, useSettingsView } from './SettingsView'
@@ -35,7 +35,7 @@ import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
 
-type Page = 'home' | 'place' | 'services' | 'favs'
+type Page = 'home' | 'place' | 'services' | 'favs' | 'filters'
 
 // Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 1 // two states: closed (the header only) and open (the height of the content, the whole screen when it needs more)
@@ -51,12 +51,12 @@ function safeBottom(): number {
   probe.remove()
   return inset
 }
-/** Height of the closed sheet: the handle, the service header and the filter row, plus the phone's bottom safe area. Measured, so it follows the real layout. */
+/** Height of the closed sheet: the handle, the service header, plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-testid=filters]') ?? pop?.querySelector('[data-testid=services]')
+      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-testid=services]')
       if (!pop || !head) return
       const next = Math.ceil(head.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
@@ -358,6 +358,7 @@ export function App() {
   const turnTo = (p: Page) => { levelBefore.current = level; go(p); pendingLevel.current = PEEK }
   const back = () => { if (goUp() && page !== 'home') pendingLevel.current = levelBefore.current }
   const openServices = () => turnTo('services')
+  const openFilters = () => turnTo('filters')
   const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) pendingLevel.current = FULL }
   // Escape and the back gesture: up one page, then lower the sheet one step
   const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') pendingLevel.current = levelBefore.current } else setLevel(l => Math.max(CLOSED, l - 1)) }
@@ -367,6 +368,7 @@ export function App() {
   const pageEl = (() => {
     switch (page) {
       case 'services': return <ServicesPage layer={layer.id} onPick={pickLayer} onBack={back} peekRef={setPeekEl} />
+      case 'filters': return <FiltersPage layer={layer} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }} onBack={back} peekRef={setPeekEl} />
       case 'favs': return <FavsPage onOpen={openFav} onBack={back} peekRef={setPeekEl} locked={mobileLow} pos={pos} />
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} peekRef={setPeekEl} />
       default: return (
@@ -375,7 +377,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onFavs={openFavs} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
+          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
           desktop={desktop}
         />
       )

@@ -16,7 +16,6 @@ import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
-import { LAYERS } from '../layers'
 import { ServiceGroups, ServiceHeader } from './ServiceBar'
 import { Tick } from './Tick'
 import { cardSwap, tap } from './motion'
@@ -35,7 +34,7 @@ import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
-import { Button, FilterChip, FilterMenu, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
+import { Button, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav, splitFav, useFavs } from '../lib/favs'
 import { FavButton } from './Favs'
@@ -310,7 +309,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
             {next.slice(0, 2).map((n, i) => (
               <li key={i} className="flex items-baseline gap-2 leading-snug" data-testid="train-row">
                 <span className={cn('font-bold tabular-nums', i === 0 && 'text-[1.6em] leading-none')}>{n.at}</span>
-                <span className="min-w-0 flex-1 truncate">{t('trainTo').replace('{to}', DATA.cercanias.dests[n.dest] ?? '')}</span>
+                <span className="min-w-0 flex-1 truncate">{two ? '' : t('trainTo').replace('{to}', DATA.cercanias.dests[n.dest] ?? '')}</span>
                 <span className="text-ink-soft">{n.tomorrow ? t('trainTomorrow') : t('trainIn').replace('{n}', String(n.inMin))}</span>
               </li>
             ))}
@@ -361,12 +360,10 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
 }
 
 /** Bizi: the two real jobs as chips (take a bike, return a bike, my own bike), and one line about the live counts. Always in view, above the nearest place. */
-function BiziBar({ cat, setCat, bizi }: { cat: string; setCat: (c: string) => void; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'> }) {
+function BiziBar({ cat, bizi }: { cat: string; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'> }) {
   const { t } = useT()
-  const options = LAYERS.bizi.cats!.map(c => ({ value: c, label: t(c as Key) }))
   return (
     <div className="px-4 pb-1" data-testid="bizi-bar">
-      <FilterMenu value={cat} onChange={setCat} label={t('typeLabel')} options={options} allValue={LAYERS.bizi.catDefault} neutral={false} testId="filter-type" />
       {cat !== 'mine' && (
         <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
           {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
@@ -512,17 +509,41 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
   )
 }
 
-/** The filters of a service, ONE row of compact chips under the header: on/off ones turn red when on; one with several options has an arrow and opens its list. */
-export function FilterRow({ layer, showRange, setShowRange, cat, setCat }: {
-  layer: LayerConfig; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
+/** Which services have filters to set on the Filters page. */
+export const hasFilters = (layer: LayerConfig) => layer.id === 'wifi' || !!layer.cats
+
+/** True when a filter is not at its starting value (the Filters button then wears a dot). */
+export const filtersOn = (layer: LayerConfig, cat: string) => !!layer.cats && cat !== (layer.catDefault ?? 'all')
+
+/** The Filters page: the same drawer turns to it. The filters of the service you are on, as big chips under a title; a choice applies at once. */
+export function FiltersPage({ layer, showRange, setShowRange, cat, setCat, onBack, peekRef }: {
+  layer: LayerConfig; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void; onBack: () => void; peekRef: React.Ref<HTMLDivElement>
 }) {
-  const { t } = useT()
-  const cats = layer.cats && layer.id !== 'bizi'
-  if (layer.id !== 'wifi' && !cats) return null
+  const { t, lang } = useT()
+  const chip = (on: boolean, label: string, onClick: () => void, testId: string) => (
+    <button key={testId} type="button" onClick={onClick} aria-pressed={on} data-testid={testId}
+      className={'flex min-h-[44px] min-w-0 grow items-center justify-center rounded-btn border-0 px-2.5 text-[0.87em] font-semibold ' + (on ? 'bg-brand text-on-brand' : 'bg-surface text-ink')}>
+      <span className="min-w-0 truncate">{label}</span>
+    </button>
+  )
+  const head = (text: string) => <div role="heading" aria-level={2} className="mb-3 text-[0.8em] font-extrabold uppercase tracking-wide text-ink">{text}</div>
+  const kinds = layer.cats ? [...(layer.id === 'bizi' ? [] : ['all']), ...layer.cats] : []
   return (
-    <div className="flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={t('filtersLabel')} data-testid="filters">
-      {layer.id === 'wifi' && <FilterChip on={showRange} onChange={setShowRange} label={t('showRange')} testId="switch-range" />}
-      {cats && <FilterMenu value={cat} onChange={setCat} label={t('typeLabel')} testId="filter-type" options={[{ value: 'all', label: t('all') }, ...layer.cats!.map(c => ({ value: c, label: t(c as Key) }))]} />}
+    <div ref={peekRef} className="shrink-0">
+      <PageHeader title={`${t('filtersLabel')} · ${layer.short[lang]}`} onBack={onBack} />
+      <div className="flex flex-col gap-5 px-4 pb-6 pt-2" data-testid="filters">
+        {layer.id === 'wifi' && (
+          <div>
+            <div className="flex flex-wrap gap-1.5">{chip(showRange, t('showRange'), () => setShowRange(!showRange), 'switch-range')}</div>
+          </div>
+        )}
+        {kinds.length > 0 && (
+          <div>
+            {head(t('typeLabel'))}
+            <div className="flex flex-wrap gap-1.5">{kinds.map(c => chip(c === cat, c === 'all' ? t('all') : t(c as Key), () => setCat(c), `filter-${c}`))}</div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -555,7 +576,7 @@ export function HomePage(p: {
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
-  onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
+  onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -563,11 +584,10 @@ export function HomePage(p: {
   const favLayers = useFavs().map(k => splitFav(k)[0] as LayerId)
   return (
     <MoreCtx.Provider value={more}>
-      <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} />
-      {!p.liveState && !p.lineView && <FilterRow layer={p.layer} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
+      <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
-        {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
+        {p.layer.id === 'bizi' && <BiziBar cat={p.cat} bizi={p.bizi} />}
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
