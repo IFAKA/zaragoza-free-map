@@ -375,20 +375,19 @@ function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes
   const [all, setAll] = useState(false)
   const list = lines.split(',')
   const { shown, more } = all ? { shown: list, more: 0 } : chipSplit(list, LINE_ROWS * LINE_COLS)
-  const chip = 'flex min-h-[44px] min-w-0 items-center justify-center rounded-btn px-1 text-[0.93em] font-bold'
+  const chip = 'flex h-8 min-w-[2.75rem] items-center justify-center rounded-btn px-2.5 text-[0.87em] font-bold'
   return (
     <div className="pb-2 pt-1" data-testid="bus-lines">
-      <span className="font-semibold">{t('lines')}</span>
-      <ul className="m-0 mt-1 grid list-none grid-cols-6 gap-2 p-0">
+      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label={t('lines')}>
         {shown.map(l => (
-          <li key={l} className="min-w-0">
+          <li key={l}>
             {routes?.lines[l]
-              ? <BaseButton onClick={() => onLine(l)} render={<m.button {...tap} />} aria-label={t('lineChip').replace('{n}', l)} data-testid="bus-line-chip" data-line={l} className={cn(chip, 'w-full border-0 bg-bus text-on-brand')}>{l}</BaseButton>
+              ? <BaseButton onClick={() => onLine(l)} render={<m.button {...tap} />} aria-label={t('lineChip').replace('{n}', l)} data-testid="bus-line-chip" data-line={l} className={cn(chip, 'border-0 bg-bus text-on-brand')}>{l}</BaseButton>
               : <span className={cn(chip, 'bg-surface text-ink-soft')} data-testid="bus-line-plain">{l}</span>}
           </li>
         ))}
-        {more > 0 && <li className="min-w-0"><BaseButton onClick={() => setAll(true)} render={<m.button {...tap} />} data-testid="bus-line-more" className={cn(chip, 'w-full border border-line-strong bg-transparent text-brand-text')}>{t('lineMore').replace('{n}', String(more))}</BaseButton></li>}
-        {all && list.length > LINE_ROWS * LINE_COLS && <li className="col-span-2 min-w-0"><BaseButton onClick={() => setAll(false)} render={<m.button {...tap} />} className={cn(chip, 'w-full border-0 bg-transparent text-brand-text')}>{t('lineLess')}</BaseButton></li>}
+        {more > 0 && <li><BaseButton onClick={() => setAll(true)} render={<m.button {...tap} />} data-testid="bus-line-more" className={cn(chip, 'w-full border border-line-strong bg-transparent text-brand-text')}>{t('lineMore').replace('{n}', String(more))}</BaseButton></li>}
+        {all && list.length > LINE_ROWS * LINE_COLS && <li className=""><BaseButton onClick={() => setAll(false)} render={<m.button {...tap} />} className={cn(chip, 'w-full border-0 bg-transparent text-brand-text')}>{t('lineLess')}</BaseButton></li>}
       </ul>
     </div>
   )
