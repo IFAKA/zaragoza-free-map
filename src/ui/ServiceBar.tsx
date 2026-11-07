@@ -1,5 +1,5 @@
 import { m } from 'motion/react'
-import { ListMagnifyingGlass, ListStar, SlidersHorizontal } from '@phosphor-icons/react'
+import { ListMagnifyingGlass, SlidersHorizontal } from '@phosphor-icons/react'
 import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
 import { cn } from './cn'
@@ -17,6 +17,11 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
  * The header of the home page (about 64 px): two equal text buttons (Favourites, Services with a magnifier so it is clear it is for finding a service). The service you are on is named in the card below, above the place.
  * The Services button turns the drawer to the Services page (same drawer, new page).
  */
+/** The Phosphor "list with star" (bold) with the star filled in, so it reads as the favourites list and not as the outline save star. */
+function ListFilledStar() {
+  return <svg width="1.3em" height="1.3em" viewBox="0 0 256 256" fill="currentColor" aria-hidden><path d="M28,64A12,12,0,0,1,40,52H216a12,12,0,0,1,0,24H40A12,12,0,0,1,28,64Zm12,76H88a12,12,0,0,0,0-24H40a12,12,0,0,0,0,24Zm64,40H40a12,12,0,0,0,0,24h64a12,12,0,0,0,0-24Zm135.64-33.13-20.58,17,6.25,25.26a12,12,0,0,1-17.73,13.22L184,188.46l-23.58,13.88a12,12,0,0,1-17.73-13.22l6.25-25.26-20.58-17a12,12,0,0,1,6.72-21.22l27.42-2.12L173,99.25a12,12,0,0,1,22,0l10.48,24.28,27.42,2.12a12,12,0,0,1,6.72,21.22Z" /></svg>
+}
+
 /** Height of the phone footer bar (px), without the bottom safe area. The home page keeps this much room at its end, and the closed sheet ends above it. */
 export const FOOTER_PX = 72
 export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersActive, bar }: { bar?: boolean; onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
@@ -33,7 +38,7 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
         )}
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
           className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand px-3 font-bold text-on-brand shadow-md">
-          <ListStar size="1.3em" weight="bold" aria-hidden />{t('favsTitle')}
+          <ListFilledStar />{t('favsTitle')}
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
           className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand px-3 font-bold text-on-brand shadow-md">
