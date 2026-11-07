@@ -33,8 +33,8 @@ export function FavButton({ layer, item }: { layer: LayerConfig; item: Item }) {
   }
   return (
     <m.button {...tap} type="button" onClick={press} aria-pressed={on} aria-label={on ? t('favSaved') : t('favSave')} title={on ? t('favSaved') : t('favSave')} data-testid="fav-star"
-      className={cn('inline-flex size-11 shrink-0 select-none items-center justify-center rounded-btn border border-line-strong bg-transparent p-0', on ? 'text-brand-text' : 'text-ink')}>
-      <span key={on ? 'on' : 'off'} className={cn('grid', on && saved && 'star-save')}><Star size="1.4em" weight={on ? 'fill' : 'regular'} aria-hidden /></span>
+      className={cn('inline-flex size-10 shrink-0 select-none items-center justify-center rounded-full border-0 bg-transparent p-0', on ? 'text-brand-text' : 'text-ink')}>
+      <span key={on ? 'on' : 'off'} className={cn('grid', on && saved && 'star-save')}><Star size="1.7em" weight={on ? 'fill' : 'regular'} aria-hidden /></span>
     </m.button>
   )
 }

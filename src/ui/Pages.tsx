@@ -454,7 +454,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center">
-      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left text-ink">
+      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5 text-left text-ink">
         <FavButton layer={layer} item={item} />
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
