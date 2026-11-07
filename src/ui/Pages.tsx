@@ -168,9 +168,11 @@ function VehNote({ show }: { show: boolean }) {
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
  */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line }: {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line, fav }: {
   kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
   title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon; line?: string
+  /** The Save button: placed at the end of the "Updated" line, so it needs no row of its own. */
+  fav?: ReactNode
 }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
@@ -187,22 +189,23 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const tramLn = tramLine()
   const tramShown: Vehicle[] = tramVeh.length || !(kind === 'tram' && hasDirs && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
-  if (state === 'failed' && !live) return null
+  if (state === 'failed' && !live) return fav ? <div className="mt-1 flex justify-end">{fav}</div> : null
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const [north, south] = DATA.tram.ends
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
   const first = rows[0]
+  const viaText = live?.via ? t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d)) : ''
   return (
     <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
       {title && <div className={overline}>{title}</div>}
-      {!live ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveLoading')}</p> : (
+      {!live ? <div className="mt-1 flex min-h-[44px] items-center justify-between gap-2"><p className={cn(sub, 'm-0')}>{t('liveLoading')}</p>{fav}</div> : (
         <>
           {live.via && (live.via.side ? (
             <div className="m-0 mt-1 leading-snug" data-testid="live-via" data-side={live.via.side}>
               <p className="m-0 font-semibold">{t('routeVia').replace('{n}', line ?? '').replace('{name}', live.via.name)}</p>
               <p className={cn(sub, 'm-0')}>{t('routeNoCity')} {live.via.side === 'before' ? t('routeBefore') : t('routeAfter')}</p>
             </div>
-          ) : <p className="m-0 mt-1 font-semibold leading-snug" data-testid="live-via">{t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d))}</p>)}
+          ) : <p className="m-0 mt-1 truncate font-semibold" data-testid="live-via" title={viaText} aria-label={viaText}>{viaText}</p>)}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
           {!first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
             <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
@@ -217,11 +220,14 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
               ))}
             </ul>
           )}
+          <div className="mt-1 flex min-h-[44px] items-center justify-between gap-2">
+            <div className={cn(sub, 'flex min-w-0 items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}<span className="truncate">{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</span></div>
+            {fav}
+          </div>
           {hasDirs && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
             { id: 'n', label: t('dirTo').replace('{to}', north) },
             { id: 's', label: t('dirTo').replace('{to}', south) },
           ]} />}
-          <div className={cn(sub, 'mt-1 flex items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 rounded-full bg-current" aria-hidden />}{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</div>
           <VehNote show={tramVeh.length > 0} />
         </>
       )}
@@ -230,7 +236,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
 }
 
 /** Bus stop: live next buses (city stops only). The link to the bus company page and Walk go to the full-height area. Rural stops have no live data and keep the link-out only. */
-function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon; onWalk: () => void }) {
+function BusActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode }) {
   const { t } = useT()
   const stop = item.stop
   const live = !!stop && /^\d+$/.test(stop)
@@ -241,22 +247,23 @@ function BusActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon
   }, [stop, item.lines, item.lat, item.lon, origin])
   return (
     <>
-      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} />}
-      {!stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
+      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} fav={fav} />}
+      {!live && <div className="mt-1 flex items-center justify-between gap-2">{!stop ? <p className={cn(sub, 'm-0')}>{t('noLive')}</p> : <span />}{fav}</div>}
       <More><MoreLinks times={stop ? { url: busUrl(stop), label: t('timesShort'), onClick: () => track('times', 'bus'), testId: 'next-buses' } : undefined} walk={{ item, onWalk }} /></More>
     </>
   )
 }
 
 /** Tram stop: live next trams (both platforms). The link to the tram company's times page and Walk go to the full-height area. */
-function TramActions({ item, origin, onWalk }: { item: RankedItem; origin: LatLon; onWalk: () => void }) {
+function TramActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode }) {
   const { t } = useT()
   const ids = item.tramIds ?? []
   const key = ids.join(',')
   const load = useCallback((s: AbortSignal) => loadTram(key ? key.split(',') : [], s), [key])
   return (
     <>
-      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} />}
+      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} fav={fav} />}
+      {!key && fav && <div className="mt-1 flex justify-end">{fav}</div>}
       <More><MoreLinks times={{ url: TRAM_URL, label: t('timesShort'), onClick: () => track('times', 'tram'), testId: 'tram-times' }} walk={{ item, onWalk }} /></More>
     </>
   )
@@ -471,6 +478,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
+  const favBtn = canFav(layer, item) ? <FavButton layer={layer} item={item} /> : null
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center">
@@ -483,17 +491,18 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
       </BaseButton>
       </div>
-      {item.type === 'lib' && <div className="mt-0.5"><Occupancy item={item} /></div>}
+      {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
+      {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <More><LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} /></More>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-2 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
           <FavButton layer={layer} item={item} />
         </div>
       )}
-      {(item.type === 'bus' || item.type === 'tram' || item.type === 'train') && canFav(layer, item) && <div className="mt-2 flex"><FavButton layer={layer} item={item} /></div>}
+      {item.type === 'train' && favBtn && <div className="mt-2 flex"><FavButton layer={layer} item={item} /></div>}
     </m.section>
   )
 }
@@ -594,7 +603,8 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} />
-      <FavSection onOpen={p.onOpenFav} onAll={p.onFavs} pos={p.hasPos ? p.origin : null} />
+      {/* only on the plain home state (the nearest place chosen by itself): not when a place was picked, a greyed-out place is shown, or a line route is open */}
+      {!p.selected && !p.off && !p.lineView && <FavSection onOpen={p.onOpenFav} onAll={p.onFavs} pos={p.hasPos ? p.origin : null} />}
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}

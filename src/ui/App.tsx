@@ -40,7 +40,8 @@ type Page = 'home' | 'place' | 'services' | 'favs'
 // Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 2
 const DEFAULT_CLOSED_PX = 94, DEFAULT_PEEK_PX = 360
-const MAP_SHARE = 0.28 // the sheet never covers more than 72% of the screen at peek: this much stays for the map
+const MAP_SHARE = 0.55 // the home sheet at peek never covers more than 45% of the screen: this much stays for the map
+const PAGE_MAP_SHARE = 0.28 // other pages (services, details, favourites) size to their content, up to 72%
 /** The phone's bottom safe area (home indicator) in px. */
 function safeBottom(): number {
   const probe = document.createElement('div')
@@ -72,16 +73,16 @@ function useClosedPx(dep: unknown) {
  * Height of the peeking sheet: from the top of the sheet to the end of the peek block (the service header and the one card), plus the bottom safe area.
  * Measured on the real layout, so a long Spanish bus card or a hint line can never be cut off. Re-measured on every render and whenever any part changes size.
  */
-function usePeekPx(block: HTMLElement | null): number {
+function usePeekPx(block: HTMLElement | null, share: number): number {
   const [px, setPx] = useState(DEFAULT_PEEK_PX)
   const measure = useCallback(() => {
     const pop = block?.closest('[data-slot=drawer-popup]')
     if (!block || !pop) return
     let scrolled = 0 // a block inside a scrolled area still counts from its top, so the height does not follow the scrolling
     for (let e = block.parentElement; e && e !== pop; e = e.parentElement) scrolled += e.scrollTop
-    const next = Math.min(Math.ceil(block.getBoundingClientRect().bottom + scrolled - pop.getBoundingClientRect().top + safeBottom()), Math.floor(window.innerHeight * (1 - MAP_SHARE)))
+    const next = Math.min(Math.ceil(block.getBoundingClientRect().bottom + scrolled - pop.getBoundingClientRect().top + safeBottom()), Math.floor(window.innerHeight * (1 - share)))
     if (next > 120) setPx(old => (old === next ? old : next))
-  }, [block])
+  }, [block, share])
   useEffect(measure) // after every render
   useEffect(() => {
     if (!block?.parentElement) return
@@ -165,7 +166,7 @@ export function App() {
   const [chipOrder] = useState<LayerId[]>(() => rankByTaps(serviceOrder(), parseTaps(lsGet('taps'))))
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
-  const peekPx = usePeekPx(peekEl)
+  const peekPx = usePeekPx(peekEl, page === 'home' ? MAP_SHARE : PAGE_MAP_SHARE)
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', 1], [closedPx, peekPx])
   const mobileClosed = !desktop && level === CLOSED
   // a closed sheet shows only the chip row, so it always closes onto the first page

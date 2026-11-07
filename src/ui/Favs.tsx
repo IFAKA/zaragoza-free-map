@@ -72,7 +72,7 @@ export function useSteadyPos(pos: LatLon | null): LatLon | null {
 }
 
 /** One favourite as a row (60 to 64 px): layer icon, name, distance, and on the right the next 2 arrivals (bus, tram) or open / closed (places). The right column keeps its width while the times load, then they fade in. With `edit`: a remove button at the start and the name turns into a rename field. */
-export function FavRow({ fav, pos, onOpen, edit, onRemove, full }: { fav: Fav; pos: LatLon | null; onOpen: (layer: string, id: string) => void; edit?: boolean; onRemove?: (key: string) => void; full?: boolean }) {
+export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, trailing }: { fav: Fav; pos: LatLon | null; onOpen: (layer: string, id: string) => void; edit?: boolean; onRemove?: (key: string) => void; full?: boolean; compact?: boolean; trailing?: React.ReactNode }) {
   const { t, lang, type } = useT()
   const labels = useFavLabels()
   const label = labels[fav.key]
@@ -89,7 +89,8 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full }: { fav: Fav; p
     return () => io.disconnect()
   }, [live])
   useEffect(() => { if (!edit) setRenaming(false) }, [edit])
-  const { arrs } = useFavLive(fav, vis)
+  const { arrs: all } = useFavLive(fav, vis)
+  const arrs = compact ? all.slice(0, 1) : all // the home row has room for one arrival
   const I = ICONS[fav.layer.icon]
   const name = fav.item.name || type(fav.item.type) // some map places have no name: their kind
   const title = favTitle(name, label)
@@ -99,16 +100,11 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full }: { fav: Fav; p
   const aria = arrs.length ? `${title}: ${arrs.map(a => `${a.line} ${a.text}`).join(', ')}` : title
   const body = (
     <>
+      {compact && <Star size="0.9em" weight="fill" className="-mr-1 shrink-0 text-brand-text" aria-hidden />}
       <span className="flex size-10 shrink-0 items-center justify-center rounded-tile text-on-brand" style={{ background: fav.layer.color }}><I size="1.4em" weight="fill" aria-hidden /></span>
       <span className="min-w-0 flex-1">
-        {renaming ? (
-          <input autoFocus defaultValue={label ?? ''} maxLength={LABEL_MAX} placeholder={name} aria-label={t('favRename')} data-testid="fav-rename" enterKeyHint="done"
-            onFocus={e => e.currentTarget.select()}
-            onBlur={e => { setLabel(fav.key, e.currentTarget.value); setRenaming(false) }}
-            onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); else if (e.key === 'Escape') { e.currentTarget.value = label ?? ''; e.currentTarget.blur() } }}
-            className="block h-9 w-full min-w-0 rounded-btn border border-line-strong bg-paper px-2 text-[16px] font-bold text-ink placeholder:font-normal placeholder:text-ink-soft" />
-        ) : <span className="flex items-center gap-1.5 font-bold"><span className="truncate">{title}</span>{edit && <PencilSimple size="0.9em" className="shrink-0 text-ink-soft" aria-hidden />}</span>}
-        {!renaming && <span className="block truncate text-[0.82em] text-ink-soft">{sub}</span>}
+        <span className="block truncate font-bold">{title}</span>
+        <span className="block truncate text-[0.82em] text-ink-soft">{sub}</span>
       </span>
       {live ? (
         <span className="flex min-h-10 w-[6.5rem] shrink-0 flex-col items-end justify-center gap-0.5" data-testid="fav-times">
@@ -124,54 +120,58 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full }: { fav: Fav; p
       )}
     </>
   )
-  return (
-    <li ref={ref} className="fav-row flex min-h-16 items-center border-b border-line" data-leaving={leaving ? '' : undefined} data-testid="fav-row">
-      {edit && (
+  const renameInput = (
+    <input autoFocus defaultValue={label ?? ''} maxLength={LABEL_MAX} placeholder={name} aria-label={t('favRename')} data-testid="fav-rename" enterKeyHint="done"
+      onFocus={e => e.currentTarget.select()}
+      onBlur={e => { setLabel(fav.key, e.currentTarget.value); setRenaming(false) }}
+      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); else if (e.key === 'Escape') { e.currentTarget.value = label ?? ''; e.currentTarget.blur() } }}
+      className="block h-9 w-full min-w-0 rounded-btn border border-line-strong bg-paper px-2 text-[16px] font-bold text-ink placeholder:font-normal placeholder:text-ink-soft" />
+  )
+  // edit mode: only what is needed to manage the row. Remove at the start (44 px), the name on the full width (2 lines), the layer under it, rename (pencil) at the far end (44 px). No times, no distance.
+  if (edit) {
+    return (
+      <li ref={ref} className="fav-row flex min-h-16 items-center border-b border-line" data-leaving={leaving ? '' : undefined} data-testid="fav-row">
         <m.button {...tap} type="button" aria-label={`${t('favRemove')}: ${title}`} data-testid="fav-row-remove"
           onClick={e => { if (leaving || !onRemove) return; if (e.detail === 0) return onRemove(fav.key); setLeaving(true); setTimeout(() => onRemove(fav.key), MS.small) }}
           className="ml-1 grid size-11 shrink-0 select-none place-items-center rounded-full border-0 bg-transparent p-0">
           <span className="grid size-6 place-items-center rounded-full bg-brand text-on-brand"><Minus size="1em" weight="bold" aria-hidden /></span>
         </m.button>
-      )}
-      {edit ? (
-        <div className="flex min-w-0 flex-1 items-center gap-3 py-2 pl-2 pr-4 text-left text-ink">
-          {renaming ? body : (
-            <button type="button" onClick={() => setRenaming(true)} aria-label={`${t('favRename')}: ${title}`} data-testid="fav-rename-open" className="flex min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent p-0 text-left text-ink">{body}</button>
-          )}
+        <div className="min-w-0 flex-1 py-2 pl-2 text-left text-ink">
+          {renaming ? renameInput : <span className="line-clamp-2 break-words font-bold leading-snug" data-testid="fav-name">{title}</span>}
+          <span className="block truncate text-[0.82em] text-ink-soft">{[label ? name : '', fav.layer.label[lang]].filter(Boolean).join(' · ')}</span>
         </div>
-      ) : (
-        <m.button {...tap} type="button" onClick={() => onOpen(fav.layer.id, fav.item.id)} aria-label={aria} data-testid="fav-open-row"
-          className="flex min-h-16 min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent py-2 pl-4 pr-4 text-left text-ink">{body}</m.button>
-      )}
+        <m.button {...tap} type="button" onClick={() => setRenaming(true)} aria-label={`${t('favRename')}: ${title}`} data-testid="fav-rename-open"
+          className="mr-1 grid size-11 shrink-0 select-none place-items-center border-0 bg-transparent p-0 text-ink-soft"><PencilSimple size="1.2em" aria-hidden /></m.button>
+      </li>
+    )
+  }
+  return (
+    <li ref={ref} className="fav-row flex min-h-16 items-center border-b border-line" data-leaving={leaving ? '' : undefined} data-testid="fav-row">
+      <m.button {...tap} type="button" onClick={() => onOpen(fav.layer.id, fav.item.id)} aria-label={aria} data-testid="fav-open-row"
+        className={cn('flex min-h-16 min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent py-2 pl-4 text-left text-ink', trailing ? 'pr-1' : 'pr-4')}>{body}</m.button>
+      {trailing}
     </li>
   )
 }
 
-/** A short phone screen (about 640 px high): the sheet at peek may cover only 72% of it, so the section shows 1 row and the nearest-place card still fits whole. */
-function useShort(): boolean {
-  const q = '(max-height: 699px)'
-  const [v, setV] = useState(() => matchMedia(q).matches)
-  useEffect(() => { const mq = matchMedia(q); const f = () => setV(mq.matches); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f) }, [])
-  return v
-}
-
-/** The Favourites section of the home page: a header ("Favourites", "See all (N)" with a chevron, one 44 px tap target that opens the page) and the 2 favourites nearest to the user as rows (the ones opened last when the position is unknown). Nothing when there is no favourite. */
+/** The Favourites row of the home page: ONE row (64 px) that is header and nearest favourite together: star, layer icon, name, distance and the next arrival, then a control with the count and a chevron that opens the Favourites page (44 px target). Nothing when there is no favourite. */
 export function FavSection({ onOpen, onAll, pos }: { onOpen: (layer: string, id: string) => void; onAll: () => void; pos: LatLon | null }) {
   const { t } = useT()
   const list = resolveFavs(useFavs())
   const steady = useSteadyPos(pos)
-  const short = useShort()
   if (!list.length) return null
-  const shown = nearestFavs(list, steady, short ? 1 : 2)
+  const [f] = nearestFavs(list, steady, 1)
+  const see = t('favsSee').replace('{n}', String(list.length))
+  const all = (
+    <m.button {...tap} type="button" onClick={onAll} aria-label={`${t('favsTitle')}: ${see}`} title={see} data-testid="fav-all"
+      className="flex min-h-11 min-w-12 shrink-0 select-none items-center justify-center gap-0.5 border-0 bg-transparent pl-1 pr-3 font-bold text-brand-text">
+      <span className="tabular-nums">{list.length}</span><CaretRight size="1.1em" weight="bold" aria-hidden />
+    </m.button>
+  )
   return (
-    <section className="shrink-0" aria-label={t('favsTitle')} data-testid="fav-section">
-      <m.button {...tap} type="button" onClick={onAll} aria-label={`${t('favsTitle')}: ${t('favsSee').replace('{n}', String(list.length))}`} data-testid="fav-all"
-        className="flex min-h-11 w-full select-none items-center justify-between gap-2 border-0 bg-transparent px-4 text-left">
-        <span className="font-title text-[1.1em] font-semibold text-ink">{t('favsTitle')}</span>
-        <span className="flex items-center gap-0.5 font-semibold text-brand-text">{t('favsSee').replace('{n}', String(list.length))}<CaretRight size="1.1em" weight="bold" aria-hidden /></span>
-      </m.button>
-      <ul className="m-0 list-none border-t border-line p-0" aria-label={t('favsLabel')}>
-        {shown.map(f => <FavRow key={f.key} fav={f} pos={steady} onOpen={onOpen} />)}
+    <section className="shrink-0 border-t border-line" aria-label={t('favsTitle')} data-testid="fav-section">
+      <ul className="m-0 list-none p-0" aria-label={t('favsLabel')}>
+        <FavRow fav={f} pos={steady} onOpen={onOpen} compact trailing={all} />
       </ul>
     </section>
   )
