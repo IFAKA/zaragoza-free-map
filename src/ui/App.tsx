@@ -214,8 +214,6 @@ export function App() {
   const offSel = selected && !arr.some(i => i.id === selected) ? offItems.find(i => i.id === selected) ?? null : null
   const chosen = selected ? arr.find(i => i.id === selected) ?? null : null
   const focus = chosen ?? arr[0] ?? null
-  // the two nearest places after the one on the card
-  const nearby = useMemo(() => (focus ? arr.filter(i => i.id !== focus.id).slice(0, 2) : []), [arr, focus])
 
   // the chosen line as the map and the sheet need it (null when none, or while the line file is loading)
   const lineData = useMemo(() => {
@@ -375,11 +373,11 @@ export function App() {
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} peekRef={setPeekEl} />
       default: return (
         <HomePage
-          off={offSel} layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} nearby={nearby} peekRef={setPeekEl}
+          off={offSel} layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} peekRef={setPeekEl}
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onSelect={select} onOpenFav={openFav} onFavs={openFavs} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
+          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onOpenFav={openFav} onFavs={openFavs} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
           desktop={desktop}
         />
       )

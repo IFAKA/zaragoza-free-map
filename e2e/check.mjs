@@ -81,7 +81,7 @@ const go = async (p, id, how = 'click') => {
   await p.getByTestId('tab-' + id)[how]()
 }
 const layerOn = p => p.evaluate(() => localStorage.getItem('zgz:v2:layer'))
-// the handle cycles the sheet: from peek one tap opens it to full height (where the line chips, links and nearby places are)
+// the handle cycles the sheet: from peek one tap opens it to full height (where the line chips and links are)
 const full = async p => { await p.getByTestId('handle').tap(); await settle(p) }
 const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top))
 
@@ -250,18 +250,6 @@ todo.push(async () => {
       ok(sel.bottom < sel.sheet - 4 && sel.top > 0, `${id}: selected marker sits above the sheet (marker bottom ${Math.round(sel.bottom)}, sheet top ${Math.round(sel.sheet)})`)
     }
     await p.screenshot({ path: out + '/g-marker.png' })
-    await ctx.close()
-  })
-  // the next two nearest places are chips at the top of the full-height area; a tap selects
-  todo.push(async () => {
-    const { ctx, p } = await sess()
-    await full(p)
-    ok(await p.getByTestId('nearby-item').count() === 2, 'two nearby chips in the full-height area')
-    ok(await p.getByTestId('list').count() === 0, 'no places list')
-    const name = await p.getByTestId('nearby-item').first().innerText()
-    await p.getByTestId('nearby-item').first().tap(); await settle(p)
-    ok(await p.getByTestId('nearest').getAttribute('aria-label') === 'Selected' && name.includes(await p.getByTestId('nearest-name').innerText()), 'tap on a chip selects that place')
-    ok(await lvl(p) === 'peek', 'and stays at peek')
     await ctx.close()
   })
   // page stack: About from Settings goes Back to Settings; Escape: page, then lower
@@ -646,7 +634,7 @@ todo.push(async () => {
   await go(p, 'bizi', 'tap'); await settle(p)
   ok(await layerOn(p) === 'bizi' && await p.locator('.mk').count() > 0, 'Bizi: one tap on its chip draws its markers')
   await go(p, 'libraries', 'tap'); await settle(p)
-  ok(await layerOn(p) === 'libraries' && await p.getByTestId('nearby-item').count() === 2, 'Libraries is a normal tab with its nearest card and two nearby chips (in the full-height area)')
+  ok(await layerOn(p) === 'libraries', 'Libraries is a normal tab with its nearest card')
   await go(p, 'water', 'tap'); await settle(p)
   // Settings page in Spanish
   await p.getByTestId('open-settings').tap(); await settle(p)
@@ -813,7 +801,7 @@ todo.push(async () => { // nothing in the list is wiped when the feed is down
   await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=failed]')
   ok(/Live counts unavailable/.test(await p.getByTestId('bizi-status').innerText()) && await p.getByTestId('bizi-retry').count() === 1, 'failed feed: "Live counts unavailable" and Try again')
-  ok(await markers(p) > 0 && await p.getByTestId('nearby-item').count() === 2, 'failed feed: the places still show')
+  ok(await markers(p) > 0, 'failed feed: the places still show')
   ok(!/bikes? · /.test(await listText(p)), 'failed feed: no counts shown')
   await p.screenshot({ path: out + '/bizi-failed-en.png' })
   mock.mode = 'ok'; await p.getByTestId('bizi-retry').tap()
@@ -834,7 +822,7 @@ todo.push(async () => { // no station has a bike: show them all and say so
   mock.mode = 'empty'
   await go(p, 'bizi', 'tap'); await settle(p)
   await p.waitForSelector('[data-testid=bizi-status][data-state=live]'); await settle(p)
-  ok(await p.getByTestId('all-out').count() === 1 && await p.getByTestId('nearby-item').count() === 2, 'no bikes anywhere: the message plus all stations')
+  ok(await p.getByTestId('all-out').count() === 1, 'no bikes anywhere: the message')
   await ctx.close()
 })
 todo.push(async () => { // cached counts older than 5 minutes are not live; the page makes no call while on another tab

@@ -524,28 +524,6 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
   )
 }
 
-// ---------- the next two nearest, at the top of the full-height area ----------
-/** The two nearest places after the one on the card, as compact chips: one tap shows that place (card and map). */
-export function Nearby({ items, onSelect }: { items: RankedItem[]; onSelect: (id: string) => void }) {
-  const { t, type } = useT()
-  if (!items.length) return null
-  return (
-    <div className="px-4 pb-3" data-testid="nearby">
-      <div className={overline}>{t('alsoNearby')}</div>
-      <ul className="m-0 mt-1 grid list-none grid-cols-2 gap-2 p-0">
-        {items.map(it => (
-          <li key={it.id} className="min-w-0">
-            <BaseButton onClick={() => onSelect(it.id)} render={<m.button {...tap} />} data-testid="nearby-item" className={cn('flex min-h-[44px] w-full items-center justify-between gap-2 rounded-btn border-0 bg-surface px-3 text-left text-ink', it.open === false && 'opacity-60')}>
-              <span className="min-w-0 truncate text-[0.93em] font-semibold">{it.name || type(it.type)}</span>
-              <span className="shrink-0 text-[0.87em] font-bold text-ink-soft">{fmtDist(it.d)}</span>
-            </BaseButton>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
 export function Controls({ layer, openOnly, setOpenOnly, showRange, setShowRange, cat, setCat }: {
   layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {
@@ -579,11 +557,11 @@ function Locate({ hasPos, locating, denied, onLocate }: { hasPos: boolean; locat
 export function HomePage(p: {
   off: RankedItem | null
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
-  nearby: RankedItem[]; peekRef: React.Ref<HTMLDivElement>
+  peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
-  onSelect: (id: string) => void; onOpenFav: (layer: string, id: string) => void; onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
+  onOpenFav: (layer: string, id: string) => void; onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -604,7 +582,6 @@ export function HomePage(p: {
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <div ref={setMore} />
-        {!p.liveState && !p.lineView && !p.off && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
       </Scroll>
