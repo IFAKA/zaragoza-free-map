@@ -224,9 +224,9 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
               ))}
             </ul>
           )}
-          <div className="mt-1 flex items-center gap-2">
+          <More><div className="flex items-center gap-2 px-4 pb-1">
             <div className={cn(sub, 'flex min-w-0 items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}<span className="truncate">{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</span></div>
-          </div>
+          </div></More>
           <VehNote show={tramVeh.length > 0} />
         </>
       )}
@@ -316,7 +316,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
             ))}
           </ul>
         )}
-        <p className={cn(sub, 'm-0 mt-1 text-[0.8em]')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
+        <More><p className={cn(sub, 'm-0 px-4 pb-1 text-[0.8em]')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p></More>
         {mine.map(a => <p key={a.id} className={cn(sub, 'm-0 mt-1 font-semibold text-ink')} role="note" data-testid="train-alert">{a.text} <span className="font-normal">(Renfe)</span></p>)}
         <VehNote show={trainVeh.length > 0} />
       </div>
@@ -371,7 +371,7 @@ function LineChips({ lines, routes, onLine }: { lines: string; routes: BusRoutes
   const { shown, more } = all ? { shown: list, more: 0 } : chipSplit(list, LINE_ROWS * LINE_COLS)
   const chip = 'flex min-h-[44px] min-w-0 items-center justify-center rounded-btn px-1 text-[0.93em] font-bold'
   return (
-    <div className="px-4 pb-3 pt-3" data-testid="bus-lines">
+    <div className="pb-2 pt-1" data-testid="bus-lines">
       <span className="font-semibold">{t('lines')}</span>
       <ul className="m-0 mt-1 grid list-none grid-cols-6 gap-2 p-0">
         {shown.map(l => (
@@ -461,10 +461,10 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
       </BaseButton>
       </div>
+      {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
-      {item.lines && <More><LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} /></More>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
     </m.section>
