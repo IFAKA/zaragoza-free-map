@@ -1,4 +1,4 @@
-import { CaretRight, Minus, PencilSimple, Star } from '@phosphor-icons/react'
+import { Minus, PencilSimple, Star } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICONS } from './icons'
@@ -165,24 +165,17 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
   )
 }
 
-/** The Favourites row of the home page: ONE row (64 px) that is header and nearest favourite together: star, layer icon, name, distance and the next arrival, then a control with the count and a chevron that opens the Favourites page (44 px target). Nothing when there is no favourite. */
-export function FavSection({ onOpen, onAll, pos }: { onOpen: (layer: string, id: string) => void; onAll: () => void; pos: LatLon | null }) {
+/** The Favourites row of the home page: ONE row (64 px) with the nearest favourite OF THE SERVICE ON SHOW: star, layer icon, name, distance and the next arrival. The way to the full page is the star button in the page header. Nothing when this service has no favourite. */
+export function FavSection({ layer, onOpen, pos }: { layer: string; onOpen: (layer: string, id: string) => void; pos: LatLon | null }) {
   const { t } = useT()
-  const list = resolveFavs(useFavs())
+  const list = resolveFavs(useFavs()).filter(f => f.layer.id === layer)
   const steady = useSteadyPos(pos)
   if (!list.length) return null
   const [f] = nearestFavs(list, steady, 1)
-  const see = t('favsSee').replace('{n}', String(list.length))
-  const all = (
-    <m.button {...tap} type="button" onClick={onAll} aria-label={`${t('favsTitle')}: ${see}`} title={see} data-testid="fav-all"
-      className="flex min-h-11 min-w-12 shrink-0 select-none items-center justify-center gap-0.5 border-0 bg-transparent pl-1 pr-3 font-bold text-brand-text">
-      <span className="tabular-nums">{list.length}</span><CaretRight size="1.1em" weight="bold" aria-hidden />
-    </m.button>
-  )
   return (
     <section className="shrink-0 border-t border-line" aria-label={t('favsTitle')} data-testid="fav-section">
       <ul className="m-0 list-none p-0" aria-label={t('favsLabel')}>
-        <FavRow fav={f} pos={steady} onOpen={onOpen} compact trailing={all} />
+        <FavRow fav={f} pos={steady} onOpen={onOpen} compact />
       </ul>
     </section>
   )

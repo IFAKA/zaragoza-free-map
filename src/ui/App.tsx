@@ -346,14 +346,9 @@ export function App() {
   const levelBefore = useRef(PEEK)
   // The sheet changes size once per page turn, when the new page is on screen (not while the old one still fades out): see onShown below.
   const pendingLevel = useRef<number | null>(null)
-  const turningTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const pageNow = useRef(page); pageNow.current = page
   const onShown = useCallback(() => {
-    // the sheet takes its new size at once, under the fading-in page: no tall blank sheet that then shrinks, no bounce
-    const root = document.documentElement
-    root.dataset.turning = '1'
-    clearTimeout(turningTimer.current)
-    turningTimer.current = setTimeout(() => { delete root.dataset.turning }, 300)
+    // the sheet grows or shrinks once, smoothly, under the fading-in page (not twice: no tall blank sheet that then shrinks)
     if (pendingLevel.current != null) { setLevel(pendingLevel.current); pendingLevel.current = null }
     setLivePage(pageNow.current)
   }, [])
