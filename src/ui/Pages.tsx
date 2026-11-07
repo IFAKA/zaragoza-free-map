@@ -2,7 +2,7 @@ import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
 import { ChatCircleText, ArrowBendUpRight, ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ICONS } from './icons'
 import { Skel, SkelRows } from './Skel'
@@ -443,6 +443,29 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
   )
 }
 
+/** The place name on one line. Tapped, it gets the whole width (the star and the walk button fade away, see NearestBlock); a name that is still too long then slides back and forth so all of it can be read. */
+function NameButton({ name, open, onToggle }: { name: string; open: boolean; onToggle: () => void }) {
+  const box = useRef<HTMLSpanElement>(null), txt = useRef<HTMLSpanElement>(null)
+  const [over, setOver] = useState(0) // how many px the text is wider than its box
+  useEffect(() => {
+    const b = box.current, x = txt.current
+    if (!open || !b || !x) { setOver(0); return }
+    const measure = () => setOver(Math.max(0, Math.ceil(x.scrollWidth - b.clientWidth)))
+    const ro = new ResizeObserver(measure) // the box grows while the star fades away
+    ro.observe(b)
+    measure()
+    return () => ro.disconnect()
+  }, [open, name])
+  return (
+    <m.button {...tap} type="button" onClick={onToggle} aria-expanded={open} data-testid="nearest-name-btn"
+      className="m-0 block w-full min-w-0 select-none border-0 bg-transparent p-0 text-left">
+      <span ref={box} className={cn(h2, 'block overflow-hidden whitespace-nowrap', open && 'name-box')} data-testid="nearest-name">
+        <span ref={txt} className={cn(open ? 'inline-block' : 'block truncate', open && over > 0 && 'name-slide')} style={open && over > 0 ? { '--slide': `-${over}px`, animationDuration: `${3 + over / 25}s` } as React.CSSProperties : undefined}>{name}</span>
+      </span>
+    </m.button>
+  )
+}
+
 // ---------- the block with the nearest (or selected) place ----------
 /** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
 /** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
@@ -454,6 +477,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   onDetails: () => void; onWalk: () => void
 }) {
   const { t, type, lang } = useT()
+  const [wide, setWide] = useState<string | null>(null) // id of the place whose name is open (full width); another place starts closed
   const Icon = ICONS[layer.icon]
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
@@ -465,7 +489,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left text-ink">
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
-          <span className={cn(h2, 'block truncate')} data-testid="nearest-name">{name}</span>
+          <NameButton name={name} open={wide === item.id} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
           <span className="flex items-center">
             {statusDot(item, layer, t)}
             <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</span>
@@ -477,8 +501,10 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
             )}
           </span>
         </span>
-        <FavButton layer={layer} item={item} />
-        <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
+        <div className={cn('flex shrink-0 items-center gap-2 overflow-hidden [transition:opacity_var(--dur-small)_var(--ease-out),max-width_var(--dur-small)_var(--ease-out)]', wide === item.id ? 'pointer-events-none max-w-0 opacity-0' : 'max-w-24 opacity-100')} aria-hidden={wide === item.id} inert={wide === item.id}>
+          <FavButton layer={layer} item={item} />
+          <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
+        </div>
       </div>
       </div>
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
