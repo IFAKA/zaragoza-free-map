@@ -91,16 +91,16 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
               {list.map(f => <FavRow key={f.key} fav={f} pos={steady} onOpen={onOpen} mode={mode ?? undefined} checked={ticked.includes(f.key)} onToggle={toggle} onRename={setRenameKey} full />)}
             </ul>
           )}
+          {mode === 'delete' && (
+            <div className="sticky bottom-0 -mb-6 flex items-center gap-2 border-t border-line bg-paper px-4 py-2" data-testid="fav-delete-bar">
+              <m.button {...tap} type="button" onClick={() => setPicked(allOn ? [] : list.map(f => f.key))} data-testid="fav-select-all"
+                className="min-h-11 rounded-btn border-0 bg-surface px-4 font-bold text-ink">{allOn ? t('favsNoneSel') : t('favsAll')}</m.button>
+              <m.button {...tap} type="button" disabled={!ticked.length} onClick={removePicked} data-testid="fav-delete-go"
+                className="ml-auto min-h-11 rounded-btn border-0 bg-brand px-4 font-bold text-on-brand disabled:opacity-40">{t('favsDeleteN').replace('{n}', String(ticked.length))}</m.button>
+            </div>
+          )}
         </div>
       </Scroll>
-      {mode === 'delete' && (
-        <div className="flex shrink-0 items-center gap-2 border-t border-line px-4 py-2" data-testid="fav-delete-bar">
-          <m.button {...tap} type="button" onClick={() => setPicked(allOn ? [] : list.map(f => f.key))} data-testid="fav-select-all"
-            className="min-h-11 rounded-btn border-0 bg-surface px-4 font-bold text-ink">{allOn ? t('favsNoneSel') : t('favsAll')}</m.button>
-          <m.button {...tap} type="button" disabled={!ticked.length} onClick={removePicked} data-testid="fav-delete-go"
-            className="ml-auto min-h-11 rounded-btn border-0 bg-brand px-4 font-bold text-on-brand disabled:opacity-40">{t('favsDeleteN').replace('{n}', String(ticked.length))}</m.button>
-        </div>
-      )}
     </>
   )
 }
