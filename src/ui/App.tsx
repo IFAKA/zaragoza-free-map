@@ -368,7 +368,7 @@ export function App() {
   const pageEl = (() => {
     switch (page) {
       case 'services': return <ServicesPage layer={layer.id} onPick={pickLayer} onBack={back} peekRef={setPeekEl} />
-      case 'filters': return <FiltersPage layer={layer} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }} onBack={back} peekRef={setPeekEl} />
+      case 'filters': return <FiltersPage layer={layer} cat={cat} setCat={c => { setCat(c); setSelected(null) }} onBack={back} peekRef={setPeekEl} />
       case 'favs': return <FavsPage onOpen={openFav} onBack={back} peekRef={setPeekEl} locked={mobileLow} pos={pos} />
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} peekRef={setPeekEl} />
       default: return (

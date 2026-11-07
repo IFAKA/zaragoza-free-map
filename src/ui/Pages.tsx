@@ -34,7 +34,7 @@ import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
-import { Button, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
+import { Button, FilterChip, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav, splitFav, useFavs } from '../lib/favs'
 import { FavButton } from './Favs'
@@ -193,7 +193,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
     { id: 'n', label: t('dirTo').replace('{to}', north) },
     { id: 's', label: t('dirTo').replace('{to}', south) },
   ]} />
-  if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}><p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>{picker}</div>
+  if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}>{picker}<p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p></div>
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
   const first = rows[0]
@@ -201,6 +201,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   return (
     <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
       {title && <div className={overline}>{title}</div>}
+      {picker}
       {!live ? <div className="mt-1 flex min-h-[44px] items-center justify-between gap-2"><p className={cn(sub, 'm-0')}>{t('liveLoading')}</p></div> : (
         <>
           {live.via && (live.via.side ? (
@@ -226,7 +227,6 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
           <div className="mt-1 flex items-center gap-2">
             <div className={cn(sub, 'flex min-w-0 items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}<span className="truncate">{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</span></div>
           </div>
-          {picker}
           <VehNote show={tramVeh.length > 0} />
         </>
       )}
@@ -304,8 +304,9 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
   return (
     <>
       <div className="mt-1" data-testid="train-next">
+        {two && <DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} />}
         {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
-          <ul className="m-0 flex list-none flex-col p-0">
+          <ul className={cn('m-0 flex list-none flex-col p-0', two && 'mt-2')}>
             {next.slice(0, 2).map((n, i) => (
               <li key={i} className="flex items-baseline gap-2 leading-snug" data-testid="train-row">
                 <span className={cn('font-bold tabular-nums', i === 0 && 'text-[1.6em] leading-none')}>{n.at}</span>
@@ -315,7 +316,6 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
             ))}
           </ul>
         )}
-        {two && <DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} />}
         <p className={cn(sub, 'm-0 mt-1 text-[0.8em]')} data-testid="train-planned">{t('trainPlanned')}{d ? ` · ${t('trainUpdated').replace('{date}', `${d}/${mo}/${y}`)}` : ''}</p>
         {mine.map(a => <p key={a.id} className={cn(sub, 'm-0 mt-1 font-semibold text-ink')} role="note" data-testid="train-alert">{a.text} <span className="font-normal">(Renfe)</span></p>)}
         <VehNote show={trainVeh.length > 0} />
@@ -356,27 +356,6 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
         <Button variant="secondary" {...linkProps(DUTY_PAGE)} data-testid="duty-city">{t('cityPage')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       </div>
     </section>
-  )
-}
-
-/** Bizi: the two real jobs as chips (take a bike, return a bike, my own bike), and one line about the live counts. Always in view, above the nearest place. */
-function BiziBar({ cat, bizi }: { cat: string; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'> }) {
-  const { t } = useT()
-  return (
-    <div className="px-4 pb-1" data-testid="bizi-bar">
-      {cat !== 'mine' && (
-        <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
-          {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
-          {bizi.state === 'loading' && <p className={cn(sub, 'm-0')} role="status"><span className="sr-only">{t('biziLoading')}</span><span aria-hidden className="inline-block h-[0.8em] w-40 rounded-sm bg-surface align-middle" /></p>}
-          {bizi.state === 'failed' && (
-            <>
-              <p className={cn(sub, 'm-0 min-w-0')} role="alert"><span className="font-bold text-warn-ink">{t('biziFail')}</span></p>
-              <Button variant="link" onClick={bizi.retry} data-testid="bizi-retry">{t('retry')}</Button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -436,6 +415,9 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
           <CloseIcon size="1.4em" weight="bold" aria-hidden />
         </BaseButton>
       </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
+      </div>
       <ol className="m-0 mt-2 list-none p-0" aria-label={t('stepsLabel')} data-testid="line-steps">
         {upcoming.map((s, i) => {
           const here = view.idx >= 0 && i === 0
@@ -451,9 +433,6 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
       </ol>
       {detour && <p className={cn(sub, 'm-0 mt-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p>}
       {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
-      <div className="mt-2 flex flex-wrap gap-2">
-        {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
-      </div>
     </m.section>
   )
 }
@@ -510,14 +489,14 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
 }
 
 /** Which services have filters to set on the Filters page. */
-export const hasFilters = (layer: LayerConfig) => layer.id === 'wifi' || !!layer.cats
+export const hasFilters = (layer: LayerConfig) => !!layer.cats
 
 /** True when a filter is not at its starting value (the Filters button then wears a dot). */
 export const filtersOn = (layer: LayerConfig, cat: string) => !!layer.cats && cat !== (layer.catDefault ?? 'all')
 
 /** The Filters page: the same drawer turns to it. The filters of the service you are on, as big chips under a title; a choice applies at once. */
-export function FiltersPage({ layer, showRange, setShowRange, cat, setCat, onBack, peekRef }: {
-  layer: LayerConfig; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void; onBack: () => void; peekRef: React.Ref<HTMLDivElement>
+export function FiltersPage({ layer, cat, setCat, onBack, peekRef }: {
+  layer: LayerConfig; cat: string; setCat: (c: string) => void; onBack: () => void; peekRef: React.Ref<HTMLDivElement>
 }) {
   const { t, lang } = useT()
   const chip = (on: boolean, label: string, onClick: () => void, testId: string) => (
@@ -532,11 +511,6 @@ export function FiltersPage({ layer, showRange, setShowRange, cat, setCat, onBac
     <div ref={peekRef} className="shrink-0">
       <PageHeader title={`${t('filtersLabel')} · ${layer.short[lang]}`} onBack={onBack} />
       <div className="flex flex-col gap-5 px-4 pb-6 pt-2" data-testid="filters">
-        {layer.id === 'wifi' && (
-          <div>
-            <div className="flex flex-wrap gap-1.5">{chip(showRange, t('showRange'), () => setShowRange(!showRange), 'switch-range')}</div>
-          </div>
-        )}
         {kinds.length > 0 && (
           <div>
             {head(t('typeLabel'))}
@@ -548,11 +522,28 @@ export function FiltersPage({ layer, showRange, setShowRange, cat, setCat, onBac
   )
 }
 
-/** The notes under the card that are not filters. */
-function Notes({ layer }: { layer: LayerConfig }) {
+/** The notes under the card that are not filters: the WiFi range switch, the Bizi live line, the duty and Bizi hints. */
+function Notes({ layer, cat, bizi, showRange, setShowRange }: { layer: LayerConfig; cat: string; bizi: Pick<ReturnType<typeof useBizi>, 'state' | 'at' | 'retry'>; showRange: boolean; setShowRange: (v: boolean) => void }) {
   const { t } = useT()
+  if (layer.id === 'wifi') return <div className="flex px-4 pb-2 pt-1"><FilterChip on={showRange} onChange={setShowRange} label={t('showRange')} testId="switch-range" /></div>
   if (layer.id !== 'pharmacy' && layer.id !== 'bizi') return null
-  return <div className="px-4 pb-2">{layer.id === 'pharmacy' ? <p className={cn(sub, 'm-0 py-1')}>{t('dutyNote')} ({madridDate()})</p> : <p className={cn(sub, 'm-0 py-1')}>{t('bizi')}</p>}</div>
+  return (
+    <div className="px-4 pb-2">
+      {cat !== 'mine' && (
+        <div className="mt-1 flex min-h-8 items-center justify-between gap-2" data-testid="bizi-status" data-state={bizi.state}>
+          {bizi.state === 'live' && <p className={cn(sub, 'm-0')} role="status">{t('biziLive').replace('{time}', clockMadrid(bizi.at))}</p>}
+          {bizi.state === 'loading' && <p className={cn(sub, 'm-0')} role="status"><span className="sr-only">{t('biziLoading')}</span><span aria-hidden className="inline-block h-[0.8em] w-40 rounded-sm bg-surface align-middle" /></p>}
+          {bizi.state === 'failed' && (
+            <>
+              <p className={cn(sub, 'm-0 min-w-0')} role="alert"><span className="font-bold text-warn-ink">{t('biziFail')}</span></p>
+              <Button variant="link" onClick={bizi.retry} data-testid="bizi-retry">{t('retry')}</Button>
+            </>
+          )}
+        </div>
+      )}
+      {layer.id === 'pharmacy' ? <p className={cn(sub, 'm-0 py-1')}>{t('dutyNote')} ({madridDate()})</p> : <p className={cn(sub, 'm-0 py-1')}>{t('bizi')}</p>}
+    </div>
+  )
 }
 
 /** Whose distances these are. Without a position: the plain truth and one big button; blocked: one calm line. With a position: nothing (the card says "from you"). */
@@ -587,7 +578,6 @@ export function HomePage(p: {
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
-        {p.layer.id === 'bizi' && <BiziBar cat={p.cat} bizi={p.bizi} />}
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
@@ -596,7 +586,7 @@ export function HomePage(p: {
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <div ref={setMore} />
-        {!p.liveState && <Notes layer={p.layer} />}
+        {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} showRange={p.showRange} setShowRange={p.setShowRange} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
       </Scroll>
     </MoreCtx.Provider>
