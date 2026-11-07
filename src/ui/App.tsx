@@ -94,6 +94,30 @@ function usePeekPx(block: HTMLElement | null, share: number): number {
   return px
 }
 
+/**
+ * Height of the full sheet on the home page: the sheet as tall as its content (top of the sheet to the end of the scrolled content, plus the bottom safe area),
+ * and never taller than the screen. A short card then has no empty space under it. Returns 1 (the whole screen) when the content needs it.
+ */
+function useFullPx(viewport: React.RefObject<HTMLElement | null>, on: boolean): string | number {
+  const [px, setPx] = useState<string | number>(1)
+  const measure = useCallback(() => {
+    const vp = viewport.current, content = vp?.firstElementChild, pop = vp?.closest('[data-slot=drawer-popup]')
+    if (!on || !vp || !content || !pop) { setPx(old => (old === 1 ? old : 1)); return }
+    const need = Math.ceil(vp.getBoundingClientRect().top - pop.getBoundingClientRect().top + content.getBoundingClientRect().height + safeBottom()) + 8
+    const next = need >= window.innerHeight - 24 ? 1 : need + 'px'
+    setPx(old => (old === next ? old : next))
+  }, [viewport, on])
+  const watched = useRef<Element | null>(null)
+  const ro = useMemo(() => new ResizeObserver(() => measure()), [measure])
+  useEffect(() => { // after every render: the page may mount after the first one, so look again for its content
+    measure()
+    const content = on ? viewport.current?.firstElementChild ?? null : null
+    if (content !== watched.current) { ro.disconnect(); if (content) ro.observe(content); watched.current = content }
+  })
+  useEffect(() => { window.addEventListener('resize', measure); return () => { window.removeEventListener('resize', measure); ro.disconnect(); watched.current = null } }, [measure, ro])
+  return px
+}
+
 /** The Bizi stations (not the bike racks): the places that live counts are joined to. */
 const BIZI_STATIONS = LAYERS.bizi.items.filter(i => i.cat === 'station')
 /** Chip selected when a tab opens: Bizi starts on "Take a bike", the others on "All". */
@@ -167,7 +191,8 @@ export function App() {
   const mobileLow = !desktop && level !== FULL
   const closedPx = useClosedPx(desktop || lang)
   const peekPx = usePeekPx(peekEl, page === 'home' ? MAP_SHARE : PAGE_MAP_SHARE)
-  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', 1], [closedPx, peekPx])
+  const fullPx = useFullPx(viewport, page === 'home' && !desktop)
+  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', fullPx], [closedPx, peekPx, fullPx])
   const mobileClosed = !desktop && level === CLOSED
   // a closed sheet shows only the chip row, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
