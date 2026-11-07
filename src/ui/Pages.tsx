@@ -1,7 +1,7 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer } from '@phosphor-icons/react'
+import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
@@ -169,13 +169,16 @@ function VehNote({ show }: { show: boolean }) {
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
  */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line }: {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line, onLive }: {
   kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
   title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon; line?: string
-  /** The Save button: placed at the end of the "Updated" line, so it needs no row of its own. */
+  /** Told whether the city answered (so the card can drop a times link that would only repeat this box). */
+  onLive?: (ok: boolean) => void
 }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
+  const answered = !!live
+  useEffect(() => { onLive?.(answered) }, [answered, onLive])
   const all = live ? (pick ? pick(live.arrivals) : live.arrivals) : []
   // tram: split the rows by direction (from the destination's place on the line)
   const tram = kind === 'tram' && stopName ? all.map(r => ({ r, dir: tramDir(r.dest, stopName, DATA.tram.rows) })) : null
@@ -244,11 +247,12 @@ function BusActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: L
     await ensureBakedBad()
     return loadBus(stop ?? '', s, undefined, undefined, stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : [])
   }, [stop, item.lines, item.lat, item.lon, origin])
+  const [ok, setOk] = useState(false) // the times link is only for stops the city does not answer for
   return (
     <>
-      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} />}
+      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} onLive={setOk} />}
       {!live && !stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
-      <Actions item={item} onWalk={onWalk} fav={fav} times={stop ? { url: busUrl(stop), label: t('timesShort'), onClick: () => track('times', 'bus'), testId: 'next-buses' } : undefined} />
+      <Actions item={item} onWalk={onWalk} fav={fav} times={stop && !ok ? { url: busUrl(stop), label: t('timesShort'), onClick: () => track('times', 'bus'), testId: 'next-buses' } : undefined} />
     </>
   )
 }
@@ -259,10 +263,11 @@ function TramActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: 
   const ids = item.tramIds ?? []
   const key = ids.join(',')
   const load = useCallback((s: AbortSignal) => loadTram(key ? key.split(',') : [], s), [key])
+  const [ok, setOk] = useState(false)
   return (
     <>
-      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} />}
-      <Actions item={item} onWalk={onWalk} fav={fav} times={{ url: TRAM_URL, label: t('timesShort'), onClick: () => track('times', 'tram'), testId: 'tram-times' }} />
+      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} onLive={setOk} />}
+      <Actions item={item} onWalk={onWalk} fav={fav} times={ok ? undefined : { url: TRAM_URL, label: t('timesShort'), onClick: () => track('times', 'tram'), testId: 'tram-times' }} />
     </>
   )
 }
@@ -598,6 +603,7 @@ export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClos
         <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
  {!installEnv().standalone && <PageRow testId="row-install" icon={<DownloadSimple size="1.4em" aria-hidden />} title={t('installRow')} onClick={() => go('install')} />}
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
+        <PageRow testId="row-code" icon={<GithubLogo size="1.4em" aria-hidden />} title={t('codeRow')} description={t('codeHint')} onClick={() => window.open('https://github.com/IFAKA/zaragoza-free-map', '_blank', 'noopener')} />
         <PageRow testId="row-support" icon={<Heart size="1.4em" aria-hidden />} title={t('support')} description={t('supportHint')} onClick={() => window.open('https://ko-fi.com/zfaka', '_blank', 'noopener')} />
       </Scroll>
     </>
