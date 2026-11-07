@@ -32,6 +32,7 @@ import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
 import { serviceOrder } from '../layers/goals'
 import { bumpTap, parseTaps, rankByTaps } from '../lib/usage'
 import { SettingsFab } from './SettingsFab'
+import { SupportFab } from './SupportFab'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
@@ -422,6 +423,7 @@ export function App() {
           )}
         </div>
         <SettingsFab label={t.settings} onClick={() => view.open('settings')} inert={view.isOpen} />
+        <SupportFab inert={view.isOpen} />
         <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>
       </LazyMotion></MotionConfig>
