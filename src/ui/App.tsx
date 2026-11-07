@@ -38,10 +38,10 @@ import { useLocation } from './useLocation'
 type Page = 'home' | 'place' | 'services' | 'favs'
 
 // Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
-const CLOSED = 0, PEEK = 1, FULL = 2
+const CLOSED = 0, PEEK = 1, FULL = 1 // two states: closed (the header only) and open (the height of the content, the whole screen when it needs more)
 const DEFAULT_CLOSED_PX = 94, DEFAULT_PEEK_PX = 360
-const MAP_SHARE = 0.55 // the home sheet at peek never covers more than 45% of the screen: this much stays for the map
-const PAGE_MAP_SHARE = 0.28 // other pages (services, details, favourites) size to their content, up to 72%
+const OPEN_SHARE = 0.04 // the open sheet may use all but this much of the screen
+const MAP_SHARE_MIN = 0.72 // the map is framed as if the sheet were at most this tall (a taller sheet covers the rest)
 /** The phone's bottom safe area (home indicator) in px. */
 function safeBottom(): number {
   const probe = document.createElement('div')
@@ -103,7 +103,7 @@ function useFullPx(viewport: React.RefObject<HTMLElement | null>, on: boolean): 
   const measure = useCallback(() => {
     const vp = viewport.current, content = vp?.firstElementChild, pop = vp?.closest('[data-slot=drawer-popup]')
     if (!on || !vp || !content || !pop) { setPx(old => (old === 1 ? old : 1)); return }
-    const need = Math.ceil(vp.getBoundingClientRect().top - pop.getBoundingClientRect().top + content.getBoundingClientRect().height + safeBottom()) + 8
+    const need = Math.ceil(vp.getBoundingClientRect().top - pop.getBoundingClientRect().top + content.getBoundingClientRect().height + safeBottom()) + 16
     const next = need >= window.innerHeight - 24 ? 1 : need + 'px'
     setPx(old => (old === next ? old : next))
   }, [viewport, on])
@@ -189,11 +189,14 @@ export function App() {
   const view = useSettingsView()
   // the order of the service chips: decided once, when the app opens, from this person's own tap counts (kept on this device). It never changes while the app is open.
   const [chipOrder] = useState<LayerId[]>(() => rankByTaps(serviceOrder(), parseTaps(lsGet('taps'))))
-  const mobileLow = !desktop && level !== FULL
+  const mobileLow = !desktop && level === CLOSED
   const closedPx = useClosedPx(desktop || lang)
-  const peekPx = usePeekPx(peekEl, livePage === 'home' ? MAP_SHARE : PAGE_MAP_SHARE)
+  const pagePx = usePeekPx(peekEl, OPEN_SHARE)
   const fullPx = useFullPx(viewport, livePage === 'home' && !desktop)
-  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, peekPx + 'px', fullPx], [closedPx, peekPx, fullPx])
+  // open: the home sheet fits all its content; the other pages fit their block. Either becomes the whole screen when it needs more than the screen.
+  const openSnap: string | number = livePage === 'home' ? fullPx : pagePx >= window.innerHeight * (1 - OPEN_SHARE) ? 1 : pagePx + 'px'
+  const peekPx = typeof openSnap === 'number' ? Math.round(window.innerHeight * MAP_SHARE_MIN) : Math.min(parseInt(openSnap), Math.round(window.innerHeight * MAP_SHARE_MIN))
+  const snapPoints = useMemo<(string | number)[]>(() => [closedPx, openSnap], [closedPx, openSnap])
   const mobileClosed = !desktop && level === CLOSED
   // a closed sheet shows only the chip row, so it always closes onto the first page
   useEffect(() => { if (mobileClosed) reset() }, [mobileClosed, reset])
@@ -358,7 +361,7 @@ export function App() {
   const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) pendingLevel.current = FULL }
   // Escape and the back gesture: up one page, then lower the sheet one step
   const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') pendingLevel.current = levelBefore.current } else setLevel(l => Math.max(CLOSED, l - 1)) }
-  const cycle = () => setLevel(l => (l === CLOSED ? PEEK : l === PEEK ? FULL : PEEK))
+  const cycle = () => setLevel(l => (l === CLOSED ? PEEK : CLOSED))
   const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
   const pageEl = (() => {

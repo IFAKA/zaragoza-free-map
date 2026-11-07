@@ -1,7 +1,7 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, Clock, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
+import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
@@ -23,7 +23,7 @@ import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from '../lib/geo'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
-import { BUZ_URL, RENFE_URL, TRAM_URL, biziLine, busUrl, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
+import { BUZ_URL, biziLine, clockMadrid, fmtHours, reportUrl, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
 import { busAlternatives, ensureBakedBad, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
@@ -52,13 +52,12 @@ function More({ children }: { children: ReactNode }) {
   return el ? createPortal(children, el) : null
 }
 /** Every button of a place card in ONE row that scrolls sideways: The way there first, then Save, then the rest the place has (times, call). */
-function Actions({ item, onWalk, fav, times, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; times?: { url: string; label: string; onClick: () => void; testId: string }; extra?: ReactNode }) {
+function Actions({ item, onWalk, fav, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; extra?: ReactNode }) {
   const { t } = useT()
   return (
     <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&>*]:shrink-0 [&>*]:whitespace-nowrap [&::-webkit-scrollbar]:hidden" data-testid="actions">
       <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       {fav}
-      {times && <Button variant="secondary" {...linkProps(times.url)} onClick={times.onClick} data-testid={times.testId}><Clock size="1.2em" aria-hidden />{times.label}</Button>}
       {extra}
     </div>
   )
@@ -169,16 +168,12 @@ function VehNote({ show }: { show: boolean }) {
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
  */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line, onLive }: {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line }: {
   kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
   title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon; line?: string
-  /** Told whether the city answered (so the card can drop a times link that would only repeat this box). */
-  onLive?: (ok: boolean) => void
 }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
-  const answered = !!live
-  useEffect(() => { onLive?.(answered) }, [answered, onLive])
   const all = live ? (pick ? pick(live.arrivals) : live.arrivals) : []
   // tram: split the rows by direction (from the destination's place on the line)
   const tram = kind === 'tram' && stopName ? all.map(r => ({ r, dir: tramDir(r.dest, stopName, DATA.tram.rows) })) : null
@@ -192,7 +187,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const tramLn = tramLine()
   const tramShown: Vehicle[] = tramVeh.length || !(kind === 'tram' && hasDirs && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
-  if (state === 'failed' && !live) return null
+  if (state === 'failed' && !live) return <p className={cn(sub, 'm-0 mt-1')} data-testid="live-times" data-state={state}>{t('noLive')}</p>
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const [north, south] = DATA.tram.ends
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
@@ -237,7 +232,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   )
 }
 
-/** Bus stop: live next buses (city stops only). The link to the bus company page and Walk go to the full-height area. Rural stops have no live data and keep the link-out only. */
+/** Bus stop: live next buses (city stops only).  */
 function BusActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode }) {
   const { t } = useT()
   const stop = item.stop
@@ -247,32 +242,29 @@ function BusActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: L
     await ensureBakedBad()
     return loadBus(stop ?? '', s, undefined, undefined, stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : [])
   }, [stop, item.lines, item.lat, item.lon, origin])
-  const [ok, setOk] = useState(false) // the times link is only for stops the city does not answer for
   return (
     <>
-      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} onLive={setOk} />}
+      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} />}
       {!live && !stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
-      <Actions item={item} onWalk={onWalk} fav={fav} times={stop && !ok ? { url: busUrl(stop), label: t('timesShort'), onClick: () => track('times', 'bus'), testId: 'next-buses' } : undefined} />
+      <Actions item={item} onWalk={onWalk} fav={fav} />
     </>
   )
 }
 
-/** Tram stop: live next trams (both platforms). The link to the tram company's times page and Walk go to the full-height area. */
+/** Tram stop: live next trams (both platforms).  */
 function TramActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode }) {
-  const { t } = useT()
   const ids = item.tramIds ?? []
   const key = ids.join(',')
   const load = useCallback((s: AbortSignal) => loadTram(key ? key.split(',') : [], s), [key])
-  const [ok, setOk] = useState(false)
   return (
     <>
-      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} onLive={setOk} />}
-      <Actions item={item} onWalk={onWalk} fav={fav} times={ok ? undefined : { url: TRAM_URL, label: t('timesShort'), onClick: () => track('times', 'tram'), testId: 'tram-times' }} />
+      {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} />}
+      <Actions item={item} onWalk={onWalk} fav={fav} />
     </>
   )
 }
 
-/** Cercanías station: the next 3 trains from the baked timetable, plainly labelled as planned (not real time), with the date of the data. Renfe link-out for delays. */
+/** Cercanías station: the next 3 trains from the baked timetable, plainly labelled as planned (not real time), with the date of the data. */
 function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; origin: LatLon; times: CercaniasTimes | null; onWalk: () => void; fav: ReactNode }) {
   const { t } = useT()
   const [tick, setTick] = useState(0)
@@ -326,7 +318,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
         {mine.map(a => <p key={a.id} className={cn(sub, 'm-0 mt-1 font-semibold text-ink')} role="note" data-testid="train-alert">{a.text} <span className="font-normal">(Renfe)</span></p>)}
         <VehNote show={trainVeh.length > 0} />
       </div>
-      <Actions item={item} onWalk={onWalk} fav={fav} times={{ url: RENFE_URL, label: t('timesShort'), onClick: () => track('times', 'cercanias'), testId: 'train-times' }} />
+      <Actions item={item} onWalk={onWalk} fav={fav} />
     </>
   )
 }
@@ -460,7 +452,6 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
       {detour && <p className={cn(sub, 'm-0 mt-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p>}
       {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
       <div className="mt-2 flex flex-wrap gap-2">
-        {view.stop && <Button variant={post ? 'secondary' : 'primary'} {...linkProps(busUrl(view.stop))} onClick={() => track('times', 'bus')} data-testid="next-buses">{post ? t('busTimes') : t('nextBuses')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>}
         {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
       </div>
     </m.section>
