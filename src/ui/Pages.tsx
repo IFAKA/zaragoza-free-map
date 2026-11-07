@@ -29,7 +29,7 @@ import { busAlternatives, ensureBakedBad, loadBus, loadTram, routeAlternatives, 
 import { chooseDir, outsideCentre, railGroups, shownDir, towardCentre, type DirOpt } from '../lib/direction'
 import { lsGet, lsSet } from '../lib/cache'
 import { decodePolyline } from '../lib/transit'
-import { DirPicker } from './DirPicker'
+import { DirRows } from './DirRows'
 import { tramDir } from '../lib/tramdir'
 import { useLive } from './useLive'
 import { usePublishVehicles } from './vehicles'
@@ -46,12 +46,6 @@ const sub = 'text-[0.93em] leading-snug text-ink-soft'
 // ---------- shared small pieces ----------
 /** The top of the scroll area (full height): what a card moves out of the peek (line chips, the position note, the links). HomePage sets it. */
 export const MoreCtx = createContext<HTMLElement | null>(null)
-/** The top of a place card, above the place name: where the line chips and the direction buttons go. NearestBlock sets it. */
-const AboveCtx = createContext<HTMLElement | null>(null)
-function Above({ children }: { children: ReactNode }) {
-  const el = useContext(AboveCtx)
-  return el ? createPortal(children, el) : null
-}
 function More({ children }: { children: ReactNode }) {
   const el = useContext(MoreCtx)
   return el ? createPortal(children, el) : null
@@ -196,13 +190,15 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const tramShown: Vehicle[] = tramVeh.length || !(dirsOn && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
   const [north, south] = DATA.tram.ends
-  const picker = dirsOn && <Above><DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
-    { id: 'n', label: north },
-    { id: 's', label: south },
-  ]} /></Above>
-  if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}>{picker}<p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p></div>
-  const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
+  const dirTimes = (id: 'n' | 's') => (tram ?? []).filter(x => x.dir === id).flatMap(x => x.r.mins).sort((x, y) => x - y).slice(0, 2)
+  const tramLineName = tram?.[0]?.r.line ?? 'L1'
+  const picker = dirsOn && <DirRows testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={(['n', 's'] as const).map(id => {
+    const ms = dirTimes(id)
+    return { id, label: id === 'n' ? north : south, badge: <span className="min-w-[2.6em] rounded-[0.3em] bg-[var(--color-tram)] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand">{tramLineName}</span>, times: ms.length ? ms.map(min).join(' · ') : '—' }
+  })} />
+  if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}>{picker}<p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p></div>
+  const rows = (hasDirs ? [] : all).slice(0, 3)
   const first = rows[0]
   const rowCls = 'flex items-center gap-2'
   const rowBody = (r: Arrival, i: number) => (
@@ -218,7 +214,6 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   return (
     <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
       {title && <div className={overline}>{title}</div>}
-      {picker}
       {!live ? <div className="mt-1 flex min-h-[44px] items-center justify-between gap-2"><p className={cn(sub, 'm-0')}>{t('liveLoading')}</p></div> : (
         <>
           {live.via && (live.via.side ? (
@@ -228,7 +223,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
             </div>
           ) : <p className="m-0 mt-1 truncate font-semibold" data-testid="live-via" title={viaText} aria-label={viaText}>{viaText}</p>)}
           {live.notice && <p className="m-0 mt-1 rounded-btn bg-surface px-2 py-1 text-[0.87em] font-semibold leading-snug" data-testid="live-notice">{live.notice}</p>}
-          {!first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
+          {dirsOn ? picker : !first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
             <ul className="m-0 mt-1 flex list-none flex-col divide-y divide-line p-0">
               {rows.map((r, i) => (
                 <li key={r.line + r.dest} className="py-1.5 first:pt-0 last:pb-0" data-testid="live-row">
@@ -317,13 +312,18 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
   return (
     <>
       <div className="mt-1" data-testid="train-next">
-        {two && <Above><DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: DATA.cercanias.dests[x.g.far], empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} /></Above>}
-        {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
-          <ul className={cn('m-0 flex list-none flex-col p-0', two && 'mt-2')}>
+        {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : two ? (
+          <DirRows testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({
+            id: x.g.id, label: DATA.cercanias.dests[x.g.far], empty: empty.has(x.g.id),
+            sub: empty.has(x.g.id) ? t('dirNoMore') : x.deps[0] && !x.deps[0].tomorrow ? t('trainIn').replace('{n}', String(x.deps[0].inMin)) : undefined,
+            times: empty.has(x.g.id) ? '' : x.deps.slice(0, 2).map(n => n.at).join(' · ') || '—',
+          }))} />
+        ) : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
+          <ul className="m-0 flex list-none flex-col p-0">
             {next.slice(0, 2).map((n, i) => (
               <li key={i} className="flex items-baseline gap-2 leading-snug" data-testid="train-row">
                 <span className={cn('font-bold tabular-nums', i === 0 && 'text-[1.6em] leading-none')}>{n.at}</span>
-                <span className="min-w-0 flex-1 truncate">{two ? '' : t('trainTo').replace('{to}', DATA.cercanias.dests[n.dest] ?? '')}</span>
+                <span className="min-w-0 flex-1 truncate">{t('trainTo').replace('{to}', DATA.cercanias.dests[n.dest] ?? '')}</span>
                 <span className="text-ink-soft">{n.tomorrow ? t('trainTomorrow') : t('trainIn').replace('{n}', String(n.inMin))}</span>
               </li>
             ))}
@@ -435,7 +435,6 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   onDetails: () => void; onWalk: () => void
 }) {
   const { t, type } = useT()
-  const [above, setAbove] = useState<HTMLElement | null>(null)
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
@@ -444,9 +443,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
     {hasDetails(layer, item) && <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>}
   </>
   return (
-    <AboveCtx.Provider value={above}>
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
-      <div ref={setAbove} className="[&:not(:empty)]:mb-1" />
       <div className="flex items-center">
       <div className="flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
         <span className="min-w-0 flex-1">
@@ -462,7 +459,6 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} onLine={onLine} lineOk={line => !!routes?.lines[line]} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
     </m.section>
-    </AboveCtx.Provider>
   )
 }
 
