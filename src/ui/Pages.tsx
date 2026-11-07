@@ -53,11 +53,10 @@ function More({ children }: { children: ReactNode }) {
   return el ? createPortal(children, el) : null
 }
 /** Every button of a place card in ONE row that scrolls sideways: The way there first, then Save, then the rest the place has (times, call). */
-function Actions({ item, onWalk, fav, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; extra?: ReactNode }) {
-  const { t } = useT()
+function Actions({ fav, extra }: { fav: ReactNode; extra?: ReactNode }) {
+  if (!fav && !extra) return null
   return (
     <div className="mt-2 flex gap-2 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0 [&>*]:whitespace-nowrap" data-testid="actions">
-      <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
       {fav}
       {extra}
     </div>
@@ -255,7 +254,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
 }
 
 /** Bus stop: live next buses (city stops only).  */
-function BusActions({ item, origin, onWalk, fav, onLine, lineOk }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode; onLine?: (line: string) => void; lineOk?: (line: string) => boolean }) {
+function BusActions({ item, origin, fav, onLine, lineOk }: { item: RankedItem; origin: LatLon; fav: ReactNode; onLine?: (line: string) => void; lineOk?: (line: string) => boolean }) {
   const { t } = useT()
   const stop = item.stop
   const live = !!stop && /^\d+$/.test(stop)
@@ -268,26 +267,26 @@ function BusActions({ item, origin, onWalk, fav, onLine, lineOk }: { item: Ranke
     <>
       {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} onLine={onLine} lineOk={lineOk} />}
       {!live && !stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
-      <Actions item={item} onWalk={onWalk} fav={fav} />
+      <Actions fav={fav} />
     </>
   )
 }
 
 /** Tram stop: live next trams (both platforms).  */
-function TramActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode }) {
+function TramActions({ item, origin, fav }: { item: RankedItem; origin: LatLon; fav: ReactNode }) {
   const ids = item.tramIds ?? []
   const key = ids.join(',')
   const load = useCallback((s: AbortSignal) => loadTram(key ? key.split(',') : [], s), [key])
   return (
     <>
       {key && <LiveTimes key={key} kind="tram" stopKey={key} load={load} stopName={item.name} at={[item.lat, item.lon]} origin={origin} />}
-      <Actions item={item} onWalk={onWalk} fav={fav} />
+      <Actions fav={fav} />
     </>
   )
 }
 
 /** Cercanías station: the next 3 trains from the baked timetable, plainly labelled as planned (not real time), with the date of the data. */
-function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; origin: LatLon; times: CercaniasTimes | null; onWalk: () => void; fav: ReactNode }) {
+function TrainActions({ item, origin, times, fav }: { item: RankedItem; origin: LatLon; times: CercaniasTimes | null; fav: ReactNode }) {
   const { t } = useT()
   const [tick, setTick] = useState(0)
   useEffect(() => { const i = setInterval(() => setTick(n => n + 1), 30_000); return () => clearInterval(i) }, [])
@@ -345,7 +344,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
         {mine.map(a => <p key={a.id} className={cn(sub, 'm-0 mt-1 font-semibold text-ink')} role="note" data-testid="train-alert">{a.text} <span className="font-normal">(Renfe)</span></p>)}
         <VehNote show={trainVeh.length > 0} />
       </div>
-      <Actions item={item} onWalk={onWalk} fav={fav} />
+      <Actions fav={fav} />
     </>
   )
 }
@@ -360,11 +359,11 @@ function PharmacyInfo({ item }: { item: RankedItem }) {
     </div>
   )
 }
-function PharmacyActions({ item, onWalk, fav }: { item: RankedItem; onWalk: () => void; fav: ReactNode }) {
+function PharmacyActions({ item, fav }: { item: RankedItem; fav: ReactNode }) {
   const { t } = useT()
   const tel = item.phone?.replace(/[^\d+]/g, '')
   return (
-    <Actions item={item} onWalk={onWalk} fav={fav} extra={tel && <Button variant="secondary" render={<a href={`tel:${tel}`} />} nativeButton={false} data-testid="call">{t('call')} {item.phone}</Button>} />
+    <Actions fav={fav} extra={tel && <Button variant="secondary" render={<a href={`tel:${tel}`} />} nativeButton={false} data-testid="call">{t('call')} {item.phone}</Button>} />
   )
 }
 
@@ -451,27 +450,26 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
-  const favBtn = <>
-    <FavButton layer={layer} item={item} />
-    {hasDetails(layer, item) && <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>}
-  </>
+  const favBtn = hasDetails(layer, item) ? <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button> : null
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center">
-      <div className="flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
+      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 text-left text-ink">
+        <FavButton layer={layer} item={item} />
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
           <span className="block font-bold" data-closed-edge>{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
           <span className="block"><Status item={item} layer={layer} /></span>
         </span>
+        <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
       </div>
       </div>
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} onLine={onLine} lineOk={line => !!routes?.lines[line]} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} fav={favBtn} onLine={onLine} lineOk={line => !!routes?.lines[line]} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} fav={favBtn} /> : <Actions fav={favBtn} />}
     </m.section>
   )
 }
