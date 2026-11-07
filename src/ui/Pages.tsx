@@ -1,7 +1,7 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
+import { ChatCircleText, ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { DATA, dataRefreshed } from '../data'
@@ -60,7 +60,7 @@ function More({ children }: { children: ReactNode }) {
 function Actions({ item, onWalk, fav, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; extra?: ReactNode }) {
   const { t } = useT()
   return (
-    <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&>*]:shrink-0 [&>*]:whitespace-nowrap [&::-webkit-scrollbar]:hidden" data-testid="actions">
+    <div className="mt-2 flex flex-wrap gap-2 pb-3 [&>*]:whitespace-nowrap" data-testid="actions">
       <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
       {fav}
       {extra}
@@ -426,6 +426,9 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
 
 // ---------- the block with the nearest (or selected) place ----------
 /** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
+/** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
+const hasDetails = (layer: LayerConfig, it: RankedItem) => !!(it.addr || it.phone || it.ssid || it.hours || it.sched || it.note || it.cust || it.shelter || it.type === 'lib' || layer.id === 'wifi')
+
 export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, routes, times, onLine, onDetails, onWalk }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; origin: LatLon; cat: string
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void
@@ -436,20 +439,22 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
-  const favBtn = canFav(layer, item) ? <FavButton layer={layer} item={item} /> : null
+  const favBtn = <>
+    {canFav(layer, item) && <FavButton layer={layer} item={item} />}
+    {hasDetails(layer, item) && <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>}
+  </>
   return (
     <AboveCtx.Provider value={above}>
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div ref={setAbove} className="[&:not(:empty)]:mb-1" />
       <div className="flex items-center">
-      <BaseButton onClick={onDetails} aria-label={`${t('details')}: ${name}`} data-testid="details" render={<m.button {...tap} />} className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 border-0 bg-transparent p-0 text-left text-ink">
+      <div className="flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
         <span className="min-w-0 flex-1">
           <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
           <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
           <span className="block"><Status item={item} layer={layer} /></span>
         </span>
-        <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
-      </BaseButton>
+      </div>
       </div>
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
@@ -604,6 +609,7 @@ export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClos
  {!installEnv().standalone && <PageRow testId="row-install" icon={<DownloadSimple size="1.4em" aria-hidden />} title={t('installRow')} onClick={() => go('install')} />}
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
         <PageRow testId="row-code" icon={<GithubLogo size="1.4em" aria-hidden />} title={t('codeRow')} description={t('codeHint')} onClick={() => window.open('https://github.com/IFAKA/zaragoza-free-map', '_blank', 'noopener')} />
+        <PageRow testId="row-feedback" icon={<ChatCircleText size="1.4em" aria-hidden />} title={t('feedbackRow')} description={t('feedbackHint')} onClick={() => window.open('https://github.com/IFAKA/zaragoza-free-map/issues/new', '_blank', 'noopener')} />
         <PageRow testId="row-support" icon={<Heart size="1.4em" aria-hidden />} title={t('support')} description={t('supportHint')} onClick={() => window.open('https://ko-fi.com/zfaka', '_blank', 'noopener')} />
       </Scroll>
     </>
@@ -682,7 +688,7 @@ export function ServicesPage({ layer, onPick, onBack, peekRef }: { layer: LayerI
   )
 }
 
-export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked, peekRef }: { layer: LayerConfig; item: RankedItem | null; hasPos: boolean; onBack: () => void; onWalk: () => void; locked: boolean; peekRef: (el: HTMLElement | null) => void }) {
+export function PlacePage({ layer, item, hasPos, onBack, locked, peekRef }: { layer: LayerConfig; item: RankedItem | null; hasPos: boolean; onBack: () => void; locked: boolean; peekRef: (el: HTMLElement | null) => void }) {
   const { t, type, lang } = useT()
   if (!item) return <PageHeader title={t('details')} onBack={onBack} />
   const tel = item.phone?.replace(/[^\d+]/g, '')
@@ -698,10 +704,6 @@ export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked, peekRef
           <div className="font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
           <div><Status item={item} layer={layer} /></div>
           {item.shelter && <ShelterNote />}
-          <div className="flex flex-wrap gap-2">
-            <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk}>{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
-            <Button variant="secondary" {...linkProps(reportUrl(item))} onClick={() => track('report')}>{t('report')}</Button>
-          </div>
           <Separator />
           {field('address', item.addr)}
           {field('hours', hours && <><span className="whitespace-pre-line">{hours.replace(/; /g, '\n')}</span><div className={sub}>{t('holidays')}</div></>)}
@@ -709,6 +711,7 @@ export function PlacePage({ layer, item, hasPos, onBack, onWalk, locked, peekRef
           {field('ssid', item.ssid)}
           {layer.id === 'wifi' && <div className={sub}>{t('rangeEst')} {item.building ? t('rangeCity') : t('rangeOsm')} ({rangeMetres(item)} m).</div>}
           <Occupancy item={item} />
+          <Button variant="secondary" {...linkProps(reportUrl(item))} onClick={() => track('report')} data-testid="report" className="self-start">{t('report')}</Button>
           <div className="flex items-start gap-1"><div className={cn(sub, 'flex-1 pt-3')}>{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
         </div>
       </Scroll>

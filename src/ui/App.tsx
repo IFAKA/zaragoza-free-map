@@ -368,7 +368,7 @@ export function App() {
       case 'services': return <ServicesPage layer={layer.id} onPick={pickLayer} onBack={back} peekRef={setPeekEl} />
       case 'filters': return <FiltersPage layer={layer} cat={cat} setCat={c => { setCat(c); setSelected(null) }} onBack={back} peekRef={setPeekEl} />
       case 'favs': return <FavsPage onOpen={openFav} onBack={back} peekRef={setPeekEl} locked={mobileLow} pos={pos} />
-      case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} peekRef={setPeekEl} />
+      case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} locked={mobileLow} peekRef={setPeekEl} />
       default: return (
         <HomePage
           off={offSel} layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} peekRef={setPeekEl}
