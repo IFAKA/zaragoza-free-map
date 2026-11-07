@@ -22,7 +22,7 @@ export function DirRows({ chips, value, onPick, label, testId }: { chips: DirChi
           <BaseButton
             key={c.id} onClick={() => !c.empty && onPick(c.id)} aria-pressed={on} aria-disabled={c.empty || undefined} data-testid="dir-chip" data-dir={c.id} data-empty={c.empty ? '' : undefined}
             render={<m.button {...(c.empty ? {} : tap)} />}
-            className={cn('flex min-h-11 w-full select-none items-center gap-2 bg-transparent px-0 py-1.5 text-left leading-tight', c.empty ? 'text-ink-soft' : 'text-ink')}
+            className={cn('-mx-2 flex min-h-11 w-[calc(100%+1rem)] select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left leading-tight', on ? 'bg-brand-tint' : 'bg-transparent', c.empty ? 'text-ink-soft' : 'text-ink')}
           >
             <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full border-2', c.empty ? 'border-line-strong' : 'border-brand', on ? 'bg-brand' : 'bg-paper')} />
             {c.badge}
