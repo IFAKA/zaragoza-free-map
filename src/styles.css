@@ -171,7 +171,5 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 @keyframes skel{from{background-position:100% 0}to{background-position:-100% 0}}
 @media (prefers-reduced-motion:reduce){.skel{animation:none;background:var(--color-surface)}}
 
-/* the open place name that is wider than the card: wait, slide to its end, wait, slide back */
-@keyframes name-slide{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--slide))}}
-.name-slide{animation:name-slide 6s ease-in-out infinite alternate}
-@media (prefers-reduced-motion:reduce){.name-slide{animation:none}.name-box{overflow-x:auto;scrollbar-width:none}}
+/* the open place name: without motion preference it can be scrolled by hand */
+@media (prefers-reduced-motion:reduce){.name-box{overflow-x:auto;scrollbar-width:none}}

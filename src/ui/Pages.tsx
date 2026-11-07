@@ -19,7 +19,7 @@ import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { FOOTER_PX, ServiceGroups, ServiceHeader } from './ServiceBar'
 import { Tick } from './Tick'
-import { cardSwap, tap } from './motion'
+import { cardSwap, settleName, slideName, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from '../lib/geo'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
@@ -456,11 +456,22 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
     measure()
     return () => ro.disconnect()
   }, [open, name])
+  // The slide is a Web Animation, so it can be stopped at any moment: on a second tap or a new place the text eases back from where it is (no jump).
+  useEffect(() => {
+    const x = txt.current
+    if (!open || over <= 0 || !x || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const slide = slideName(x, over)
+    return () => {
+      const at = new DOMMatrix(getComputedStyle(x).transform).m41
+      slide.cancel()
+      if (at) settleName(x, at)
+    }
+  }, [open, over])
   return (
     <m.button {...tap} type="button" onClick={onToggle} aria-expanded={open} data-testid="nearest-name-btn"
       className="m-0 block w-full min-w-0 select-none border-0 bg-transparent p-0 text-left">
       <span ref={box} className={cn(h2, 'block overflow-hidden whitespace-nowrap', open && 'name-box')} data-testid="nearest-name">
-        <span ref={txt} className={cn(open ? 'inline-block' : 'block truncate', open && over > 0 && 'name-slide')} style={open && over > 0 ? { '--slide': `-${over}px`, animationDuration: `${3 + over / 25}s` } as React.CSSProperties : undefined}>{name}</span>
+        <span ref={txt} className={cn(open ? 'inline-block' : 'block truncate')}>{name}</span>
       </span>
     </m.button>
   )

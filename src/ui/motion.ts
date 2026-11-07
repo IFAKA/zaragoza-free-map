@@ -66,3 +66,10 @@ export const slotSwap = {
 } as const
 /** Pause between two swaps of the teaser, in ms (a pause, not the length of an animation). */
 export const TEASER_EVERY = 1500
+
+/** A name wider than its box slides back and forth to its end (wait, slide, wait, slide back; 25 px per second, at least 3 s). A Web Animation, so it can stop at any moment. */
+export const slideName = (el: HTMLElement, over: number) =>
+  el.animate([{ transform: 'translateX(0)', offset: 0.15 }, { transform: `translateX(-${over}px)`, offset: 0.85 }], { duration: (3 + over / 25) * 1000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' })
+/** After the slide is stopped: the name eases back from where it is (`at` px) to the start, so it does not jump. */
+export const settleName = (el: HTMLElement, at: number) =>
+  el.animate([{ transform: `translateX(${at}px)` }, { transform: 'translateX(0)' }], { duration: MS.small, easing: `cubic-bezier(${EASE.join(', ')})` })
