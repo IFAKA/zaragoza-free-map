@@ -1,11 +1,11 @@
 import { Star } from '@phosphor-icons/react'
 import { m } from 'motion/react'
-import { useMemo, useState } from 'react'
-import { type FavKind, favTitle, filterKind, isStopLayer, nearestFavs, removeFav, restoreFav, useFavLabels, useFavs } from '../lib/favs'
+import { useMemo, useRef, useState } from 'react'
+import { type FavKind, favTitle, filterKind, isStopLayer, nearestFavs, removeFav, restoreFav, setLabel, LABEL_MAX, useFavLabels, useFavs } from '../lib/favs'
 import type { LatLon } from '../lib/types'
 import { useT } from './lang'
 import { tap } from './motion'
-import { FavRow, resolveFavs, useSteadyPos } from './Favs'
+import { type Fav, FavRow, resolveFavs, useSteadyPos } from './Favs'
 import { PageHeader } from './Pages'
 import { toasts } from './ToastHost'
 import { FilterMenu, Scroll } from './ui/kit'
@@ -22,6 +22,8 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<FavKind>('all')
   const [edit, setEdit] = useState(false)
+  const [renameKey, setRenameKey] = useState<string | null>(null)
+  const renaming = renameKey ? all.find(f => f.key === renameKey) : undefined
   const both = all.some(f => isStopLayer(f.layer.id)) && all.some(f => !isStopLayer(f.layer.id))
   const byKind = filterKind(all, both ? kind : 'all')
   const needle = fold(q.trim())
@@ -35,6 +37,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
     <m.button {...tap} type="button" onClick={() => setEdit(e => !e)} aria-pressed={edit} data-testid="fav-edit"
       className="ml-auto mr-1 inline-flex min-h-[44px] select-none items-center border-0 bg-transparent px-3 font-semibold text-brand-text">{edit ? t('favsDone') : t('favsEdit')}</m.button>
   )
+  if (renaming) return <RenameView fav={renaming} label={labels[renaming.key]} onBack={() => setRenameKey(null)} locked={locked} peekRef={peekRef} />
   return (
     <>
       <PageHeader title={`${t('favsTitle')} · ${all.length}`} onBack={onBack} action={editBtn} />
@@ -59,10 +62,38 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
             <p className="m-0 px-4 py-4 text-ink-soft">{t('favsNone')}</p>
           ) : (
             <ul className="m-0 list-none border-t border-line p-0" data-testid="fav-list">
-              {list.map(f => <FavRow key={f.key} fav={f} pos={steady} onOpen={onOpen} edit={edit} onRemove={remove} full />)}
+              {list.map(f => <FavRow key={f.key} fav={f} pos={steady} onOpen={onOpen} edit={edit} onRemove={remove} onRename={setRenameKey} full />)}
             </ul>
           )}
         </div>
+      </Scroll>
+    </>
+  )
+}
+
+/** The rename view: a page of its own (back returns to the list). One field, two one-tap names for the stops most people save (home, work), and Save. An empty field gives back the real name. */
+function RenameView({ fav, label, onBack, locked, peekRef }: { fav: Fav; label?: string; onBack: () => void; locked: boolean; peekRef: (el: HTMLElement | null) => void }) {
+  const { t, lang, type } = useT()
+  const ref = useRef<HTMLInputElement>(null)
+  const name = fav.item.name || type(fav.item.type)
+  const save = (v: string) => { setLabel(fav.key, v); onBack() }
+  return (
+    <>
+      <PageHeader title={t('favRename')} onBack={onBack} />
+      <Scroll locked={locked}>
+        <form ref={peekRef as React.Ref<HTMLFormElement>} className="flex w-0 min-w-full flex-col gap-3 px-4 pb-6" onSubmit={e => { e.preventDefault(); save(ref.current?.value ?? '') }}>
+          <p className="m-0 text-ink-soft">{name} · {fav.layer.label[lang]}</p>
+          <input ref={ref} autoFocus defaultValue={label ?? ''} maxLength={LABEL_MAX} placeholder={name} aria-label={t('favRename')} data-testid="fav-rename" enterKeyHint="done"
+            onFocus={e => e.currentTarget.select()}
+            className="block h-11 w-full min-w-0 rounded-btn border border-line-strong bg-paper px-3 text-[16px] font-bold text-ink placeholder:font-normal placeholder:text-ink-soft" />
+          <div className="flex gap-2" data-testid="fav-presets">
+            {([['favHome', 'fav-preset-home'], ['favWork', 'fav-preset-work']] as const).map(([k, id]) => (
+              <m.button {...tap} key={k} type="button" data-testid={id} onClick={() => save(t(k))}
+                className="min-h-11 rounded-btn border-0 bg-surface px-4 font-bold text-ink">{t(k)}</m.button>
+            ))}
+          </div>
+          <m.button {...tap} type="submit" data-testid="fav-rename-save" className="min-h-11 rounded-btn border-0 bg-brand px-4 font-bold text-on-brand">{t('favSave')}</m.button>
+        </form>
       </Scroll>
     </>
   )

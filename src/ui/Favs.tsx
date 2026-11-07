@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICONS } from './icons'
 import { LAYERS } from '../layers'
 import { lsGet, lsSet } from '../lib/cache'
-import { LABEL_MAX, canFav, favKey, favTitle, setLabel, splitFav, toggleFav, useFavLabels, useFavs } from '../lib/favs'
+import { canFav, favKey, favTitle, splitFav, toggleFav, useFavLabels, useFavs } from '../lib/favs'
 import { loadBus, loadTram } from '../lib/live'
 import type { Live } from '../lib/live'
 import { dist, fmtDist } from '../lib/geo'
@@ -73,16 +73,14 @@ export function useSteadyPos(pos: LatLon | null): LatLon | null {
   return steady
 }
 
-/** One favourite as a row (60 to 64 px): layer icon, name, distance, and on the right the next 2 arrivals (bus, tram) or open / closed (places). The right column keeps its width while the times load, then they fade in. With `edit`: a remove button at the start and the name turns into a rename field. */
-export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, trailing }: { fav: Fav; pos: LatLon | null; onOpen: (layer: string, id: string) => void; edit?: boolean; onRemove?: (key: string) => void; full?: boolean; compact?: boolean; trailing?: React.ReactNode }) {
+/** One favourite as a row (60 to 64 px): layer icon, name, distance, and on the right the next 2 arrivals (bus, tram) or open / closed (places). The right column keeps its width while the times load, then they fade in. With `edit`: a remove button at the start and a pencil that opens the rename view. */
+export function FavRow({ fav, pos, onOpen, edit, onRemove, onRename, full, compact, trailing }: { fav: Fav; pos: LatLon | null; onOpen: (layer: string, id: string) => void; edit?: boolean; onRemove?: (key: string) => void; onRename?: (key: string) => void; full?: boolean; compact?: boolean; trailing?: React.ReactNode }) {
   const { t, lang, type } = useT()
   const labels = useFavLabels()
   const label = labels[fav.key]
   const ref = useRef<HTMLLIElement>(null)
   const [vis, setVis] = useState(false)
   const [leaving, setLeaving] = useState(false)
-  const [renaming, setRenaming] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
   const live = isLiveFav(fav.item)
   useEffect(() => {
     const el = ref.current
@@ -91,7 +89,6 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
     io.observe(el)
     return () => io.disconnect()
   }, [live])
-  useEffect(() => { if (!edit) setRenaming(false) }, [edit])
   const { arrs: all } = useFavLive(fav, vis)
   const arrs = compact ? all.slice(0, 1) : all // the home row has room for one arrival
   const I = ICONS[fav.layer.icon]
@@ -123,23 +120,6 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
       )}
     </>
   )
-  const renameInput = (
-    <input ref={inputRef} autoFocus defaultValue={label ?? ''} maxLength={LABEL_MAX} placeholder={name} aria-label={t('favRename')} data-testid="fav-rename" enterKeyHint="done"
-      onFocus={e => e.currentTarget.select()}
-      onBlur={e => { setLabel(fav.key, e.currentTarget.value); setRenaming(false) }}
-      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); else if (e.key === 'Escape') { e.currentTarget.value = label ?? ''; e.currentTarget.blur() } }}
-      className="block h-9 w-full min-w-0 rounded-btn border border-line-strong bg-paper px-2 text-[16px] font-bold text-ink placeholder:font-normal placeholder:text-ink-soft" />
-  )
-  // two one-tap names for the stops most people save: the one at home and the one at work (the field saves on blur, so the chip fills it and leaves)
-  const presets = (
-    <span className="mt-1 flex gap-2" data-testid="fav-presets">
-      {([['favHome', 'fav-preset-home'], ['favWork', 'fav-preset-work']] as const).map(([k, id]) => (
-        <m.button {...tap} key={k} type="button" data-testid={id} onPointerDown={e => e.preventDefault()}
-          onClick={() => { const i = inputRef.current; if (!i) return; i.value = t(k); i.blur() }}
-          className="min-h-11 rounded-btn border-0 bg-surface px-4 text-[0.93em] font-bold text-ink">{t(k)}</m.button>
-      ))}
-    </span>
-  )
   // edit mode: only what is needed to manage the row. Remove at the start (44 px), the name on the full width (2 lines), the layer under it, rename (pencil) at the far end (44 px). No times, no distance.
   if (edit) {
     return (
@@ -150,10 +130,10 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
           <span className="grid size-6 place-items-center rounded-full bg-brand text-on-brand"><Minus size="1em" weight="bold" aria-hidden /></span>
         </m.button>
         <div className="min-w-0 flex-1 py-2 pl-2 text-left text-ink">
-          {renaming ? <>{renameInput}{presets}</> : <span className="line-clamp-2 break-words font-bold leading-snug" data-testid="fav-name">{title}</span>}
+          <span className="line-clamp-2 break-words font-bold leading-snug" data-testid="fav-name">{title}</span>
           <span className="block truncate text-[0.82em] text-ink-soft">{[label ? name : '', fav.layer.label[lang]].filter(Boolean).join(' · ')}</span>
         </div>
-        <m.button {...tap} type="button" onClick={() => setRenaming(true)} aria-label={`${t('favRename')}: ${title}`} data-testid="fav-rename-open"
+        <m.button {...tap} type="button" onClick={() => onRename?.(fav.key)} aria-label={`${t('favRename')}: ${title}`} data-testid="fav-rename-open"
           className="mr-1 grid size-11 shrink-0 select-none place-items-center border-0 bg-transparent p-0 text-ink-soft"><PencilSimple size="1.2em" aria-hidden /></m.button>
       </li>
     )
