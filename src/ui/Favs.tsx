@@ -1,4 +1,4 @@
-import { Minus, PencilSimple, Star } from '@phosphor-icons/react'
+import { Check, PencilSimple, Star } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICONS } from './icons'
@@ -14,7 +14,7 @@ import { OpenDot } from './OpenDot'
 import type { Item, LatLon, LayerConfig } from '../lib/types'
 import { cn } from './cn'
 import { useT } from './lang'
-import { MS, tap } from './motion'
+import { tap } from './motion'
 import { useLive } from './useLive'
 import { toasts } from './ToastHost'
 
@@ -73,14 +73,13 @@ export function useSteadyPos(pos: LatLon | null): LatLon | null {
   return steady
 }
 
-/** One favourite as a row (60 to 64 px): layer icon, name, distance, and on the right the next 2 arrivals (bus, tram) or open / closed (places). The right column keeps its width while the times load, then they fade in. With `edit`: a remove button at the start and a pencil that opens the rename view. */
-export function FavRow({ fav, pos, onOpen, edit, onRemove, onRename, full, compact, trailing }: { fav: Fav; pos: LatLon | null; onOpen: (layer: string, id: string) => void; edit?: boolean; onRemove?: (key: string) => void; onRename?: (key: string) => void; full?: boolean; compact?: boolean; trailing?: React.ReactNode }) {
+/** One favourite as a row (60 to 64 px): layer icon, name, distance, and on the right the next 2 arrivals (bus, tram) or open / closed (places). The right column keeps its width while the times load, then they fade in. With `mode`: edit (tap to rename) or delete (tap to tick). */
+export function FavRow({ fav, pos, onOpen, mode, checked, onToggle, onRename, full, compact, trailing }: { fav: Fav; pos: LatLon | null; onOpen: (layer: string, id: string) => void; mode?: 'edit' | 'delete'; checked?: boolean; onToggle?: (key: string) => void; onRename?: (key: string) => void; full?: boolean; compact?: boolean; trailing?: React.ReactNode }) {
   const { t, lang, type } = useT()
   const labels = useFavLabels()
   const label = labels[fav.key]
   const ref = useRef<HTMLLIElement>(null)
   const [vis, setVis] = useState(false)
-  const [leaving, setLeaving] = useState(false)
   const live = isLiveFav(fav.item)
   useEffect(() => {
     const el = ref.current
@@ -120,26 +119,26 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, onRename, full, compa
       )}
     </>
   )
-  // edit mode: only what is needed to manage the row. Remove at the start (44 px), the name on the full width (2 lines), the layer under it, rename (pencil) at the far end (44 px). No times, no distance.
-  if (edit) {
+  // manage modes: only what is needed. Edit: the whole row opens the rename view (pencil at the end). Delete: the whole row ticks a circle at the start. No times, no distance.
+  if (mode) {
+    const del = mode === 'delete'
     return (
-      <li ref={ref} className="fav-row flex min-h-16 items-center border-b border-line" data-leaving={leaving ? '' : undefined} data-testid="fav-row">
-        <m.button {...tap} type="button" aria-label={`${t('favRemove')}: ${title}`} data-testid="fav-row-remove"
-          onClick={e => { if (leaving || !onRemove) return; if (e.detail === 0) return onRemove(fav.key); setLeaving(true); setTimeout(() => onRemove(fav.key), MS.small) }}
-          className="ml-1 grid size-11 shrink-0 select-none place-items-center rounded-full border-0 bg-transparent p-0">
-          <span className="grid size-6 place-items-center rounded-full bg-brand text-on-brand"><Minus size="1em" weight="bold" aria-hidden /></span>
+      <li ref={ref} className="fav-row border-b border-line" data-testid="fav-row">
+        <m.button {...tap} type="button" onClick={() => (del ? onToggle?.(fav.key) : onRename?.(fav.key))} data-testid={del ? 'fav-row-select' : 'fav-rename-open'}
+          {...(del ? { role: 'checkbox', 'aria-checked': !!checked } : {})} aria-label={del ? title : `${t('favRename')}: ${title}`}
+          className="flex min-h-16 w-full select-none items-center gap-3 border-0 bg-transparent py-2 pl-4 pr-4 text-left text-ink">
+          {del && <span className={cn('grid size-6 shrink-0 place-items-center rounded-full border-2 [transition:background-color_var(--dur-small)_var(--ease-out)]', checked ? 'border-brand bg-brand text-on-brand' : 'border-line-strong bg-transparent text-transparent')}><Check size="0.9em" weight="bold" aria-hidden /></span>}
+          <span className="min-w-0 flex-1">
+            <span className="line-clamp-2 break-words font-bold leading-snug" data-testid="fav-name">{title}</span>
+            <span className="block truncate text-[0.82em] text-ink-soft">{[label ? name : '', fav.layer.label[lang]].filter(Boolean).join(' · ')}</span>
+          </span>
+          {!del && <PencilSimple size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />}
         </m.button>
-        <div className="min-w-0 flex-1 py-2 pl-2 text-left text-ink">
-          <span className="line-clamp-2 break-words font-bold leading-snug" data-testid="fav-name">{title}</span>
-          <span className="block truncate text-[0.82em] text-ink-soft">{[label ? name : '', fav.layer.label[lang]].filter(Boolean).join(' · ')}</span>
-        </div>
-        <m.button {...tap} type="button" onClick={() => onRename?.(fav.key)} aria-label={`${t('favRename')}: ${title}`} data-testid="fav-rename-open"
-          className="mr-1 grid size-11 shrink-0 select-none place-items-center border-0 bg-transparent p-0 text-ink-soft"><PencilSimple size="1.2em" aria-hidden /></m.button>
       </li>
     )
   }
   return (
-    <li ref={ref} className="fav-row flex min-h-16 items-center border-b border-line" data-leaving={leaving ? '' : undefined} data-testid="fav-row">
+    <li ref={ref} className="fav-row flex min-h-16 items-center border-b border-line" data-testid="fav-row">
       <m.button {...tap} type="button" onClick={() => onOpen(fav.layer.id, fav.item.id)} aria-label={aria} data-testid="fav-open-row"
         className={cn('flex min-h-16 min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent py-2 pl-4 text-left text-ink', trailing ? 'pr-1' : 'pr-4')}>{body}</m.button>
       {trailing}
