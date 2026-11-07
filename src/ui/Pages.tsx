@@ -37,6 +37,7 @@ import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
+import { FavButton, FavStrip } from './Favs'
 
 const h2 = 'font-title text-[1.4em] font-semibold leading-tight text-brand-text'
 const overline = 'text-[0.8em] font-semibold uppercase tracking-wide text-ink-soft'
@@ -470,7 +471,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   const name = item.name || type(item.type)
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
-      <BaseButton onClick={onDetails} aria-label={`${t('details')}: ${name}`} data-testid="details" render={<m.button {...tap} />} className="flex min-h-[44px] w-full items-center gap-2 border-0 bg-transparent p-0 text-left text-ink">
+      <div className="flex items-center">
+      <BaseButton onClick={onDetails} aria-label={`${t('details')}: ${name}`} data-testid="details" render={<m.button {...tap} />} className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 border-0 bg-transparent p-0 text-left text-ink">
         <span className="min-w-0 flex-1">
           <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
           <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
@@ -478,6 +480,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         </span>
         <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
       </BaseButton>
+      <FavButton layer={layer} item={item} />
+      </div>
       {item.type === 'lib' && <div className="mt-0.5"><Occupancy item={item} /></div>}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.lines && <More><LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} /></More>}
@@ -579,7 +583,7 @@ export function HomePage(p: {
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
-  onSelect: (id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
+  onSelect: (id: string) => void; onOpenFav: (layer: string, id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -587,6 +591,7 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} />
+      <FavStrip onOpen={p.onOpenFav} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}

@@ -223,6 +223,7 @@ export function App() {
   const first = arr[0]?.id
   useEffect(() => {
     const it = arr[0]
+    if (skipNearest.current) { skipNearest.current = false; return }
     if (!it || lineSel) return
     flyTo([it.lat, it.lon], 16, pos ? { fitUser: pos } : {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,6 +273,20 @@ export function App() {
     if (!desktop) setLevel(PEEK)
     if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
   }
+  // a favourite chip: select that place; one of another service first switches to that service
+  const skipNearest = useRef(false)
+  const openFav = (lid: string, id: string) => {
+    if (lid === layerId) return select(id)
+    if (!isLayer(lid)) return
+    askLocation()
+    const it = LAYERS[lid].items.find(i => i.id === id)
+    skipNearest.current = true // the effect below would frame the nearest place of the new service
+    setLayerId(lid); lsSet('layer', lid); setCat(catStart(lid)); setLineSel(null)
+    reset()
+    setSelected(id); setPick(n => n + 1)
+    if (!desktop) setLevel(PEEK)
+    if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
+  }
   // a line chip on the stop card: draw that line's route, in the direction this stop is on
   const pickLine = (line: string) => {
     if (!routes || !focus) return
@@ -318,7 +333,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onSelect={select} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
+          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onSelect={select} onOpenFav={openFav} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
           desktop={desktop}
         />
       )
