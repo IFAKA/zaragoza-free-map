@@ -11,9 +11,11 @@ export const tramKey = (s: string): string =>
 
 /** 'n' / 's' for a trip from `stopName` to `dest`, or null when the destination is not a known stop (or is this stop). */
 export function tramDir(dest: string, stopName: string, rows: readonly TramRow[]): TramDir | null {
-  const d = tramKey(dest), me = tramKey(stopName)
+  const me = tramKey(stopName)
+  const d = tramKey(dest).replace(/ tranvia doble$/, '') // "Plaza del Pilar - Tranvia Doble" is the same end as "Plaza del Pilar"
   if (!d || d === me) return null
-  const to = rows.find(r => tramKey(r[1]) === d), from = rows.find(r => tramKey(r[1]) === me)
+  // the city sometimes sends a shorter name ("Plaza del Pilar" for "Plaza del Pilar - Murallas")
+  const to = rows.find(r => tramKey(r[1]) === d) ?? rows.find(r => tramKey(r[1]).startsWith(d + ' ')), from = rows.find(r => tramKey(r[1]) === me)
   if (!to || !from || to[2] === from[2]) return null
   return to[2] > from[2] ? 'n' : 's'
 }

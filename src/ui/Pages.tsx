@@ -173,9 +173,10 @@ function VehNote({ show }: { show: boolean }) {
  * Next arrivals for a bus or tram stop, read live from the city (30 s refresh while visible). The box keeps its height while loading; if the city does not answer it is not shown at all, and the link below still works.
  * A tram stop shows two direction chips and only the chosen direction's next trams. `pick` narrows a bus stop's rows (the route view: this line, towards its end).
  */
-function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line }: {
+function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, line, onLine }: {
   kind: 'bus' | 'tram'; stopKey: string; load: (signal: AbortSignal) => ReturnType<typeof loadBus>; stopName?: string
   title?: string; pick?: (a: Arrival[]) => Arrival[]; at?: LatLon; origin?: LatLon; line?: string
+  /** Bus stop: tapping a row opens that line (same as its chip). */ onLine?: (line: string) => void
 }) {
   const { t } = useT()
   const { live, state } = useLive(stopKey, load)
@@ -220,7 +221,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
           {!first ? <p className={cn(sub, 'm-0 mt-1')}>{t('liveNone')}</p> : (
             <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
               {rows.map((r, i) => (
-                <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row">
+                <li key={r.line + r.dest} className="flex items-center gap-2" data-testid="live-row" {...(onLine ? { onClick: () => onLine(r.line), role: 'button', tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') onLine(r.line) } } : {})}>
                   <span className={cn('min-w-[2.6em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', kind === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{r.line}</span>
                   <span className="min-w-0 flex-1 leading-tight"><span className="block truncate">{r.dest}</span></span>
                   {i === 0
@@ -241,7 +242,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
 }
 
 /** Bus stop: live next buses (city stops only).  */
-function BusActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode }) {
+function BusActions({ item, origin, onWalk, fav, onLine }: { item: RankedItem; origin: LatLon; onWalk: () => void; fav: ReactNode; onLine?: (line: string) => void }) {
   const { t } = useT()
   const stop = item.stop
   const live = !!stop && /^\d+$/.test(stop)
@@ -252,7 +253,7 @@ function BusActions({ item, origin, onWalk, fav }: { item: RankedItem; origin: L
   }, [stop, item.lines, item.lat, item.lon, origin])
   return (
     <>
-      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} />}
+      {live && <LiveTimes key={stop} kind="bus" stopKey={stop} load={load} onLine={onLine} />}
       {!live && !stop && <p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>}
       <Actions item={item} onWalk={onWalk} fav={fav} />
     </>
@@ -474,7 +475,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} onLine={line => routes?.lines[line] && onLine(line)} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
     </m.section>
     </AboveCtx.Provider>
   )
