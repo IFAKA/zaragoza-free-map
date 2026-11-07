@@ -576,18 +576,6 @@ function Locate({ hasPos, locating, denied, onLocate }: { hasPos: boolean; locat
   )
 }
 
-export function Footer({ onAbout }: { onAbout: () => void }) {
-  const { t } = useT()
-  const d = dataRefreshed()
-  return (
-    <footer className="px-4 pb-6 pt-3">
-      <p className={cn(sub, 'm-0')}>{t('disclaimer')}</p>
-      {d && <p className={cn(sub, 'm-0 mt-1')}>{t('dataRefreshed')}: {d}</p>}
-      <Button variant="link" onClick={onAbout} className="-ml-1">{t('about')}</Button>
-    </footer>
-  )
-}
-
 export function HomePage(p: {
   off: RankedItem | null
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
@@ -595,7 +583,7 @@ export function HomePage(p: {
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
-  onSelect: (id: string) => void; onOpenFav: (layer: string, id: string) => void; onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
+  onSelect: (id: string) => void; onOpenFav: (layer: string, id: string) => void; onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -619,7 +607,6 @@ export function HomePage(p: {
         {!p.liveState && !p.lineView && !p.off && <Nearby items={p.nearby} onSelect={p.onSelect} />}
         {!p.liveState && <Controls layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
-        <Footer onAbout={p.onAbout} />
       </Scroll>
     </MoreCtx.Provider>
   )

@@ -264,15 +264,10 @@ todo.push(async () => {
     ok(await lvl(p) === 'peek', 'and stays at peek')
     await ctx.close()
   })
-  // page stack: About from the footer goes Back to the home page; Escape: page, then lower
+  // page stack: About from Settings goes Back to Settings; Escape: page, then lower
   todo.push(async () => {
     const { ctx, p, drag } = await sess()
     await drag(195, 690, 150)
-    await p.evaluate(() => { const v = document.querySelector('[data-testid=scroll]'); v.scrollTop = v.scrollHeight })
-    await p.getByRole('button', { name: 'About' }).tap(); await settle(p)
-    ok(await p.getByTestId('close').count() === 1 && await p.getByTestId('back').count() === 0, 'About opens from the footer (a cross, no chevron: it is the first page)')
-    await p.getByTestId('close').last().tap(); await settle(p)
-    ok(await p.getByTestId('services-open').count() === 1 && await p.getByTestId('row-about').count() === 0, 'About from footer: Close returns to home, not Settings')
     await p.getByTestId('open-settings').tap(); await p.getByTestId('row-about').tap(); await settle(p)
     await p.keyboard.press('Escape'); await settle(p)
     ok(await p.getByTestId('row-about').count() === 1, 'Escape on About goes back to Settings')
