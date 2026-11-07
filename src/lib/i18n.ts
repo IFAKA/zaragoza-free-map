@@ -48,7 +48,7 @@ const es: Record<Key, string> = {
   langTitle: 'Idioma', langEn: 'English', langEs: 'Español', close: 'Cerrar',
   handle: 'Expandir o contraer el panel', map: 'Mapa', zoomIn: 'Acercar', zoomOut: 'Alejar', panel: 'Panel de servicios',
   open: 'Abierto ahora', closed: 'Cerrado ahora', openShort: 'Abierto', closedShort: 'Cerrado', alwaysOn: 'Siempre disponible', hours: 'Horario', holidays: 'El horario puede cambiar en festivos.',
-  walk: 'Cómo llegar a pie', details: 'Detalles', timesShort: 'Horarios', useLocation: 'Usar mi ubicación', locating: 'Buscándote…', fromCentre: 'desde el centro', minWalk: 'andando',
+  walk: 'Cómo llegar a pie', details: 'Detalles', timesShort: 'Horarios', useLocation: 'Usar mi ubicación', locating: 'Buscándote…', fromCentre: 'desde el centro', minWalk: 'min andando',
   distCentre: 'Distancias desde el centro', locDenied: 'La ubicación está bloqueada, así que las distancias siguen desde el centro. Para usar la tuya, permite la ubicación para este sitio en los ajustes del navegador.',
   nearestwater: 'Fuente de agua más cercana', nearesttoilets: 'Aseo más cercano', nearestcharge: 'Sitio más cercano para cargar', nearestwifi: 'WiFi más cercano', nearestlibraries: 'Biblioteca más cercana', nearestbizitake: 'Bici más cercana para coger', nearestbizireturn: 'Anclaje libre más cercano', nearestbizimine: 'Aparcabicis más cercano',
   filtersLabel: 'Filtros', selected: 'Elegido', all: 'Todos', muni: 'Edificios públicos', food: 'Cafés y bares', other: 'Otros',
