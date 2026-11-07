@@ -172,4 +172,3 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 @media (prefers-reduced-motion:reduce){.skel{animation:none;background:var(--color-surface)}}
 
 /* the open place name: without motion preference it can be scrolled by hand */
-@media (prefers-reduced-motion:reduce){.name-box{overflow-x:auto;scrollbar-width:none}}

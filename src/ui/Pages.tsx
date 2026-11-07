@@ -19,7 +19,7 @@ import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { FOOTER_PX, ServiceGroups, ServiceHeader } from './ServiceBar'
 import { Tick } from './Tick'
-import { cardSwap, settleName, slideName, tap } from './motion'
+import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from '../lib/geo'
 import { DUTY_PAGE, madridDate } from '../lib/duty'
@@ -443,23 +443,19 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
   )
 }
 
-/** The place name on one line. Tapped, it gets the whole width (the star and the walk button fade away, see NearestBlock); a name that is still too long then slides back and forth so all of it can be read. */
-function NameButton({ name, open, onToggle, onNeed }: { name: string; open: boolean; onToggle: () => void; onNeed: (px: number) => void }) {
+/** The place name on one line. A name that is cut with "…" opens on tap: all of it shows over as many lines as it needs, and the sheet grows with it. A tap anywhere else closes it. */
+function NameButton({ name, open, onToggle }: { name: string; open: boolean; onToggle: () => void }) {
   const box = useRef<HTMLSpanElement>(null), txt = useRef<HTMLSpanElement>(null)
-  const [over, setOver] = useState(0) // open: how many px the text is wider than its box
   const [clipped, setClipped] = useState(false) // closed: the name does not fit and is cut with "…"; only then is there anything to open
   useEffect(() => {
-    const b = box.current, x = txt.current
-    if (!b || !x) return
-    const measure = () => {
-      if (open) setOver(Math.max(0, Math.ceil(x.scrollWidth - b.clientWidth)))
-      else { setOver(0); setClipped(x.scrollWidth > x.clientWidth); onNeed(Math.max(0, x.scrollWidth - x.clientWidth)) }
-    }
-    const ro = new ResizeObserver(measure) // the box grows while the star fades away
+    const x = txt.current, b = box.current
+    if (!x || !b || open) return
+    const measure = () => setClipped(x.scrollWidth > x.clientWidth)
+    const ro = new ResizeObserver(measure)
     ro.observe(b)
     measure()
     return () => ro.disconnect()
-  }, [open, name, onNeed])
+  }, [open, name])
   // a tap anywhere outside the name closes it
   useEffect(() => {
     if (!open) return
@@ -467,28 +463,16 @@ function NameButton({ name, open, onToggle, onNeed }: { name: string; open: bool
     document.addEventListener('pointerdown', away, true)
     return () => document.removeEventListener('pointerdown', away, true)
   }, [open, onToggle])
-  // The slide is a Web Animation, so it can be stopped at any moment: on a second tap or a new place the text eases back from where it is (no jump).
-  useEffect(() => {
-    const x = txt.current
-    if (!open || over <= 0 || !x || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const slide = slideName(x, over)
-    return () => {
-      const at = new DOMMatrix(getComputedStyle(x).transform).m41
-      slide.cancel()
-      if (at) settleName(x, at)
-    }
-  }, [open, over])
   return (
     <m.button {...(clipped || open ? tap : {})} type="button" onClick={onToggle} disabled={!clipped && !open} aria-expanded={clipped || open ? open : undefined} data-testid="nearest-name-btn"
       className="m-0 block w-full min-w-0 select-none border-0 bg-transparent p-0 text-left disabled:cursor-default">
-      <span ref={box} className={cn(h2, 'block overflow-hidden whitespace-nowrap', open && 'name-box')} data-testid="nearest-name">
-        <span ref={txt} className={cn(open ? 'inline-block' : 'block truncate')}>{name}</span>
+      <span ref={box} className={cn(h2, 'block')} data-testid="nearest-name">
+        <span ref={txt} className={cn('block', open ? 'break-words' : 'truncate')}>{name}</span>
       </span>
     </m.button>
   )
 }
 
-const fade = '[transition:opacity_var(--dur-small)_var(--ease-out)]' // star / walk button leaving: they only fade, they do not move
 // ---------- the block with the nearest (or selected) place ----------
 /** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
 /** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
@@ -501,20 +485,18 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
 }) {
   const { t, type, lang } = useT()
   const [wide, setWide] = useState<string | null>(null) // id of the place whose name is open (full width); another place starts closed
-  const [need, setNeed] = useState(0) // px the closed name is cut by: the star is hidden first, the walk button only if that is not enough
   const Icon = ICONS[layer.icon]
   if (!item) return <div className="px-4 py-3" data-closed-edge><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
-  const hideStar = wide === item.id, hideWalk = hideStar && need > 44 // the opened name takes the room of the star first, of the walk button only when that is not enough
   const favBtn = null // the Details button is the (i) next to the name
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center" data-closed-edge>
       <div className="relative flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
-        <span className="min-w-0 flex-1 [transition:padding-right_var(--dur-small)_var(--ease-out)]" style={{ paddingRight: (hideStar ? 0 : 44) + (hideWalk ? 0 : 52) }}>
+        <span className="min-w-0 flex-1" style={{ paddingRight: 44 + 52 }}>
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
-          <NameButton name={name} open={wide === item.id} onNeed={setNeed} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
+          <NameButton name={name} open={wide === item.id} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
           <span className="flex items-center">
             {statusDot(item, layer, t)}
             <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</span>
@@ -526,10 +508,9 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
             )}
           </span>
         </span>
-        {/* star and walk button stay where they are and only fade; the name's right padding gives its room back (36 px + 8 px gap, 44 px + 8 px gap) */}
         <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center">
-          <div className={cn(fade, 'pl-2', hideStar && 'pointer-events-none opacity-0')} aria-hidden={hideStar} inert={hideStar}><FavButton layer={layer} item={item} /></div>
-          <div className={cn(fade, 'pl-2', hideWalk && 'pointer-events-none opacity-0')} aria-hidden={hideWalk} inert={hideWalk}>
+          <div className="pl-2"><FavButton layer={layer} item={item} /></div>
+          <div className="pl-2">
             <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
           </div>
         </div>
