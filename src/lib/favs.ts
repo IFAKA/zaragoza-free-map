@@ -63,3 +63,54 @@ export function nearestFavs<T extends { item: { lat: number; lon: number } }>(li
   if (!pos) return list.slice(0, n)
   return list.map((f, i) => ({ f, i, d: dist(pos, [f.item.lat, f.item.lon]) })).sort((a, b) => a.d - b.d || a.i - b.i).slice(0, n).map(x => x.f)
 }
+
+// ---- Own names ("Home stop"): kept apart from the key list, so the list stays as it was. Map of `layer:id` -> label.
+const LKEY = 'favLabels'
+export const LABEL_MAX = 30
+export function parseLabels(s: string | null): Record<string, string> {
+  try {
+    const v = JSON.parse(s ?? '{}')
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
+    const out: Record<string, string> = {}
+    for (const [k, x] of Object.entries(v)) if (typeof x === 'string' && x.trim()) out[k] = x.trim().slice(0, LABEL_MAX)
+    return out
+  } catch { return {} }
+}
+/** The label as it is saved: trimmed, spaces collapsed, at most LABEL_MAX characters. Empty means "no label". */
+export const cleanLabel = (s: string): string => s.replace(/\s+/g, ' ').trim().slice(0, LABEL_MAX).trim()
+
+let lraw: string | null = lsGet(LKEY)
+let labels: Record<string, string> = parseLabels(lraw)
+const lsubs = new Set<() => void>()
+const lemit = () => lsubs.forEach(f => f())
+const lsave = (next: Record<string, string>) => { labels = next; lraw = JSON.stringify(next); lsSet(LKEY, lraw); lemit() }
+export const getLabels = () => labels
+/** Set the label of a saved place; an empty text clears it. */
+export function setLabel(key: string, text: string): void {
+  const v = cleanLabel(text)
+  if ((labels[key] ?? '') === v) return
+  const next = { ...labels }
+  if (v) next[key] = v; else delete next[key]
+  lsave(next)
+}
+const lsubscribe = (f: () => void) => {
+  lsubs.add(f)
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== 'zgz:v2:' + LKEY || e.newValue === lraw) return
+    lraw = e.newValue; labels = parseLabels(e.newValue); lemit()
+  }
+  window.addEventListener('storage', onStorage)
+  return () => { lsubs.delete(f); window.removeEventListener('storage', onStorage) }
+}
+export const useFavLabels = (): Record<string, string> => useSyncExternalStore(lsubscribe, getLabels, getLabels)
+
+/** What to show for a place: its own label when it has one, else its name. */
+export const favTitle = (name: string, label?: string): string => label || name
+
+/** Stops (bus, tram, train) or everything else. */
+export type FavKind = 'all' | 'stops' | 'places'
+export const STOP_LAYERS = ['bus', 'tram', 'cercanias']
+export const isStopLayer = (layerId: string) => STOP_LAYERS.includes(layerId)
+export function filterKind<T extends { layer: { id: string } }>(list: T[], kind: FavKind): T[] {
+  return kind === 'all' ? list : list.filter(f => isStopLayer(f.layer.id) === (kind === 'stops'))
+}

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { canFav, favKey, getFavs, isFav, parseFavs, removeFav, nearestFavs, restoreFav, splitFav, toggleFav, touchFav } from './favs'
+import { LABEL_MAX, canFav, cleanLabel, favTitle, filterKind, getLabels, isStopLayer, parseLabels, setLabel, favKey, getFavs, isFav, parseFavs, removeFav, nearestFavs, restoreFav, splitFav, toggleFav, touchFav } from './favs'
 
 describe('favs', () => {
   beforeEach(() => { for (const k of [...getFavs()]) { const [l, id] = splitFav(k); toggleFav(l, id) } })
@@ -47,5 +47,31 @@ describe('favs', () => {
     expect(canFav({ id: 'water' }, { type: 'fountain' })).toBe(false)
     expect(canFav({ id: 'pharmacy', live: true }, { type: 'pharmacy' })).toBe(false)
     expect(canFav({ id: 'bus' }, { type: 'bus' })).toBe(true)
+  })
+  it('keeps labels in their own map, trimmed and capped; empty clears', () => {
+    setLabel('bus:a', '  Home   stop '); expect(getLabels()['bus:a']).toBe('Home stop')
+    setLabel('bus:a', 'x'.repeat(50)); expect(getLabels()['bus:a']).toHaveLength(LABEL_MAX)
+    expect(getFavs()).not.toContain('bus:a') // the key list is untouched
+    setLabel('bus:a', '   '); expect(getLabels()['bus:a']).toBeUndefined()
+    expect(cleanLabel('  a  b ')).toBe('a b')
+  })
+  it('reads saved labels safely', () => {
+    expect(parseLabels(null)).toEqual({})
+    expect(parseLabels('nope')).toEqual({})
+    expect(parseLabels('[1]')).toEqual({})
+    expect(parseLabels('{"bus:a":" Home ","bus:b":3,"bus:c":"  "}')).toEqual({ 'bus:a': 'Home' })
+  })
+  it('shows the label instead of the name', () => { expect(favTitle('Plaza', 'Home')).toBe('Home'); expect(favTitle('Plaza', undefined)).toBe('Plaza'); expect(favTitle('Plaza', '')).toBe('Plaza') })
+  it('splits stops from places', () => {
+    const l = ['bus', 'tram', 'cercanias', 'libraries', 'toilets'].map(id => ({ layer: { id } }))
+    const ids = (x: typeof l) => x.map(f => f.layer.id)
+    expect(ids(filterKind(l, 'stops'))).toEqual(['bus', 'tram', 'cercanias'])
+    expect(ids(filterKind(l, 'places'))).toEqual(['libraries', 'toilets'])
+    expect(filterKind(l, 'all')).toHaveLength(5)
+    expect(isStopLayer('bizi')).toBe(false)
+  })
+  it('orders every favourite nearest first', () => {
+    const at = (id: string, lat: number) => ({ id, item: { lat, lon: -0.88 } })
+    expect(nearestFavs([at('a', 41.70), at('b', 41.60), at('c', 41.66)], [41.66, -0.88], 3).map(f => f.id)).toEqual(['c', 'a', 'b'])
   })
 })

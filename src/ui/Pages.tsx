@@ -38,7 +38,7 @@ import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav } from '../lib/favs'
-import { FavButton, FavStrip } from './Favs'
+import { FavButton, FavSection } from './Favs'
 
 const h2 = 'font-title text-[1.4em] font-semibold leading-tight text-brand-text'
 const overline = 'text-[0.8em] font-semibold uppercase tracking-wide text-ink-soft'
@@ -63,7 +63,7 @@ function MoreLinks({ times, walk }: { times?: { url: string; label: string; onCl
   )
 }
 
-export function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
+export function PageHeader({ title, onBack, action }: { title: string; onBack: () => void; action?: ReactNode }) {
   const { t } = useT()
   return (
     <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-3">
@@ -71,6 +71,7 @@ export function PageHeader({ title, onBack }: { title: string; onBack: () => voi
         <CaretLeft size="1.4em" weight="bold" aria-hidden />
       </BaseButton>
       <h1 className={h2}>{title}</h1>
+      {action}
     </div>
   )
 }
@@ -593,7 +594,7 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} />
-      <FavStrip onOpen={p.onOpenFav} onAll={p.onFavs} pos={p.hasPos ? p.origin : null} />
+      <FavSection onOpen={p.onOpenFav} onAll={p.onFavs} pos={p.hasPos ? p.origin : null} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
