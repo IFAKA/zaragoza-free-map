@@ -102,17 +102,17 @@ function FavGrid({ layers, onClick }: { layers: LayerId[]; onClick: () => void }
 export function ServiceGroups({ layer, onPick }: { layer: LayerId; onPick: (id: LayerId) => void }) {
   const { lang } = useT()
   return (
-    <div className="flex flex-col gap-4 px-4 pb-6 pt-1">
+    <div className="flex flex-col gap-6 px-4 pb-6 pt-1">
       {GROUPS.map(g => (
         <div key={g.id}>
-          <h2 className="m-0 mb-2 text-[0.78em] font-bold uppercase tracking-wide text-ink-soft">{g.label[lang]}</h2>
-          <div className="grid grid-cols-2 gap-2">
+          <h2 className="m-0 mb-3 text-[0.78em] font-bold uppercase tracking-wide text-ink-soft">{g.label[lang]}</h2>
+          <div className="flex flex-wrap gap-1.5">
             {g.ids.map(id => {
               const J = ICONS[LAYERS[id].icon], on = id === layer
               return (
                 <m.button {...tap} key={id} type="button" onClick={() => onPick(id)} aria-pressed={on} data-testid={`tab-${id}`}
-                  className={'flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-btn border-0 px-3 text-left text-[0.93em] font-semibold ' + (on ? 'bg-brand text-on-brand' : 'bg-surface text-ink')}>
-                  <J size="1.4em" className="shrink-0" weight={on ? 'fill' : 'regular'} aria-hidden /><span className="min-w-0 truncate">{LAYERS[id].short[lang]}</span>
+                  className={'flex min-h-[44px] min-w-0 grow items-center justify-center gap-1.5 rounded-btn border-0 px-2.5 text-[0.87em] font-semibold ' + (on ? 'bg-brand text-on-brand' : 'bg-surface text-ink')}>
+                  <J size="1.3em" className="shrink-0" weight={on ? 'fill' : 'regular'} aria-hidden /><span className="min-w-0 truncate">{LAYERS[id].short[lang]}</span>
                 </m.button>
               )
             })}
