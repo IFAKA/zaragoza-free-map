@@ -120,7 +120,11 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
   }
 
   useEffect(() => {
-    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: L.canvas({ padding: 0.5, tolerance: 8 }) }).setView(CENTER, 15)
+    const canvas = L.canvas({ padding: 0.5, tolerance: 8 })
+    // A line removed after the map is gone (another cleanup) still asks the canvas for a redraw; the canvas has no context by then and Leaflet throws "reading 'save'". Skip that redraw.
+    const redraw = (canvas as unknown as { _redraw(): void })._redraw
+    ;(canvas as unknown as { _redraw(): void })._redraw = function (this: { _ctx?: unknown }) { if (this._ctx) redraw.call(this) }
+    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: canvas }).setView(CENTER, 15)
     if (desktop) L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
     m.attributionControl.setPosition('topleft') // top left: the Settings button floats at the top right
     m.on('click', () => cb.current.onBackgroundClick())
