@@ -105,11 +105,11 @@ export function FavRow({ fav, pos, onOpen, mode, checked, onToggle, onRename, fu
         <span className="block truncate text-[0.82em] text-ink-soft">{sub}</span>
       </span>
       {live ? (
-        <span className="flex min-h-10 w-[6.5rem] shrink-0 flex-col items-end justify-center gap-0.5" data-testid="fav-times">
+        <span className="flex min-h-10 w-[7rem] shrink-0 flex-col items-end justify-center gap-0.5" data-testid="fav-times">
           {arrs.map(a => (
             <span key={a.line + a.text} className="fav-fade flex items-center gap-1.5 text-[0.88em] leading-none" data-testid="fav-time">
               <span className={cn('min-w-[2.2em] rounded-[0.3em] px-1.5 py-0.5 text-center text-[0.93em] font-bold text-on-brand', fav.item.type === 'bus' ? 'bg-bus' : 'bg-[var(--color-tram)]')}>{a.line}</span>
-              <span className="min-w-[3.6ch] text-right font-bold tabular-nums">{a.text}</span>
+              <span className="min-w-[6ch] text-right font-bold tabular-nums">{a.text}</span>
             </span>
           ))}
         </span>
