@@ -70,7 +70,11 @@ function useClosedPx(dep: unknown) {
     measure()
     const id = requestAnimationFrame(measure)
     window.addEventListener('resize', measure)
-    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measure) }
+    // the name opens and closes inside the card, without a render of this component: watch the header row itself
+    const head = document.querySelector('[data-slot=drawer-popup] [data-closed-edge]')
+    const ro = new ResizeObserver(measure)
+    if (head) { ro.observe(head); if (head.parentElement) ro.observe(head.parentElement) }
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', measure); ro.disconnect() }
   }) // after every render: the filter row comes and goes with the service
   void dep
   return px
