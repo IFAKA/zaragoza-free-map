@@ -444,7 +444,7 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
 }
 
 /** The place name on one line. Tapped, it gets the whole width (the star and the walk button fade away, see NearestBlock); a name that is still too long then slides back and forth so all of it can be read. */
-function NameButton({ name, open, onToggle }: { name: string; open: boolean; onToggle: () => void }) {
+function NameButton({ name, open, onToggle, onNeed }: { name: string; open: boolean; onToggle: () => void; onNeed: (px: number) => void }) {
   const box = useRef<HTMLSpanElement>(null), txt = useRef<HTMLSpanElement>(null)
   const [over, setOver] = useState(0) // open: how many px the text is wider than its box
   const [clipped, setClipped] = useState(false) // closed: the name does not fit and is cut with "…"; only then is there anything to open
@@ -453,13 +453,13 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
     if (!b || !x) return
     const measure = () => {
       if (open) setOver(Math.max(0, Math.ceil(x.scrollWidth - b.clientWidth)))
-      else { setOver(0); setClipped(x.scrollWidth > x.clientWidth) }
+      else { setOver(0); setClipped(x.scrollWidth > x.clientWidth); onNeed(Math.max(0, x.scrollWidth - x.clientWidth)) }
     }
     const ro = new ResizeObserver(measure) // the box grows while the star fades away
     ro.observe(b)
     measure()
     return () => ro.disconnect()
-  }, [open, name])
+  }, [open, name, onNeed])
   // The slide is a Web Animation, so it can be stopped at any moment: on a second tap or a new place the text eases back from where it is (no jump).
   useEffect(() => {
     const x = txt.current
@@ -481,6 +481,7 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
   )
 }
 
+const fade = 'shrink-0 overflow-hidden [transition:opacity_var(--dur-small)_var(--ease-out),max-width_var(--dur-small)_var(--ease-out)]' // star / walk button leaving: fade and give the room back
 // ---------- the block with the nearest (or selected) place ----------
 /** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
 /** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
@@ -493,6 +494,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
 }) {
   const { t, type, lang } = useT()
   const [wide, setWide] = useState<string | null>(null) // id of the place whose name is open (full width); another place starts closed
+  const [need, setNeed] = useState(0) // px the closed name is cut by: the star is hidden first, the walk button only if that is not enough
   const Icon = ICONS[layer.icon]
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
@@ -501,10 +503,10 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" data-closed-edge aria-label={kind}>
       <div className="flex items-center">
-      <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left text-ink">
+      <div className="flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
-          <NameButton name={name} open={wide === item.id} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
+          <NameButton name={name} open={wide === item.id} onNeed={setNeed} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
           <span className="flex items-center">
             {statusDot(item, layer, t)}
             <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</span>
@@ -516,9 +518,14 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
             )}
           </span>
         </span>
-        <div className={cn('flex shrink-0 items-center gap-2 overflow-hidden [transition:opacity_var(--dur-small)_var(--ease-out),max-width_var(--dur-small)_var(--ease-out)]', wide === item.id ? 'pointer-events-none max-w-0 opacity-0' : 'max-w-24 opacity-100')} aria-hidden={wide === item.id} inert={wide === item.id}>
-          <FavButton layer={layer} item={item} />
-          <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
+        {/* the name, opened, takes only the room it needs: first the star, and the walk button only when the star is not enough (36 px + 8 px gap) */}
+        <div className={cn(fade, wide === item.id ? 'pointer-events-none max-w-0 opacity-0' : 'max-w-11 opacity-100')} aria-hidden={wide === item.id} inert={wide === item.id}>
+          <div className="pl-2"><FavButton layer={layer} item={item} /></div>
+        </div>
+        <div className={cn(fade, wide === item.id && need > 44 ? 'pointer-events-none max-w-0 opacity-0' : 'max-w-14 opacity-100')} aria-hidden={wide === item.id && need > 44} inert={wide === item.id && need > 44}>
+          <div className="pl-2">
+            <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
+          </div>
         </div>
       </div>
       </div>
