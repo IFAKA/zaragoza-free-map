@@ -19,8 +19,8 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
 export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersActive }: { onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
   const { t } = useT()
   return (
-    <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="shrink-0">
-      <div className="flex items-center gap-2 px-4 pb-2 pt-2">
+    <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="-mt-2 shrink-0">
+      <div className="flex items-center gap-2 px-4 pb-3 pt-0">
         {onFilters && (
           <m.button {...tap} type="button" onClick={onFilters} aria-label={t('filtersLabel')} data-testid="filters-open"
             className="relative grid size-14 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">
