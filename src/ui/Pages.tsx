@@ -66,7 +66,7 @@ function Actions({ item, onWalk, fav, extra }: { item: RankedItem; onWalk: () =>
 export function PageHeader({ title, onBack, action }: { title: string; onBack: () => void; action?: ReactNode }) {
   const { t } = useT()
   return (
-    <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-[9px]">
+    <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-0">
       <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className="inline-flex size-[44px] items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
         <CaretLeft size="1.4em" weight="bold" aria-hidden />
       </BaseButton>

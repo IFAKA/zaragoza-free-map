@@ -104,7 +104,7 @@ function useFullPx(viewport: React.RefObject<HTMLElement | null>, on: boolean): 
   const measure = useCallback(() => {
     const vp = viewport.current, content = vp?.firstElementChild, pop = vp?.closest('[data-slot=drawer-popup]')
     if (!on || !vp || !content || !pop) { setPx(old => (old === 1 ? old : 1)); return }
-    const need = Math.ceil(vp.getBoundingClientRect().top - pop.getBoundingClientRect().top + content.getBoundingClientRect().height + safeBottom()) + 16
+    const need = Math.ceil(vp.getBoundingClientRect().top - pop.getBoundingClientRect().top + content.getBoundingClientRect().height + safeBottom())
     const next = need >= window.innerHeight - 24 ? 1 : need + 'px'
     setPx(old => (old === next ? old : next))
   }, [viewport, on])
