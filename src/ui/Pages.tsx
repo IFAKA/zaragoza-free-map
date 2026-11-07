@@ -46,6 +46,12 @@ const sub = 'text-[0.93em] leading-snug text-ink-soft'
 // ---------- shared small pieces ----------
 /** The top of the scroll area (full height): what a card moves out of the peek (line chips, the position note, the links). HomePage sets it. */
 export const MoreCtx = createContext<HTMLElement | null>(null)
+/** The top of a place card, above the place name: where the line chips and the direction buttons go. NearestBlock sets it. */
+const AboveCtx = createContext<HTMLElement | null>(null)
+function Above({ children }: { children: ReactNode }) {
+  const el = useContext(AboveCtx)
+  return el ? createPortal(children, el) : null
+}
 function More({ children }: { children: ReactNode }) {
   const el = useContext(MoreCtx)
   return el ? createPortal(children, el) : null
@@ -189,10 +195,10 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   const tramShown: Vehicle[] = tramVeh.length || !(dirsOn && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
   const [north, south] = DATA.tram.ends
-  const picker = dirsOn && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
+  const picker = dirsOn && <Above><DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
     { id: 'n', label: t('dirTo').replace('{to}', north) },
     { id: 's', label: t('dirTo').replace('{to}', south) },
-  ]} />
+  ]} /></Above>
   if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}>{picker}<p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p></div>
   const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
@@ -304,7 +310,7 @@ function TrainActions({ item, origin, times, onWalk, fav }: { item: RankedItem; 
   return (
     <>
       <div className="mt-1" data-testid="train-next">
-        {two && <DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} />}
+        {two && <Above><DirPicker testId="train-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={per.map(x => ({ id: x.g.id, label: t('dirTo').replace('{to}', DATA.cercanias.dests[x.g.far]), empty: empty.has(x.g.id) ? t('dirNoMore') : undefined }))} /></Above>}
         {!times ? <p className={cn(sub, 'm-0')}>{t('trainLoading')}</p> : next.length === 0 ? <p className={cn(sub, 'm-0')}>{t('trainNone')}</p> : (
           <ul className={cn('m-0 flex list-none flex-col p-0', two && 'mt-2')}>
             {next.slice(0, 2).map((n, i) => (
@@ -445,12 +451,15 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   onDetails: () => void; onWalk: () => void
 }) {
   const { t, type } = useT()
+  const [above, setAbove] = useState<HTMLElement | null>(null)
   if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
   const favBtn = canFav(layer, item) ? <FavButton layer={layer} item={item} /> : null
   return (
+    <AboveCtx.Provider value={above}>
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
+      <div ref={setAbove} className="[&:not(:empty)]:mb-1" />
       <div className="flex items-center">
       <BaseButton onClick={onDetails} aria-label={`${t('details')}: ${name}`} data-testid="details" render={<m.button {...tap} />} className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 border-0 bg-transparent p-0 text-left text-ink">
         <span className="min-w-0 flex-1">
@@ -461,13 +470,14 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
       </BaseButton>
       </div>
-      {item.lines && <LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} />}
+      {item.lines && <Above><LineChips lines={item.lines} routes={item.stop ? routes : null} onLine={onLine} /></Above>}
       {/* live occupancy is news worth the peek; "not published" moves to the full-height area */}
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pb-2"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
       {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} fav={favBtn} /> : <Actions item={item} onWalk={onWalk} fav={favBtn} />}
     </m.section>
+    </AboveCtx.Provider>
   )
 }
 
