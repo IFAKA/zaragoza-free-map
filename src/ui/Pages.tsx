@@ -178,18 +178,24 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   // tram: split the rows by direction (from the destination's place on the line)
   const tram = kind === 'tram' && stopName ? all.map(r => ({ r, dir: tramDir(r.dest, stopName, DATA.tram.rows) })) : null
   const hasDirs = !!tram && tram.some(x => x.dir)
-  const opts: DirOpt[] = hasDirs ? (['n', 's'] as const).map(id => ({ id, soon: tram.filter(x => x.dir === id).reduce<number | null>((m0, x) => (m0 === null ? x.r.mins[0] : Math.min(m0, x.r.mins[0])), null) })) : []
-  const centre = hasDirs && at && outsideCentre(origin ?? at) ? towardCentre(at, tramEnds()) : null
+  // the two directions are shown for every tram stop, even when the city sends no times (the direction is about the track, not the data)
+  const dirsOn = kind === 'tram' && !!at && (hasDirs || all.length === 0)
+  const opts: DirOpt[] = dirsOn ? (['n', 's'] as const).map(id => ({ id, soon: (tram ?? []).filter(x => x.dir === id).reduce<number | null>((m0, x) => (m0 === null ? x.r.mins[0] : Math.min(m0, x.r.mins[0])), null) })) : []
+  const centre = dirsOn && at && outsideCentre(origin ?? at) ? towardCentre(at, tramEnds()) : null
   const { dir, pickDir } = useDirChoice('tram:' + stopKey, opts, centre)
   // tram: the next 2 trams of the shown direction, placed on the track upstream of the stop (approximate; none without live minutes)
-  const tramVeh: Vehicle[] = kind === 'tram' && state === 'live' && hasDirs && at
+  const tramVeh: Vehicle[] = kind === 'tram' && state === 'live' && tram && dirsOn && at
     ? upstream(tramLine(), at, dir === 'n', nextTwo(tram.filter(x => x.dir === dir).flatMap(x => x.r.mins)), TRAM_KMH).map((p, i) => ({ ...vehicleOf(p, i, 'tram', at, stopKey + dir), via: between(tramLine(), p, at) })) : []
   const tramLn = tramLine()
-  const tramShown: Vehicle[] = tramVeh.length || !(kind === 'tram' && hasDirs && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
+  const tramShown: Vehicle[] = tramVeh.length || !(dirsOn && at && tramLn.length) ? tramVeh : [startOf(tramLn, dir === 'n', at, stopKey + dir)] // no tram to place: show where this direction starts
   usePublishVehicles(tramShown)
-  if (state === 'failed' && !live) return <p className={cn(sub, 'm-0 mt-1')} data-testid="live-times" data-state={state}>{t('noLive')}</p>
-  const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const [north, south] = DATA.tram.ends
+  const picker = dirsOn && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
+    { id: 'n', label: t('dirTo').replace('{to}', north) },
+    { id: 's', label: t('dirTo').replace('{to}', south) },
+  ]} />
+  if (state === 'failed' && !live) return <div data-testid="live-times" data-state={state}><p className={cn(sub, 'm-0 mt-1')}>{t('noLive')}</p>{picker}</div>
+  const rows = (hasDirs ? tram.filter(x => x.dir === dir).map(x => x.r) : all).slice(0, 3)
   const min = (n: number) => (n === 0 ? t('liveNow') : t('liveMin').replace('{n}', String(n)))
   const first = rows[0]
   const viaText = live?.via ? t('nextBusesNear').replace('{name}', live.via.name).replace('{d}', fmtDist(live.via.d)) : ''
@@ -221,10 +227,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
           <div className="mt-1 flex items-center gap-2">
             <div className={cn(sub, 'flex min-w-0 items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}<span className="truncate">{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</span></div>
           </div>
-          {hasDirs && <DirPicker testId="tram-dirs" label={t('dirsLabel')} value={dir} onPick={pickDir} chips={[
-            { id: 'n', label: t('dirTo').replace('{to}', north) },
-            { id: 's', label: t('dirTo').replace('{to}', south) },
-          ]} />}
+          {picker}
           <VehNote show={tramVeh.length > 0} />
         </>
       )}
