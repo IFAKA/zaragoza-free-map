@@ -58,7 +58,7 @@ function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-closed-edge]') ?? pop?.querySelector('[data-testid=services]')
+      const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-testid=services]')
       if (!pop || !edge) return
       const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 4 + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
