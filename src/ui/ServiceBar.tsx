@@ -1,5 +1,5 @@
 import { m } from 'motion/react'
-import { MagnifyingGlass, SlidersHorizontal, Star } from '@phosphor-icons/react'
+import { ListMagnifyingGlass, SlidersHorizontal, Star } from '@phosphor-icons/react'
 import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
 import { useT } from './lang'
@@ -20,7 +20,7 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
   const { t } = useT()
   return (
     <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="shrink-0">
-      <div className="flex items-center gap-2 px-4 pb-1.5 pt-1">
+      <div className="flex items-center gap-2 px-4 pb-2 pt-2">
         {onFilters && (
           <m.button {...tap} type="button" onClick={onFilters} aria-label={t('filtersLabel')} data-testid="filters-open"
             className="relative grid size-14 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">
@@ -34,7 +34,7 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
           className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand px-3 font-bold text-on-brand shadow-md">
-          <MagnifyingGlass size="1.3em" weight="bold" aria-hidden />{t('tabsLabel')}
+          <ListMagnifyingGlass size="1.3em" weight="bold" aria-hidden />{t('tabsLabel')}
         </m.button>
       </div>
     </div>

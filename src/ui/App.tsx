@@ -53,14 +53,14 @@ function safeBottom(): number {
   probe.remove()
   return inset
 }
-/** Height of the closed sheet: the handle, the service header, plus the phone's bottom safe area. Measured, so it follows the real layout. */
+/** Height of the closed sheet: the handle and the top of the card (down to the distance line; the buttons when the card has none), plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-testid=services]')
-      if (!pop || !head) return
-      const next = Math.ceil(head.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + safeBottom())
+      const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-closed-edge]') ?? pop?.querySelector('[data-testid=services]')
+      if (!pop || !edge) return
+      const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 4 + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
     }
     measure()

@@ -462,7 +462,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <span className={cn(h2, 'block')} data-testid="nearest-name">{name}</span>
-          <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
+          <span className="block font-bold" data-closed-edge>{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
           <span className="block"><Status item={item} layer={layer} /></span>
         </span>
       </div>
@@ -580,13 +580,13 @@ export function HomePage(p: {
   const favLayers = useFavs().map(k => splitFav(k)[0] as LayerId)
   return (
     <MoreCtx.Provider value={more}>
-      <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
-      {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
+      {/* everything down to the end of this block is what the sheet shows at peek: the one card and the two buttons under it */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
+        <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
         <Separator />
       </div>
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
