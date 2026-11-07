@@ -20,13 +20,30 @@ const save = (next: string[]) => { list = next; raw = JSON.stringify(next); lsSe
 
 export const getFavs = (): string[] => list
 export const isFav = (layer: string, id: string): boolean => list.includes(favKey(layer, id))
-/** Add or remove. Returns false only when the list is full and the place could not be added. */
+/** Add (at the front) or remove. Returns false only when the list is full and the place could not be added. */
 export function toggleFav(layer: string, id: string): boolean {
   const k = favKey(layer, id)
   if (list.includes(k)) { save(list.filter(x => x !== k)); return true }
   if (list.length >= FAV_MAX) return false
-  save([...list, k])
+  save([k, ...list])
   return true
+}
+/** Opening a favourite moves it to the front, so the first few are the ones in use. */
+export function touchFav(layer: string, id: string): void {
+  const k = favKey(layer, id), i = list.indexOf(k)
+  if (i > 0) save([k, ...list.slice(0, i), ...list.slice(i + 1)])
+}
+/** Remove one key. Returns where it was (for restoreFav), or -1 when it was not saved. */
+export function removeFav(k: string): number {
+  const i = list.indexOf(k)
+  if (i >= 0) save(list.filter(x => x !== k))
+  return i
+}
+/** Put a removed key back at its old position (undo). */
+export function restoreFav(k: string, index: number): void {
+  if (list.includes(k) || list.length >= FAV_MAX) return
+  const next = [...list]; next.splice(Math.min(Math.max(index, 0), next.length), 0, k)
+  save(next)
 }
 
 const subscribe = (f: () => void) => {

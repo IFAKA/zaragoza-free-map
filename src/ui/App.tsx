@@ -2,6 +2,7 @@ import { track } from '../lib/analytics'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withCounts } from '../lib/bizi'
 import { lsGet, lsSet } from '../lib/cache'
+import { getFavs, touchFav } from '../lib/favs'
 import { loadDuty, madridDate, readDutyCache, todays } from '../lib/duty'
 import type { DutyRow } from '../lib/sources.ts'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
@@ -21,6 +22,7 @@ import type { FlyRequest, RouteView } from './MapView'
 // Leaflet and its cluster plugin are most of the code; they load as their own chunk so the drawer can paint first
 const MapView = lazy(() => import('./MapView').then(m => ({ default: m.MapView })))
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
+import { FavsPage } from './FavsPage'
 import { HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
 import { VehicleCtx } from './vehicles'
 import type { Vehicle } from '../lib/vehicles'
@@ -33,7 +35,7 @@ import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
 
-type Page = 'home' | 'place' | 'services'
+type Page = 'home' | 'place' | 'services' | 'favs'
 
 // Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 2
@@ -276,6 +278,8 @@ export function App() {
   // a favourite chip: select that place; one of another service first switches to that service
   const skipNearest = useRef(false)
   const openFav = (lid: string, id: string) => {
+    touchFav(lid, id)
+    reset() // from the Favourites page: back to Home
     if (lid === layerId) return select(id)
     if (!isLayer(lid)) return
     askLocation()
@@ -318,6 +322,7 @@ export function App() {
   const turnTo = (p: Page) => { levelBefore.current = level; go(p); setLevel(PEEK) }
   const back = () => { if (goUp() && page !== 'home') setLevel(levelBefore.current) }
   const openServices = () => turnTo('services')
+  const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) setLevel(FULL) }
   // Escape and the back gesture: up one page, then lower the sheet one step
   const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') setLevel(levelBefore.current) } else setLevel(l => Math.max(CLOSED, l - 1)) }
   const cycle = () => setLevel(l => (l === CLOSED ? PEEK : l === PEEK ? FULL : PEEK))
@@ -326,6 +331,7 @@ export function App() {
   const pageEl = (() => {
     switch (page) {
       case 'services': return <ServicesPage layer={layer.id} onPick={pickLayer} onBack={back} peekRef={setPeekEl} />
+      case 'favs': return <FavsPage onOpen={openFav} onBack={back} peekRef={setPeekEl} locked={mobileLow} />
       case 'place': return <PlacePage layer={layer} item={focus} hasPos={!!pos} onBack={back} onWalk={onWalk} locked={mobileLow} peekRef={setPeekEl} />
       default: return (
         <HomePage
@@ -333,7 +339,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           openOnly={openOnly} setOpenOnly={setOpenOnly} showRange={showRange} setShowRange={setShowRange} cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onSelect={select} onOpenFav={openFav} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
+          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onSelect={select} onOpenFav={openFav} onFavs={openFavs} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk} onAbout={() => view.open('about')}
           desktop={desktop}
         />
       )

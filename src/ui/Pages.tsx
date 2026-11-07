@@ -583,7 +583,7 @@ export function HomePage(p: {
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
-  onSelect: (id: string) => void; onOpenFav: (layer: string, id: string) => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
+  onSelect: (id: string) => void; onOpenFav: (layer: string, id: string) => void; onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void; onAbout: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -591,7 +591,7 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} />
-      <FavStrip onOpen={p.onOpenFav} />
+      <FavStrip onOpen={p.onOpenFav} onAll={p.onFavs} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}

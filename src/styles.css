@@ -154,3 +154,13 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .mk.sel::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--c);animation:selpulse 1.6s ease-out 2 both;pointer-events:none}
 @keyframes selpulse{from{transform:scale(1);opacity:.7}to{transform:scale(1.5);opacity:0}}
 @media (prefers-reduced-motion:reduce){.mk.sel::after{animation:none;opacity:.5}}
+
+/* Favourites: chips enter once (opacity + 6px up, 40 ms apart); the star pops from 90%; a removed row fades. Transitions only, transform and opacity only. */
+.fav-in { --fav-y: 6px; transition: opacity var(--dur-small) var(--ease-out), translate var(--dur-small) var(--ease-out); @starting-style { opacity: 0; translate: 0 var(--fav-y); } }
+.fav-in:nth-child(2) { transition-delay: 40ms; }
+.fav-in:nth-child(3) { transition-delay: 80ms; }
+.fav-in:nth-child(n+4) { transition-delay: 120ms; }
+.star-pop { transition: scale var(--dur-press) var(--ease-out); @starting-style { scale: 0.9; } }
+.fav-row { transition: opacity var(--dur-small) var(--ease-out), translate var(--dur-small) var(--ease-out); }
+.fav-row[data-leaving] { opacity: 0; translate: 0 -4px; }
+@media (prefers-reduced-motion: reduce) { .fav-in { --fav-y: 0px; } .star-pop { @starting-style { scale: 1; } } .fav-row[data-leaving] { translate: none; } }

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { FAV_MAX, canFav, favKey, getFavs, isFav, parseFavs, splitFav, toggleFav } from './favs'
+import { FAV_MAX, canFav, favKey, getFavs, isFav, parseFavs, removeFav, restoreFav, splitFav, toggleFav, touchFav } from './favs'
 
 describe('favs', () => {
   beforeEach(() => { for (const k of [...getFavs()]) { const [l, id] = splitFav(k); toggleFav(l, id) } })
@@ -10,7 +10,20 @@ describe('favs', () => {
     toggleFav('bus', 'u688')
     expect(isFav('bus', 'u688')).toBe(false)
   })
-  it('keeps the order of saving', () => { toggleFav('tram', 't1'); toggleFav('bus', 'u2'); expect(getFavs()).toEqual(['tram:t1', 'bus:u2']) })
+  it('puts a new favourite at the front', () => { toggleFav('tram', 't1'); toggleFav('bus', 'u2'); expect(getFavs()).toEqual(['bus:u2', 'tram:t1']) })
+  it('moves an opened favourite to the front', () => {
+    toggleFav('bus', 'a'); toggleFav('bus', 'b'); toggleFav('bus', 'c') // c b a
+    touchFav('bus', 'a'); expect(getFavs()).toEqual(['bus:a', 'bus:c', 'bus:b'])
+    touchFav('bus', 'a'); expect(getFavs()).toEqual(['bus:a', 'bus:c', 'bus:b'])
+    touchFav('bus', 'zz'); expect(getFavs()).toHaveLength(3)
+  })
+  it('restores a removed favourite in the same place', () => {
+    toggleFav('bus', 'a'); toggleFav('bus', 'b'); toggleFav('bus', 'c') // c b a
+    const i = removeFav('bus:b'); expect(i).toBe(1); expect(getFavs()).toEqual(['bus:c', 'bus:a'])
+    restoreFav('bus:b', i); expect(getFavs()).toEqual(['bus:c', 'bus:b', 'bus:a'])
+    restoreFav('bus:b', 0); expect(getFavs()).toHaveLength(3)
+    expect(removeFav('bus:nope')).toBe(-1)
+  })
   it('stops at the cap', () => {
     for (let i = 0; i < FAV_MAX; i++) expect(toggleFav('bus', 'u' + i)).toBe(true)
     expect(toggleFav('bus', 'ux')).toBe(false)
