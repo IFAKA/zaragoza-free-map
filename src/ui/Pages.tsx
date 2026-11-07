@@ -232,7 +232,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
             <ul className="m-0 mt-1 flex list-none flex-col divide-y divide-line p-0">
               {rows.map((r, i) => (
                 <li key={r.line + r.dest} className="py-1.5 first:pt-0 last:pb-0" data-testid="live-row">
-                  {onLine && lineOk?.(r.line) ? <BaseButton onClick={() => onLine(r.line)} render={<m.button {...tap} />} data-testid="live-row-open" data-line={r.line} aria-label={t('lineChip').replace('{n}', r.line)} className={cn(rowCls, 'w-full min-h-9 border-0 bg-transparent p-0 text-left text-inherit')}>{rowBody(r, i)}<CaretRight size="1em" weight="bold" className="shrink-0 text-ink-soft" aria-hidden /></BaseButton> : <div className={rowCls}>{rowBody(r, i)}</div>}
+                  {onLine && lineOk?.(r.line) ? <BaseButton onClick={() => onLine(r.line)} render={<m.button {...tap} />} data-testid="live-row-open" data-line={r.line} aria-label={t('lineChip').replace('{n}', r.line)} className={cn(rowCls, 'w-full min-h-9 border-0 bg-transparent p-0 text-left text-inherit')}>{rowBody(r, i)}<CaretRight size="1em" weight="bold" className="shrink-0 text-ink-soft" aria-hidden /></BaseButton> : <div className={cn(rowCls, 'min-h-9')}>{rowBody(r, i)}{onLine && <span className="w-[1em] shrink-0" aria-hidden />}</div>}
                 </li>
               ))}
             </ul>
