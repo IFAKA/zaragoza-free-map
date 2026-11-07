@@ -62,13 +62,23 @@ function Actions({ item, onWalk, fav, extra }: { item: RankedItem; onWalk: () =>
   )
 }
 
-export function PageHeader({ title, onBack, action }: { title: string; onBack: () => void; action?: ReactNode }) {
+/** The cross at the end of a page header that has no back arrow (a mode to leave: edit, delete, rename). */
+export function CloseButton({ onClick, label, testId }: { onClick: () => void; label: string; testId?: string }) {
+  return (
+    <m.button {...tap} type="button" onClick={onClick} aria-label={label} title={label} data-testid={testId}
+      className="ml-auto mr-1 inline-flex size-11 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-brand-text"><CloseIcon size="1.4em" weight="bold" aria-hidden /></m.button>
+  )
+}
+
+export function PageHeader({ title, onBack, action, noBack }: { title: string; onBack: () => void; action?: ReactNode; noBack?: boolean }) {
   const { t } = useT()
   return (
     <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-0">
-      <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className="inline-flex size-[44px] items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
-        <CaretLeft size="1.4em" weight="bold" aria-hidden />
-      </BaseButton>
+      {noBack ? <span className="w-2 shrink-0" aria-hidden /> : (
+        <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className="inline-flex size-[44px] items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
+          <CaretLeft size="1.4em" weight="bold" aria-hidden />
+        </BaseButton>
+      )}
       <h1 className={h2}>{title}</h1>
       {action}
     </div>

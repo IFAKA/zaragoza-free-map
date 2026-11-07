@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
-import { DotsThreeVertical, PencilSimple, Star, Trash, X } from '@phosphor-icons/react'
+import { DotsThreeVertical, PencilSimple, Star, Trash } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import { type FavKind, favTitle, filterKind, isStopLayer, nearestFavs, removeFav, restoreFav, setLabel, LABEL_MAX, useFavLabels, useFavs } from '../lib/favs'
@@ -7,7 +7,7 @@ import type { LatLon } from '../lib/types'
 import { useT } from './lang'
 import { tap } from './motion'
 import { type Fav, FavRow, resolveFavs, useSteadyPos } from './Favs'
-import { PageHeader } from './Pages'
+import { CloseButton, PageHeader } from './Pages'
 import { toasts } from './ToastHost'
 import { FilterMenu, Scroll } from './ui/kit'
 
@@ -44,9 +44,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   const start = (k: 'edit' | 'delete') => { setMenu(false); setPicked([]); setMode(k) }
   const item = 'flex min-h-[44px] w-full items-center gap-3 border-0 bg-transparent px-3 text-left font-semibold text-ink hov:bg-surface'
   const action = all.length > 0 && (mode ? (
-    <m.button {...tap} type="button" onClick={done} data-testid="fav-edit"
-      aria-label={t('favsDone')} title={t('favsDone')}
-      className="ml-auto mr-1 inline-flex size-11 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-brand-text"><X size="1.4em" weight="bold" aria-hidden /></m.button>
+    <CloseButton onClick={done} label={t('favsDone')} testId="fav-edit" />
   ) : (
     <Popover.Root open={menu} onOpenChange={setMenu}>
       <Popover.Trigger render={<m.button {...tap} />} aria-label={t('favsMore')} data-testid="fav-more"
@@ -64,7 +62,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   if (renaming) return <RenameView fav={renaming} label={labels[renaming.key]} onBack={() => setRenameKey(null)} locked={locked} peekRef={peekRef} />
   return (
     <>
-      <PageHeader title={mode === 'edit' ? t('favsEditing') : mode === 'delete' ? t('favsDeleting') : `${t('favsTitle')} · ${all.length}`} onBack={onBack} action={action} />
+      <PageHeader title={mode === 'edit' ? t('favsEditing') : mode === 'delete' ? t('favsDeleting') : `${t('favsTitle')} · ${all.length}`} onBack={onBack} action={action} noBack={!!mode} />
       <Scroll locked={locked}>
         <div ref={peekRef} className="w-0 min-w-full pb-6">
           {all.length > 8 && (
@@ -111,7 +109,7 @@ function RenameView({ fav, label, onBack, locked, peekRef }: { fav: Fav; label?:
   const save = (v: string) => { setLabel(fav.key, v); onBack() }
   return (
     <>
-      <PageHeader title={t('favRename')} onBack={onBack} />
+      <PageHeader title={t('favRename')} onBack={onBack} noBack action={<CloseButton onClick={onBack} label={t('back')} />} />
       <Scroll locked={locked}>
         <form ref={peekRef as React.Ref<HTMLFormElement>} className="flex w-0 min-w-full flex-col gap-3 px-4 pb-6" onSubmit={e => { e.preventDefault(); save(ref.current?.value ?? '') }}>
           <p className="m-0 text-ink-soft">{name} · {fav.layer.label[lang]}</p>
