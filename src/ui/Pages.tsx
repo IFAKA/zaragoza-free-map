@@ -502,8 +502,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   const hideStar = wide === item.id, hideWalk = hideStar && need > 44 // the opened name takes the room of the star first, of the walk button only when that is not enough
   const favBtn = null // the Details button is the (i) next to the name
   return (
-    <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" data-closed-edge aria-label={kind}>
-      <div className="flex items-center">
+    <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
+      <div className="flex items-center" data-closed-edge>
       <div className="relative flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
         <span className="min-w-0 flex-1 [transition:padding-right_var(--dur-small)_var(--ease-out)]" style={{ paddingRight: (hideStar ? 0 : 44) + (hideWalk ? 0 : 52) }}>
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
