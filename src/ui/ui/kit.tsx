@@ -36,7 +36,7 @@ export function Switch({ checked, onCheckedChange, label, hint, testId }: { chec
         <span className="block font-bold leading-tight">{label}</span>
         {hint && <span className="block text-[0.87em] leading-tight text-ink-soft">{hint}</span>}
       </span>
-      <BaseSwitch.Root render={<m.button {...tap} />}
+      <BaseSwitch.Root render={<m.button {...tap} />} nativeButton
         checked={checked} onCheckedChange={onCheckedChange} data-testid={testId}
         className="relative inline-flex h-[1.6em] w-[2.8em] shrink-0 items-center rounded-full border border-line-strong bg-surface p-[0.15em] [transition:background-color_var(--dur-small),border-color_var(--dur-small)] data-[checked]:border-brand data-[checked]:bg-brand"
       >
