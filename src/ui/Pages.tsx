@@ -51,13 +51,13 @@ function More({ children }: { children: ReactNode }) {
   const el = useContext(MoreCtx)
   return el ? createPortal(children, el) : null
 }
-/** Every button of a place card in ONE row that scrolls sideways: Save first, then the way there, then the rest the place has (times, call). */
+/** Every button of a place card in ONE row that scrolls sideways: The way there first, then Save, then the rest the place has (times, call). */
 function Actions({ item, onWalk, fav, times, extra }: { item: RankedItem; onWalk: () => void; fav: ReactNode; times?: { url: string; label: string; onClick: () => void; testId: string }; extra?: ReactNode }) {
   const { t } = useT()
   return (
     <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&>*]:shrink-0 [&>*]:whitespace-nowrap [&::-webkit-scrollbar]:hidden" data-testid="actions">
-      {fav}
       <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+      {fav}
       {times && <Button variant="secondary" {...linkProps(times.url)} onClick={times.onClick} data-testid={times.testId}><Clock size="1.2em" aria-hidden />{times.label}</Button>}
       {extra}
     </div>
