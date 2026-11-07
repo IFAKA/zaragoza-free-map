@@ -105,6 +105,14 @@ function ViewHeader({ title, onBack, onClose }: { title: string; onBack?: () => 
   )
 }
 
+/** Open / closed as only a round dot after the place name (green: open, grey: closed); the word is its name for screen readers and its hover title. */
+function statusDot(item: RankedItem, layer: LayerConfig, t: (k: Key) => string) {
+  if (!layer.hours) return null
+  const open = item.always || item.open === true ? true : item.open === false ? false : null
+  if (open === null) return null
+  const label = t(item.always ? 'alwaysOn' : open ? 'openShort' : 'closedShort')
+  return <span role="img" aria-label={label} title={label} data-testid="nearest-status" className={cn('ml-2 inline-block size-3 rounded-full align-middle', open ? 'bg-success-ink' : 'bg-ink-soft')} />
+}
 function Status({ item, layer }: { item: RankedItem; layer: LayerConfig }) {
   const { t } = useT()
   if (!layer.hours) return null
@@ -452,19 +460,18 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   const name = item.name || type(item.type)
   const favBtn = null // the Details button is the (i) next to the name
   return (
-    <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
+    <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" data-closed-edge aria-label={kind}>
       <div className="flex items-center">
       <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left text-ink">
         <span className="min-w-0 flex-1">
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
-          <span className="block"><span className={h2} data-testid="nearest-name">{name}</span>{hasDetails(layer, item) && (
+          <span className="block"><span className={h2} data-testid="nearest-name">{name}</span>{statusDot(item, layer, t)}{hasDetails(layer, item) && (
             <m.button {...tap} type="button" onClick={onDetails} data-testid="details" aria-label={t('details')} title={t('details')}
               className="relative -my-1 ml-1.5 inline-flex size-8 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 align-middle text-ink-soft before:absolute before:-inset-1.5 before:content-['']">
               <InfoIcon size="1.5em" weight="bold" aria-hidden />
             </m.button>
           )}</span>
           <span className="block font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
-          <span className="block" data-closed-edge><Status item={item} layer={layer} /></span>
         </span>
         <FavButton layer={layer} item={item} />
         <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
