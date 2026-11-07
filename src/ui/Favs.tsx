@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICONS } from './icons'
 import { LAYERS } from '../layers'
 import { lsGet, lsSet } from '../lib/cache'
-import { canFav, favKey, favTitle, splitFav, toggleFav, useFavLabels, useFavs } from '../lib/favs'
+import { favKey, getSnap, favTitle, splitFav, toggleFav, useFavLabels, useFavs } from '../lib/favs'
 import { loadBus, loadTram } from '../lib/live'
 import type { Live } from '../lib/live'
 import { dist, fmtDist } from '../lib/geo'
@@ -18,17 +18,16 @@ import { tap } from './motion'
 import { useLive } from './useLive'
 import { toasts } from './ToastHost'
 
-/** The save button of a place card, in its action row: an outline pill with a star and "Save" / "Saved". Not shown for places that cannot be saved. The first save gives a short message. */
+/** The save button of a place card, in its action row: an outline pill with a star and "Save" / "Saved". The first save gives a short message. */
 export function FavButton({ layer, item }: { layer: LayerConfig; item: Item }) {
   const { t } = useT()
   const favs = useFavs()
   const [saved, setSaved] = useState(false) // true only after a tap that saves, so opening an already saved place stays still
-  if (!canFav(layer)) return null
   const on = favs.includes(favKey(layer.id, item.id))
   const press = () => {
     const first = favs.length === 0 && !lsGet('favFirst')
     setSaved(!on)
-    toggleFav(layer.id, item.id)
+    toggleFav(layer.id, item.id, layer.live ? item : undefined)
     if (first && !on) { lsSet('favFirst', '1'); toasts.add({ title: t('favFirst'), timeout: 2500, data: { close: '' } }) }
   }
   return (
@@ -45,7 +44,7 @@ export function resolveFavs(keys: string[]): Fav[] {
   return keys.flatMap<Fav>(key => {
     const [lid, id] = splitFav(key)
     const layer = LAYERS[lid as keyof typeof LAYERS]
-    const item = layer?.items.find(i => i.id === id)
+    const item = layer?.items.find(i => i.id === id) ?? (layer?.live ? getSnap(key) : null)
     return item ? [{ key, layer, item }] : []
   })
 }

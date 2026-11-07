@@ -35,7 +35,7 @@ import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
 import { Button, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
 import { cn } from './cn'
-import { canFav, splitFav, useFavs } from '../lib/favs'
+import { splitFav, useFavs } from '../lib/favs'
 import { FavButton } from './Favs'
 import { OpenDot } from './OpenDot'
 
@@ -439,7 +439,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
   const favBtn = <>
-    {canFav(layer) && <FavButton layer={layer} item={item} />}
+    <FavButton layer={layer} item={item} />
     {hasDetails(layer, item) && <Button variant="secondary" onClick={onDetails} data-testid="details">{t('details')}</Button>}
   </>
   return (
@@ -465,7 +465,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
 /** The card of a greyed-out place that was tapped on the map: why it is not available, the hours when closed, and where the record comes from. */
 export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }) {
   const { t, type, lang } = useT()
-  const why = t(item.off === 'noBikes' ? 'offNoBikes' : item.off === 'noDocks' ? 'offNoDocks' : 'offClosed')
+  const why = t(item.off === 'noBikes' ? 'offNoBikes' : item.off === 'noDocks' ? 'offNoDocks' : item.off === 'notOnDuty' ? 'offNotOnDuty' : 'offClosed')
   const hours = item.off === 'closed' && item.hours ? fmtHours(lang, item.hours) : ''
   return (
     <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="off-card" aria-label={t('offTitle')}>
@@ -473,6 +473,7 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
       <h2 className={cn(h2, 'mt-1')} data-testid="off-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{fmtDist(item.d)} · {walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></div>
       <p className="m-0 mt-1" data-testid="off-reason">{why}</p>
+      {item.off === 'notOnDuty' && <p className={cn(sub, 'm-0 mt-0.5')}>{[item.addr, item.phone].filter(Boolean).join(' · ')}</p>}
       {hours && <p className={cn(sub, 'm-0 mt-0.5')}>{t('hours')}: {hours}</p>}
       <div className="flex items-start gap-1"><div className={cn(sub, 'flex-1 pt-2')} data-testid="off-source">{t('source')}: {srcLabel(t, item)}</div><InfoPop label={t('srcInfo')} title={t('srcInfo')}>{srcExplain(t, item)}</InfoPop></div>
     </m.section>

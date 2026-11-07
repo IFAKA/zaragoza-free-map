@@ -1,14 +1,11 @@
 import { useSyncExternalStore } from 'react'
 import { lsGet, lsSet } from './cache'
 import { dist } from './geo'
-import type { LatLon } from './types'
-// Favourite places, kept on this device as `layerId:itemId` keys (ids repeat across layers). The live pharmacy list changes every day, so a pharmacy is never starred (see canFav).
+import type { Item, LatLon } from './types'
+// Favourite places, kept on this device as `layerId:itemId` keys (ids repeat across layers). A pharmacy on duty is in today's list only, so saving one keeps a small copy of it (name, address, phone, place): see snapFav.
 const KEY = 'favs'
 export const favKey = (layer: string, id: string) => `${layer}:${id}`
 export const splitFav = (k: string): [string, string] => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)] }
-/** Every place can be starred except the live pharmacy list (only today's duty pharmacies exist in it, so a saved one would have nothing true to show on most days). */
-export const canFav = (layer: { live?: boolean }) => !layer.live
-
 export function parseFavs(s: string | null): string[] {
   try { const v = JSON.parse(s ?? '[]'); return Array.isArray(v) ? [...new Set<string>(v.filter((x): x is string => typeof x === 'string' && x.includes(':')))] : [] } catch { return [] }
 }
@@ -21,11 +18,27 @@ const save = (next: string[]) => { list = next; raw = JSON.stringify(next); lsSe
 
 export const getFavs = (): string[] => list
 export const isFav = (layer: string, id: string): boolean => list.includes(favKey(layer, id))
-/** Add (at the front) or remove. */
-export function toggleFav(layer: string, id: string): void {
+/** Add (at the front) or remove. `snap`: a place of the live pharmacy list, whose copy is kept so it can be opened on a day it is not on duty. */
+export function toggleFav(layer: string, id: string, snap?: Item): void {
   const k = favKey(layer, id)
   if (list.includes(k)) { save(list.filter(x => x !== k)); return }
+  if (snap) snapFav(k, snap)
   save([k, ...list])
+}
+
+type Snap = Pick<Item, 'name' | 'addr' | 'phone' | 'lat' | 'lon'>
+const SNAPS = 'favSnaps'
+const readSnaps = (): Record<string, Snap> => { try { const v = JSON.parse(lsGet(SNAPS) ?? '{}'); return v && typeof v === 'object' ? v : {} } catch { return {} } }
+const snaps = readSnaps()
+/** Keep a small copy of a place that is not in the baked data (a pharmacy on duty). */
+export function snapFav(key: string, it: Item): void {
+  snaps[key] = { name: it.name, addr: it.addr, phone: it.phone, lat: it.lat, lon: it.lon }
+  lsSet(SNAPS, JSON.stringify(snaps))
+}
+/** The kept copy of a saved pharmacy, as a place without today's duty fields (so it never claims to be on duty). */
+export function getSnap(key: string): Item | null {
+  const x = snaps[key]
+  return x && Number.isFinite(x.lat) && Number.isFinite(x.lon) ? { id: splitFav(key)[1], part: 'city', type: 'pharmacy', ...x } : null
 }
 /** Opening a favourite moves it to the front, so the first few are the ones in use. */
 export function touchFav(layer: string, id: string): void {

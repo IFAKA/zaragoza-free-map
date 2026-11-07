@@ -2,7 +2,7 @@ import { track } from '../lib/analytics'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withCounts } from '../lib/bizi'
 import { lsGet, lsSet } from '../lib/cache'
-import { getFavs, touchFav } from '../lib/favs'
+import { favKey, getFavs, getSnap, splitFav, touchFav, useFavs } from '../lib/favs'
 import { loadDuty, madridDate, readDutyCache, todays } from '../lib/duty'
 import type { DutyRow } from '../lib/sources.ts'
 import { initialLang, DICT, type Lang } from '../lib/i18n'
@@ -12,8 +12,8 @@ import { rankOrAll, unavailable } from '../lib/rank'
 import { DATA } from '../data'
 import { loadBusRoutes, loadCercaniasTimes, type CercaniasTimes } from '../data/lazy'
 import { decodePolyline, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
-import { CENTER } from '../lib/geo'
-import type { LatLon, LayerId } from '../lib/types'
+import { CENTER, dist } from '../lib/geo'
+import type { LatLon, LayerId, RankedItem } from '../lib/types'
 import { LAYERS, defaultLayer } from '../layers'
 import { dutyItems } from '../layers/build'
 import { LangCtx } from './lang'
@@ -205,12 +205,22 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [layer, layerItems, pos, openOnly, cat, tick])
   // places the filters leave out because they are not available: still on the map, greyed out
+  const favKeys = useFavs()
   const offItems = useMemo(() => {
-    if (layer.live || lineSel) return []
+    if (layer.live) {
+      // saved pharmacies that are not on today's list: greyed out, never listed as on duty
+      if (!dutyRows) return []
+      const ids = new Set(layerItems.map(i => i.id))
+      return favKeys.flatMap<RankedItem>(k => {
+        const [lid, id] = splitFav(k), it = lid === layer.id && !ids.has(id) ? getSnap(k) : null
+        return it ? [{ ...it, d: dist(pos ?? CENTER, [it.lat, it.lon]), open: null, off: 'notOnDuty' }] : []
+      })
+    }
+    if (lineSel) return []
     const ids = new Set(arr.map(i => i.id))
     return unavailable(layer, layerItems, { ref: pos, openOnly, cat: layer.cats && cat !== 'all' ? cat : null }, nowMadrid()).filter(i => !ids.has(i.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arr, layer, layerItems, pos, openOnly, cat, lineSel])
+  }, [arr, layer, layerItems, pos, openOnly, cat, lineSel, dutyRows, favKeys])
   const mapItems = useMemo(() => (offItems.length ? [...arr, ...offItems] : arr), [arr, offItems])
   const offSel = selected && !arr.some(i => i.id === selected) ? offItems.find(i => i.id === selected) ?? null : null
   const chosen = selected ? arr.find(i => i.id === selected) ?? null : null
@@ -309,7 +319,7 @@ export function App() {
     if (lid === layerId) return select(id)
     if (!isLayer(lid)) return
     askLocation()
-    const it = LAYERS[lid].items.find(i => i.id === id)
+    const it = LAYERS[lid].items.find(i => i.id === id) ?? getSnap(favKey(lid, id))
     skipNearest.current = true // the effect below would frame the nearest place of the new service
     setLayerId(lid); lsSet('layer', lid); setCat(catStart(lid)); setLineSel(null)
     reset()

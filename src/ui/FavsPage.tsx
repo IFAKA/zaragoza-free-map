@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
-import { DotsThreeVertical, PencilSimple, Star, Trash } from '@phosphor-icons/react'
+import { DotsThreeVertical, PencilSimple, Star, Trash, X } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import { type FavKind, favTitle, filterKind, isStopLayer, nearestFavs, removeFav, restoreFav, setLabel, LABEL_MAX, useFavLabels, useFavs } from '../lib/favs'
@@ -45,7 +45,8 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   const item = 'flex min-h-[44px] w-full items-center gap-3 border-0 bg-transparent px-3 text-left font-semibold text-ink hov:bg-surface'
   const action = all.length > 0 && (mode ? (
     <m.button {...tap} type="button" onClick={done} data-testid="fav-edit"
-      className="ml-auto mr-1 inline-flex min-h-[44px] select-none items-center border-0 bg-transparent px-3 font-semibold text-brand-text">{t('favsDone')}</m.button>
+      aria-label={t('favsDone')} title={t('favsDone')}
+      className="ml-auto mr-1 inline-flex size-11 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-brand-text"><X size="1.4em" weight="bold" aria-hidden /></m.button>
   ) : (
     <Popover.Root open={menu} onOpenChange={setMenu}>
       <Popover.Trigger render={<m.button {...tap} />} aria-label={t('favsMore')} data-testid="fav-more"
@@ -63,7 +64,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   if (renaming) return <RenameView fav={renaming} label={labels[renaming.key]} onBack={() => setRenameKey(null)} locked={locked} peekRef={peekRef} />
   return (
     <>
-      <PageHeader title={`${t('favsTitle')} · ${all.length}`} onBack={onBack} action={action} />
+      <PageHeader title={mode === 'edit' ? t('favsEditing') : mode === 'delete' ? t('favsDeleting') : `${t('favsTitle')} · ${all.length}`} onBack={onBack} action={action} />
       <Scroll locked={locked}>
         <div ref={peekRef} className="w-0 min-w-full pb-6">
           {all.length > 8 && (

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { LABEL_MAX, canFav, cleanLabel, favTitle, filterKind, getLabels, isStopLayer, parseLabels, setLabel, favKey, getFavs, isFav, parseFavs, removeFav, nearestFavs, restoreFav, splitFav, toggleFav, touchFav } from './favs'
+import { LABEL_MAX, cleanLabel, favTitle, filterKind, getLabels, isStopLayer, parseLabels, setLabel, favKey, getFavs, isFav, parseFavs, removeFav, getSnap, nearestFavs, restoreFav, splitFav, toggleFav, touchFav } from './favs'
 
 describe('favs', () => {
   beforeEach(() => { for (const k of [...getFavs()]) { const [l, id] = splitFav(k); toggleFav(l, id) } })
@@ -43,10 +43,13 @@ describe('favs', () => {
     expect(parseFavs('{"a":1}')).toEqual([])
     expect(parseFavs('["bus:u1","bus:u1",3,"bad"]')).toEqual(['bus:u1'])
   })
-  it('stars every place except the live pharmacy list', () => {
-    expect(canFav({})).toBe(true)
-    expect(canFav({ live: false })).toBe(true)
-    expect(canFav({ live: true })).toBe(false)
+  it('keeps a copy of a saved pharmacy, without any duty fields', () => {
+    const it = { id: 'p1', part: 'city' as const, type: 'pharmacy', name: 'Farmacia X', addr: 'Calle 1', phone: '976', lat: 41.6, lon: -0.9, duty: '24 h', sector: 'S' }
+    toggleFav('pharmacy', 'p1', it)
+    const s = getSnap('pharmacy:p1')
+    expect(s).toMatchObject({ id: 'p1', type: 'pharmacy', name: 'Farmacia X', addr: 'Calle 1', lat: 41.6 })
+    expect(s?.duty).toBeUndefined()
+    expect(getSnap('pharmacy:nope')).toBeNull()
   })
   it('keeps labels in their own map, trimmed and capped; empty clears', () => {
     setLabel('bus:a', '  Home   stop '); expect(getLabels()['bus:a']).toBe('Home stop')
