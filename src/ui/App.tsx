@@ -55,16 +55,14 @@ function safeBottom(): number {
   probe.remove()
   return inset
 }
-/** The card's bottom padding (pb-2) under its header row. */
-const CARD_PAD_PX = 8
-/** Height of the closed sheet: the handle and the header row of the card (service, name, walking time, star and walk button; nothing below it), plus the phone's bottom safe area. Measured, so it follows the real layout. */
+/** Height of the closed sheet: the handle and the header row of the card (service, name, walking time, star and walk button; nothing below it, not even the top edge of the next row: the cut is exactly under the header row), plus the phone's bottom safe area. Measured, so it follows the real layout. */
 function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
       const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-closed-edge]')
       if (!pop || !edge) return
-      const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 1 + CARD_PAD_PX + FOOTER_PX + safeBottom())
+      const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 1 + FOOTER_PX + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
     }
     measure()
