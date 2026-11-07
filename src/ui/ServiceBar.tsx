@@ -31,17 +31,17 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
       <div className={cn('flex items-center gap-2 px-4', bar ? 'h-[72px]' : 'pb-3 pt-0')}>
         {onFilters && (
           <m.button {...tap} type="button" onClick={onFilters} aria-label={t('filtersLabel')} data-testid="filters-open"
-            className="relative grid size-14 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">
+            className="relative grid size-12 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">
             <SlidersHorizontal size="1.5em" weight="bold" aria-hidden />
             {filtersActive && <span aria-hidden className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-brand" />}
           </m.button>
         )}
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
-          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-surface px-3 font-bold text-ink shadow-md [transition:background-color_var(--dur-small)_var(--ease-out)] hover:bg-paper">
+          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-line bg-paper px-3 font-bold text-ink shadow-md">
           <span className="text-brand-text"><ListFilledStar /></span>{t('favsTitle')}
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
-          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-surface px-3 font-bold text-ink shadow-md [transition:background-color_var(--dur-small)_var(--ease-out)] hover:bg-paper">
+          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-line bg-paper px-3 font-bold text-ink shadow-md">
           <ListMagnifyingGlass size="1.3em" weight="bold" className="text-brand-text" aria-hidden />{t('tabsLabel')}
         </m.button>
       </div>
