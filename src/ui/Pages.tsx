@@ -446,11 +446,15 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
 /** The place name on one line. Tapped, it gets the whole width (the star and the walk button fade away, see NearestBlock); a name that is still too long then slides back and forth so all of it can be read. */
 function NameButton({ name, open, onToggle }: { name: string; open: boolean; onToggle: () => void }) {
   const box = useRef<HTMLSpanElement>(null), txt = useRef<HTMLSpanElement>(null)
-  const [over, setOver] = useState(0) // how many px the text is wider than its box
+  const [over, setOver] = useState(0) // open: how many px the text is wider than its box
+  const [clipped, setClipped] = useState(false) // closed: the name does not fit and is cut with "…"; only then is there anything to open
   useEffect(() => {
     const b = box.current, x = txt.current
-    if (!open || !b || !x) { setOver(0); return }
-    const measure = () => setOver(Math.max(0, Math.ceil(x.scrollWidth - b.clientWidth)))
+    if (!b || !x) return
+    const measure = () => {
+      if (open) setOver(Math.max(0, Math.ceil(x.scrollWidth - b.clientWidth)))
+      else { setOver(0); setClipped(x.scrollWidth > x.clientWidth) }
+    }
     const ro = new ResizeObserver(measure) // the box grows while the star fades away
     ro.observe(b)
     measure()
@@ -468,8 +472,8 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
     }
   }, [open, over])
   return (
-    <m.button {...tap} type="button" onClick={onToggle} aria-expanded={open} data-testid="nearest-name-btn"
-      className="m-0 block w-full min-w-0 select-none border-0 bg-transparent p-0 text-left">
+    <m.button {...(clipped || open ? tap : {})} type="button" onClick={onToggle} disabled={!clipped && !open} aria-expanded={clipped || open ? open : undefined} data-testid="nearest-name-btn"
+      className="m-0 block w-full min-w-0 select-none border-0 bg-transparent p-0 text-left disabled:cursor-default">
       <span ref={box} className={cn(h2, 'block overflow-hidden whitespace-nowrap', open && 'name-box')} data-testid="nearest-name">
         <span ref={txt} className={cn(open ? 'inline-block' : 'block truncate')}>{name}</span>
       </span>
