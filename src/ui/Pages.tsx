@@ -101,7 +101,7 @@ function Status({ item, layer }: { item: RankedItem; layer: LayerConfig }) {
   if (item.always) return <span className="font-bold text-success-ink">{t('alwaysOn')}</span>
   if (item.open === true) return <span className="font-bold text-success-ink">{t('open')}</span>
   if (item.open === false) return <span className="font-bold text-warn-ink">{t('closed')}</span>
-  return <span className="font-semibold text-ink-soft">{t('hoursUnknown')}</span>
+  return null // no known hours: say nothing rather than "unknown"
 }
 
 /** Libraries: a live-occupancy link where one exists (University of Zaragoza), an honest "not published" otherwise. */
