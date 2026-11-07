@@ -22,17 +22,19 @@ import { toasts } from './ToastHost'
 export function FavButton({ layer, item }: { layer: LayerConfig; item: Item }) {
   const { t } = useT()
   const favs = useFavs()
+  const [saved, setSaved] = useState(false) // true only after a tap that saves, so opening an already saved place stays still
   if (!canFav(layer, item)) return null
   const on = favs.includes(favKey(layer.id, item.id))
   const press = () => {
     const first = favs.length === 0 && !lsGet('favFirst')
+    setSaved(!on)
     toggleFav(layer.id, item.id)
     if (first && !on) { lsSet('favFirst', '1'); toasts.add({ title: t('favFirst'), timeout: 2500, data: { close: '' } }) }
   }
   return (
     <m.button {...tap} type="button" onClick={press} aria-pressed={on} aria-label={on ? t('favSaved') : t('favSave')} title={on ? t('favSaved') : t('favSave')} data-testid="fav-star"
       className={cn('inline-flex size-11 shrink-0 select-none items-center justify-center rounded-btn border border-line-strong bg-transparent p-0', on ? 'text-brand-text' : 'text-ink')}>
-      <span key={on ? 'on' : 'off'} className={cn('grid', on && 'star-pop')}><Star size="1.4em" weight={on ? 'fill' : 'regular'} aria-hidden /></span>
+      <span key={on ? 'on' : 'off'} className={cn('grid', on && saved && 'star-save')}><Star size="1.4em" weight={on ? 'fill' : 'regular'} aria-hidden /></span>
     </m.button>
   )
 }

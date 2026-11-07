@@ -155,9 +155,13 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 @keyframes selpulse{from{transform:scale(1);opacity:.7}to{transform:scale(1.5);opacity:0}}
 @media (prefers-reduced-motion:reduce){.mk.sel::after{animation:none;opacity:.5}}
 
-/* Favourites: live times fade in (opacity only) so the right column never jumps; the star pops from 90%; a removed row fades. Transitions only, transform and opacity only. */
+/* Favourites: live times fade in (opacity only) so the right column never jumps; a removed row fades. Transitions only, transform and opacity only. */
 .fav-fade { transition: opacity var(--dur-small) var(--ease-out); @starting-style { opacity: 0; } }
-.star-pop { transition: scale var(--dur-press) var(--ease-out); @starting-style { scale: 0.9; } }
+.star-save { position: relative; animation: starpop var(--dur-pick) var(--ease-out); }
+/* saving a place: the star fills, swells once (same --pick-scale as the map marker) and a soft ring fades out; removing is silent */
+.star-save::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--color-brand); pointer-events: none; animation: starring var(--dur-pick) var(--ease-out) both; }
+@keyframes starpop { 0% { transform: scale(0.8); } 40% { transform: scale(var(--pick-scale)); } 100% { transform: scale(1); } }
+@keyframes starring { from { opacity: 0.5; transform: scale(0.8); } to { opacity: 0; transform: scale(2); } }
 .fav-row { transition: opacity var(--dur-small) var(--ease-out), translate var(--dur-small) var(--ease-out); }
 .fav-row[data-leaving] { opacity: 0; translate: 0 -4px; }
-@media (prefers-reduced-motion: reduce) { .star-pop { @starting-style { scale: 1; } } .fav-row[data-leaving] { translate: none; } }
+@media (prefers-reduced-motion: reduce) { .star-save, .star-save::after { animation: none; } .fav-row[data-leaving] { translate: none; } }
