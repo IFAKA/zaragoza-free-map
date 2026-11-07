@@ -1,4 +1,3 @@
-import { Tabs } from '@base-ui/react/tabs'
 import { m } from 'motion/react'
 import { ListMagnifyingGlass, SlidersHorizontal } from '@phosphor-icons/react'
 import { LAYERS } from '../layers'
@@ -37,19 +36,14 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
             {filtersActive && <span aria-hidden className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-brand" />}
           </m.button>
         )}
-        {/* two Base UI tabs in a segmented control: no tab is selected on the home page, a tap turns the drawer to that page */}
-        <Tabs.Root value={null} onValueChange={v => (v === 'favs' ? onFavs() : onOpen())} className="flex min-w-0 flex-1">
-          <Tabs.List aria-label={t('tabsLabel')} className="flex min-w-0 flex-1 gap-1 rounded-full border border-line bg-surface p-1">
-            <Tabs.Tab value="favs" render={<m.button {...tap} />} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
-              className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-transparent px-3 font-bold text-ink [transition:background-color_var(--dur-small)_var(--ease-out)] hover:bg-paper data-[active]:bg-paper">
-              <span className="text-brand-text"><ListFilledStar /></span>{t('favsTitle')}
-            </Tabs.Tab>
-            <Tabs.Tab value="services" render={<m.button {...tap} />} data-testid="services-open"
-              className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-transparent px-3 font-bold text-ink [transition:background-color_var(--dur-small)_var(--ease-out)] hover:bg-paper data-[active]:bg-paper">
-              <ListMagnifyingGlass size="1.3em" weight="bold" className="text-brand-text" aria-hidden />{t('tabsLabel')}
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs.Root>
+        <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
+          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-surface px-3 font-bold text-ink shadow-md [transition:background-color_var(--dur-small)_var(--ease-out)] hover:bg-paper">
+          <span className="text-brand-text"><ListFilledStar /></span>{t('favsTitle')}
+        </m.button>
+        <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
+          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-surface px-3 font-bold text-ink shadow-md [transition:background-color_var(--dur-small)_var(--ease-out)] hover:bg-paper">
+          <ListMagnifyingGlass size="1.3em" weight="bold" className="text-brand-text" aria-hidden />{t('tabsLabel')}
+        </m.button>
       </div>
     </div>
   )
