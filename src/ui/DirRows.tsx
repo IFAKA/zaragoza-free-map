@@ -15,14 +15,15 @@ export interface DirChip {
 /** The two directions of a tram stop or a station as two rows, like the bus rows: where it goes on the left, when on the right. The chosen one is filled (it also decides which vehicles the map shows); an empty one is grey. */
 export function DirRows({ chips, value, onPick, label, testId }: { chips: DirChip[]; value: string; onPick: (id: string) => void; label: string; testId: string }) {
   return (
-    <div role="group" aria-label={label} data-testid={testId} className="mt-1 flex flex-col divide-y divide-line">
-      {chips.map(c => {
+    <div role="group" aria-label={label} data-testid={testId} className="mt-1 flex flex-col">
+      {chips.map((c, i) => {
         const on = value === c.id && !c.empty
+        const prevOn = i > 0 && value === chips[i - 1].id && !chips[i - 1].empty
         return (
           <BaseButton
             key={c.id} onClick={() => !c.empty && onPick(c.id)} aria-pressed={on} aria-disabled={c.empty || undefined} data-testid="dir-chip" data-dir={c.id} data-empty={c.empty ? '' : undefined}
             render={<m.button {...(c.empty ? {} : tap)} />}
-            className={cn('-mx-2 flex min-h-11 w-[calc(100%+1rem)] select-none items-center gap-2 px-2 py-1.5 text-left leading-tight', on ? 'rounded-lg bg-brand-tint' : 'bg-transparent', c.empty ? 'text-ink-soft' : 'text-ink')}
+            className={cn('-mx-2 flex min-h-11 w-[calc(100%+1rem)] select-none items-center gap-2 px-2 py-1.5 text-left leading-tight', on ? 'rounded-lg bg-brand-tint' : 'bg-transparent', i > 0 && !on && !prevOn && 'border-t border-line', c.empty ? 'text-ink-soft' : 'text-ink')}
           >
             {c.badge}
             <span className="flex min-w-0 flex-1 items-baseline gap-1.5"><span className={cn('truncate', on && 'font-bold')}>{c.label}</span>{c.sub && <span className="shrink-0 text-[0.87em] font-normal text-ink-soft">{c.sub}</span>}</span>
