@@ -26,7 +26,7 @@ export function FavButton({ layer, item }: { layer: LayerConfig; item: Item }) {
   const press = () => {
     const first = favs.length === 0 && !lsGet('favFirst')
     toggleFav(layer.id, item.id)
-    if (first && !on) { lsSet('favFirst', '1'); toasts.add({ title: t('favFirst'), timeout: 2500, data: { close: t('close') } }) }
+    if (first && !on) { lsSet('favFirst', '1'); toasts.add({ title: t('favFirst'), timeout: 2500, data: { close: '' } }) }
   }
   return (
     <m.button {...tap} type="button" onClick={press} aria-pressed={on} data-testid="fav-star"
