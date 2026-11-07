@@ -513,15 +513,14 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
 }
 
 /** The filters of a service, ONE row of compact chips under the header: on/off ones turn red when on; one with several options has an arrow and opens its list. */
-export function FilterRow({ layer, openOnly, setOpenOnly, showRange, setShowRange, cat, setCat }: {
-  layer: LayerConfig; openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
+export function FilterRow({ layer, showRange, setShowRange, cat, setCat }: {
+  layer: LayerConfig; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
 }) {
   const { t } = useT()
   const cats = layer.cats && layer.id !== 'bizi'
-  if (!layer.hours && !cats) return null
+  if (layer.id !== 'wifi' && !cats) return null
   return (
     <div className="flex shrink-0 gap-2 overflow-x-auto px-4 pb-3 pt-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={t('filtersLabel')} data-testid="filters">
-      {layer.hours && <FilterChip on={openOnly} onChange={setOpenOnly} label={t('openNow')} testId="switch-open" />}
       {layer.id === 'wifi' && <FilterChip on={showRange} onChange={setShowRange} label={t('showRange')} testId="switch-range" />}
       {cats && <FilterMenu value={cat} onChange={setCat} label={t('typeLabel')} testId="filter-type" options={[{ value: 'all', label: t('all') }, ...layer.cats!.map(c => ({ value: c, label: t(c as Key) }))]} />}
     </div>
@@ -554,7 +553,7 @@ export function HomePage(p: {
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
   peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
-  openOnly: boolean; setOpenOnly: (v: boolean) => void; showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
+  showRange: boolean; setShowRange: (v: boolean) => void; cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
   onFavs: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
@@ -565,7 +564,7 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} />
-      {!p.liveState && !p.lineView && <FilterRow layer={p.layer} openOnly={p.openOnly} setOpenOnly={p.setOpenOnly} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
+      {!p.liveState && !p.lineView && <FilterRow layer={p.layer} showRange={p.showRange} setShowRange={p.setShowRange} cat={p.cat} setCat={p.setCat} />}
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}
