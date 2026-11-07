@@ -10,6 +10,7 @@ import type { Live } from '../lib/live'
 import { dist, fmtDist } from '../lib/geo'
 import { nowMadrid } from '../lib/hours'
 import { itemOpen } from '../lib/rank'
+import { OpenDot } from './OpenDot'
 import type { Item, LatLon, LayerConfig } from '../lib/types'
 import { cn } from './cn'
 import { useT } from './lang'
@@ -117,7 +118,7 @@ export function FavRow({ fav, pos, onOpen, edit, onRemove, full, compact, traili
           ))}
         </span>
       ) : open !== null && (
-        <span className={cn('flex shrink-0 items-center gap-1.5 text-[0.88em] font-semibold', open ? 'text-success-ink' : 'text-ink-soft')} data-testid="fav-open"><span aria-hidden className={cn('size-2 rounded-full', open ? 'bg-success-ink' : 'bg-line-strong')} />{open ? t('openShort') : t('closedShort')}</span>
+        <OpenDot open={open} testId="fav-open" className="shrink-0 text-[0.88em]">{open ? t('openShort') : t('closedShort')}</OpenDot>
       )}
     </>
   )

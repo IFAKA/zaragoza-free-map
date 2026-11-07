@@ -37,6 +37,7 @@ import { Button, InfoPop, Scroll, Separator, linkProps } from './ui/kit'
 import { cn } from './cn'
 import { canFav, splitFav, useFavs } from '../lib/favs'
 import { FavButton } from './Favs'
+import { OpenDot } from './OpenDot'
 
 const h2 = 'font-title text-[1.4em] font-semibold leading-tight text-brand-text'
 const overline = 'text-[0.8em] font-semibold uppercase tracking-wide text-ink-soft'
@@ -96,9 +97,9 @@ function ViewHeader({ title, onBack, onClose }: { title: string; onBack?: () => 
 function Status({ item, layer }: { item: RankedItem; layer: LayerConfig }) {
   const { t } = useT()
   if (!layer.hours) return null
-  if (item.always) return <span className="font-bold text-success-ink">{t('alwaysOn')}</span>
-  if (item.open === true) return <span className="font-bold text-success-ink">{t('open')}</span>
-  if (item.open === false) return <span className="font-bold text-warn-ink">{t('closed')}</span>
+  if (item.always) return <OpenDot open>{t('alwaysOn')}</OpenDot>
+  if (item.open === true) return <OpenDot open>{t('openShort')}</OpenDot>
+  if (item.open === false) return <OpenDot open={false}>{t('closedShort')}</OpenDot>
   return null // no known hours: say nothing rather than "unknown"
 }
 
