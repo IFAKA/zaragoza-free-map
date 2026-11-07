@@ -37,6 +37,7 @@ import { usePublishVehicles } from './vehicles'
 import { between, bearingTo, nextTwo, stitch, TRAIN_KMH, TRAIN_MAX_MIN, TRAM_KMH, upstream, type Vehicle } from '../lib/vehicles'
 import { Button, Chips, InfoPop, Scroll, Separator, Switch, linkProps } from './ui/kit'
 import { cn } from './cn'
+import { canFav } from '../lib/favs'
 import { FavButton, FavStrip } from './Favs'
 
 const h2 = 'font-title text-[1.4em] font-semibold leading-tight text-brand-text'
@@ -480,7 +481,6 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         </span>
         <CaretRight size="1.2em" className="shrink-0 text-ink-soft" aria-hidden />
       </BaseButton>
-      <FavButton layer={layer} item={item} />
       </div>
       {item.type === 'lib' && <div className="mt-0.5"><Occupancy item={item} /></div>}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
@@ -489,8 +489,10 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       {item.type === 'bus' ? <BusActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} onWalk={onWalk} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} onWalk={onWalk} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} onWalk={onWalk} /> : (
         <div className="mt-2 flex flex-wrap gap-2">
           <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk">{t('walk')} <ArrowUpRight size="1.1em" weight="bold" aria-hidden /></Button>
+          <FavButton layer={layer} item={item} />
         </div>
       )}
+      {(item.type === 'bus' || item.type === 'tram' || item.type === 'train') && canFav(layer, item) && <div className="mt-2 flex"><FavButton layer={layer} item={item} /></div>}
     </m.section>
   )
 }
@@ -591,7 +593,7 @@ export function HomePage(p: {
   return (
     <MoreCtx.Provider value={more}>
       <ServiceHeader layer={p.layer.id} order={p.chipOrder} onOpen={p.onServices} onShow={p.onShowService} />
-      <FavStrip onOpen={p.onOpenFav} onAll={p.onFavs} />
+      <FavStrip onOpen={p.onOpenFav} onAll={p.onFavs} pos={p.hasPos ? p.origin : null} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.layer.id === 'bizi' && <BiziBar cat={p.cat} setCat={p.setCat} bizi={p.bizi} />}

@@ -1,7 +1,7 @@
 import { Star } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FAV_MAX, removeFav, restoreFav, useFavs } from '../lib/favs'
+import { removeFav, restoreFav, useFavs } from '../lib/favs'
 import { ICONS } from './icons'
 import { cn } from './cn'
 import { useT } from './lang'
@@ -62,7 +62,7 @@ export function FavsPage({ onOpen, onBack, peekRef, locked }: { onOpen: (layer: 
   }
   return (
     <>
-      <PageHeader title={`${t('favsTitle')} · ${keys.length}/${FAV_MAX}`} onBack={onBack} />
+      <PageHeader title={`${t('favsTitle')} · ${keys.length}`} onBack={onBack} />
       <Scroll locked={locked}>
         <div ref={peekRef} className="w-0 min-w-full pb-6">
           {all.length > 8 && (

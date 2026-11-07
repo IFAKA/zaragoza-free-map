@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { FAV_MAX, canFav, favKey, getFavs, isFav, parseFavs, removeFav, restoreFav, splitFav, toggleFav, touchFav } from './favs'
+import { canFav, favKey, getFavs, isFav, parseFavs, removeFav, nearestFavs, restoreFav, splitFav, toggleFav, touchFav } from './favs'
 
 describe('favs', () => {
   beforeEach(() => { for (const k of [...getFavs()]) { const [l, id] = splitFav(k); toggleFav(l, id) } })
   it('adds, finds and removes a place', () => {
-    expect(toggleFav('bus', 'u688')).toBe(true)
+    toggleFav('bus', 'u688')
     expect(isFav('bus', 'u688')).toBe(true)
     expect(isFav('tram', 'u688')).toBe(false) // ids are per layer
     toggleFav('bus', 'u688')
@@ -24,10 +24,17 @@ describe('favs', () => {
     restoreFav('bus:b', 0); expect(getFavs()).toHaveLength(3)
     expect(removeFav('bus:nope')).toBe(-1)
   })
-  it('stops at the cap', () => {
-    for (let i = 0; i < FAV_MAX; i++) expect(toggleFav('bus', 'u' + i)).toBe(true)
-    expect(toggleFav('bus', 'ux')).toBe(false)
-    expect(getFavs()).toHaveLength(FAV_MAX)
+  it('has no cap', () => {
+    for (let i = 0; i < 40; i++) toggleFav('bus', 'u' + i)
+    expect(getFavs()).toHaveLength(40)
+  })
+  it('picks the nearest favourites, ties by recency, no position by recency', () => {
+    const at = (id: string, lat: number, lon: number) => ({ id, item: { lat, lon } })
+    const list = [at('a', 41.70, -0.88), at('b', 41.66, -0.88), at('c', 41.66, -0.88), at('d', 41.60, -0.88)] // recency order a b c d
+    const ids = (x: { id: string }[]) => x.map(f => f.id)
+    expect(ids(nearestFavs(list, [41.661, -0.88], 2))).toEqual(['b', 'c'])
+    expect(ids(nearestFavs(list, [41.59, -0.88], 2))).toEqual(['d', 'b'])
+    expect(ids(nearestFavs(list, null, 2))).toEqual(['a', 'b'])
   })
   it('splits a key', () => expect(splitFav(favKey('bus', 'u688'))).toEqual(['bus', 'u688']))
   it('reads saved text safely', () => {

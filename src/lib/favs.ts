@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { lsGet, lsSet } from './cache'
+import { dist } from './geo'
+import type { LatLon } from './types'
 // Favourite places, kept on this device as `layerId:itemId` keys (ids repeat across layers). Fountain ids ('f' + row number) and live pharmacy ids are not stable, so they are never starred (see canFav).
-export const FAV_MAX = 20
 const KEY = 'favs'
 export const favKey = (layer: string, id: string) => `${layer}:${id}`
 export const splitFav = (k: string): [string, string] => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)] }
@@ -9,7 +10,7 @@ export const splitFav = (k: string): [string, string] => { const i = k.indexOf('
 export const canFav = (layer: { id: string; live?: boolean }, item: { type: string }) => !layer.live && layer.id !== 'water' && item.type !== 'fountain'
 
 export function parseFavs(s: string | null): string[] {
-  try { const v = JSON.parse(s ?? '[]'); return Array.isArray(v) ? [...new Set<string>(v.filter((x): x is string => typeof x === 'string' && x.includes(':')))].slice(0, FAV_MAX) : [] } catch { return [] }
+  try { const v = JSON.parse(s ?? '[]'); return Array.isArray(v) ? [...new Set<string>(v.filter((x): x is string => typeof x === 'string' && x.includes(':')))] : [] } catch { return [] }
 }
 
 let raw: string | null = null // the saved text the list below was parsed from
@@ -20,13 +21,11 @@ const save = (next: string[]) => { list = next; raw = JSON.stringify(next); lsSe
 
 export const getFavs = (): string[] => list
 export const isFav = (layer: string, id: string): boolean => list.includes(favKey(layer, id))
-/** Add (at the front) or remove. Returns false only when the list is full and the place could not be added. */
-export function toggleFav(layer: string, id: string): boolean {
+/** Add (at the front) or remove. */
+export function toggleFav(layer: string, id: string): void {
   const k = favKey(layer, id)
-  if (list.includes(k)) { save(list.filter(x => x !== k)); return true }
-  if (list.length >= FAV_MAX) return false
+  if (list.includes(k)) { save(list.filter(x => x !== k)); return }
   save([k, ...list])
-  return true
 }
 /** Opening a favourite moves it to the front, so the first few are the ones in use. */
 export function touchFav(layer: string, id: string): void {
@@ -41,7 +40,7 @@ export function removeFav(k: string): number {
 }
 /** Put a removed key back at its old position (undo). */
 export function restoreFav(k: string, index: number): void {
-  if (list.includes(k) || list.length >= FAV_MAX) return
+  if (list.includes(k)) return
   const next = [...list]; next.splice(Math.min(Math.max(index, 0), next.length), 0, k)
   save(next)
 }
@@ -58,3 +57,9 @@ const subscribe = (f: () => void) => {
 }
 /** The favourite keys, re-rendering the component whenever they change (here or in another tab). */
 export const useFavs = (): string[] => useSyncExternalStore(subscribe, getFavs, getFavs)
+
+/** The `n` places nearest to `pos` (straight line, ties keep the recency order of the input). No position: the first `n` as given. */
+export function nearestFavs<T extends { item: { lat: number; lon: number } }>(list: T[], pos: LatLon | null, n: number): T[] {
+  if (!pos) return list.slice(0, n)
+  return list.map((f, i) => ({ f, i, d: dist(pos, [f.item.lat, f.item.lon]) })).sort((a, b) => a.d - b.d || a.i - b.i).slice(0, n).map(x => x.f)
+}
