@@ -111,7 +111,7 @@ function statusDot(item: RankedItem, layer: LayerConfig, t: (k: Key) => string) 
   const open = item.always || item.open === true ? true : item.open === false ? false : null
   if (open === null) return null
   const label = t(item.always ? 'alwaysOn' : open ? 'openShort' : 'closedShort')
-  return <span role="img" aria-label={label} title={label} data-testid="nearest-status" className={cn('ml-2 inline-block size-3 shrink-0 rounded-full', open ? 'bg-success-ink' : 'bg-ink-soft')} />
+  return <span role="img" aria-label={label} title={label} data-testid="nearest-status" className={cn('mr-2 inline-block size-3 shrink-0 rounded-full', open ? 'bg-success-ink' : 'border-2 border-ink-soft')} />
 }
 function Status({ item, layer }: { item: RankedItem; layer: LayerConfig }) {
   const { t } = useT()
@@ -467,8 +467,8 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <span className={cn(h2, 'block truncate')} data-testid="nearest-name">{name}</span>
           <span className="flex items-center">
-            <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
             {statusDot(item, layer, t)}
+            <span className="min-w-0 truncate font-bold">{walkMins(item.d)} {t('minWalk')} <span className="font-normal text-ink-soft">{hasPos ? t('fromYou') : t('fromCentre')}</span></span>
             {hasDetails(layer, item) && (
               <m.button {...tap} type="button" onClick={onDetails} data-testid="details" aria-label={t('details')} title={t('details')}
                 className="relative -my-1 ml-1.5 inline-flex size-8 shrink-0 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-soft before:absolute before:-inset-1.5 before:content-['']">
