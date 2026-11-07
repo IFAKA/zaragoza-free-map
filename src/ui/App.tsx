@@ -60,8 +60,10 @@ function useClosedPx(dep: unknown) {
   const [px, setPx] = useState(DEFAULT_CLOSED_PX)
   useEffect(() => {
     const measure = () => {
-      const pop = document.querySelector('[data-slot=drawer-popup]'), edge = pop?.querySelector('[data-closed-edge]')
-      if (!pop || !edge) return
+      const pop = document.querySelector('[data-slot=drawer-popup]'), head = pop?.querySelector('[data-closed-edge]')
+      if (!pop || !head) return
+      // a card with nothing under its header row is cut where the peek ends (card padding and divider included), so closed and peek look the same
+      const edge = !head.nextElementSibling && head.parentElement?.nextElementSibling ? head.parentElement.nextElementSibling : head
       const next = Math.ceil(edge.getBoundingClientRect().bottom - pop.getBoundingClientRect().top + 1 + FOOTER_PX + safeBottom())
       if (next > 40) setPx(old => (old === next ? old : next))
     }
