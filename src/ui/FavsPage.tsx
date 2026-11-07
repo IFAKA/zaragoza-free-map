@@ -1,4 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
+import { useBackLayer } from './back'
 import { DotsThreeVertical, PencilSimple, Star, Trash } from '@phosphor-icons/react'
 import { m } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
@@ -26,6 +27,9 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   const [menu, setMenu] = useState(false)
   const [picked, setPicked] = useState<string[]>([])
   const [renameKey, setRenameKey] = useState<string | null>(null)
+  useBackLayer(menu, () => setMenu(false))
+  useBackLayer(!!mode, () => { setMode(null); setPicked([]) })
+  useBackLayer(!!renameKey, () => setRenameKey(null))
   const renaming = renameKey ? all.find(f => f.key === renameKey) : undefined
   const both = all.some(f => isStopLayer(f.layer.id)) && all.some(f => !isStopLayer(f.layer.id))
   const byKind = filterKind(all, both ? kind : 'all')

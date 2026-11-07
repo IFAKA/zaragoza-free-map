@@ -22,6 +22,7 @@ import type { FlyRequest, RouteView } from './MapView'
 // Leaflet and its cluster plugin are most of the code; they load as their own chunk so the drawer can paint first
 const MapView = lazy(() => import('./MapView').then(m => ({ default: m.MapView })))
 import { PageFrame, PagedDrawer, usePages } from './PagedDrawer'
+import { useBackLayer } from './back'
 import { FavsPage } from './FavsPage'
 import { FiltersPage, HomePage, PlacePage, ServicesPage, type LineView } from './Pages'
 import { VehicleCtx } from './vehicles'
@@ -370,6 +371,9 @@ export function App() {
   const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) pendingLevel.current = FULL }
   // Escape and the back gesture: up one page, then lower the sheet one step
   const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') pendingLevel.current = levelBefore.current } else setLevel(l => Math.max(CLOSED, l - 1)) }
+  // the back gesture closes what is open (a bus line, then the page) and only leaves the app from the home page
+  useBackLayer(page !== 'home', () => { if (goUp()) pendingLevel.current = levelBefore.current })
+  useBackLayer(!!lineSel, lineBack)
   const cycle = () => setLevel(l => (l === CLOSED ? PEEK : CLOSED))
   const levelOf = (v: string | number | null) => { const i = v == null ? -1 : snapPoints.indexOf(v); return i < 0 ? null : i }
 
