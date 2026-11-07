@@ -30,10 +30,9 @@ export function FavButton({ layer, item }: { layer: LayerConfig; item: Item }) {
     if (first && !on) { lsSet('favFirst', '1'); toasts.add({ title: t('favFirst'), timeout: 2500, data: { close: '' } }) }
   }
   return (
-    <m.button {...tap} type="button" onClick={press} aria-pressed={on} data-testid="fav-star"
-      className={cn('inline-flex min-h-[44px] select-none items-center justify-center gap-2 rounded-btn border border-line-strong bg-transparent px-4 font-semibold', on ? 'text-brand-text' : 'text-ink')}>
-      <span key={on ? 'on' : 'off'} className={cn('grid', on && 'star-pop')}><Star size="1.2em" weight={on ? 'fill' : 'regular'} aria-hidden /></span>
-      {on ? t('favSaved') : t('favSave')}
+    <m.button {...tap} type="button" onClick={press} aria-pressed={on} aria-label={on ? t('favSaved') : t('favSave')} title={on ? t('favSaved') : t('favSave')} data-testid="fav-star"
+      className={cn('inline-flex size-11 shrink-0 select-none items-center justify-center rounded-btn border border-line-strong bg-transparent p-0', on ? 'text-brand-text' : 'text-ink')}>
+      <span key={on ? 'on' : 'off'} className={cn('grid', on && 'star-pop')}><Star size="1.4em" weight={on ? 'fill' : 'regular'} aria-hidden /></span>
     </m.button>
   )
 }
