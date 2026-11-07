@@ -378,9 +378,9 @@ function PharmacyActions({ item, fav }: { item: RankedItem; fav: ReactNode }) {
 /** The live list could not be loaded (or is still loading): say so plainly, offer a retry and the city page. Never an old list. */
 function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry: () => void }) {
   const { t } = useT()
-  if (state === 'loading') return <div className="px-4 py-5" role="status" data-testid="duty-loading"><span className="sr-only">{t('dutyLoading')}</span><SkelRows rows={3} /></div>
+  if (state === 'loading') return <div className="px-4 py-5" role="status" data-testid="duty-loading" data-closed-edge><span className="sr-only">{t('dutyLoading')}</span><SkelRows rows={3} /></div>
   return (
-    <section className="px-4 pb-3 pt-4" role="alert" data-testid="duty-failed">
+    <section className="px-4 pb-3 pt-4" role="alert" data-testid="duty-failed" data-closed-edge>
       <h2 className={h2}>{t('dutyFail')}</h2>
       <p className={cn(sub, 'm-0 mt-1')}>{t('dutyFailBody')}</p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -460,6 +460,13 @@ function NameButton({ name, open, onToggle, onNeed }: { name: string; open: bool
     measure()
     return () => ro.disconnect()
   }, [open, name, onNeed])
+  // a tap anywhere outside the name closes it
+  useEffect(() => {
+    if (!open) return
+    const away = (e: PointerEvent) => { if (!box.current?.parentElement?.contains(e.target as Node)) onToggle() }
+    document.addEventListener('pointerdown', away, true)
+    return () => document.removeEventListener('pointerdown', away, true)
+  }, [open, onToggle])
   // The slide is a Web Animation, so it can be stopped at any moment: on a second tap or a new place the text eases back from where it is (no jump).
   useEffect(() => {
     const x = txt.current
@@ -496,7 +503,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
   const [wide, setWide] = useState<string | null>(null) // id of the place whose name is open (full width); another place starts closed
   const [need, setNeed] = useState(0) // px the closed name is cut by: the star is hidden first, the walk button only if that is not enough
   const Icon = ICONS[layer.icon]
-  if (!item) return <div className="px-4 py-3"><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
+  if (!item) return <div className="px-4 py-3" data-closed-edge><p className={cn(sub, 'm-0')}>{t('noneOpen')}</p></div>
   const kind = isSelected ? t('selected') : t(('nearest' + layer.id + (layer.id === 'bizi' ? cat : '')) as Key)
   const name = item.name || type(item.type)
   const hideStar = wide === item.id, hideWalk = hideStar && need > 44 // the opened name takes the room of the star first, of the walk button only when that is not enough
@@ -543,7 +550,7 @@ export function OffBlock({ item, hasPos }: { item: RankedItem; hasPos: boolean }
   const why = t(item.off === 'noBikes' ? 'offNoBikes' : item.off === 'noDocks' ? 'offNoDocks' : item.off === 'notOnDuty' ? 'offNotOnDuty' : 'offClosed')
   const hours = item.off === 'closed' && item.hours ? fmtHours(lang, item.hours) : ''
   return (
-    <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="off-card" aria-label={t('offTitle')}>
+    <m.section key={item.id} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="off-card" data-closed-edge aria-label={t('offTitle')}>
       <div className={overline}>{t('offTitle')}</div>
       <h2 className={cn(h2, 'mt-1')} data-testid="off-name">{item.name || type(item.type)}</h2>
       <div className="mt-1 font-bold">{walkMins(item.d)} {t('minWalk')}{!hasPos && <span className="font-normal text-ink-soft"> · {t('fromCentre')}</span>}</div>
