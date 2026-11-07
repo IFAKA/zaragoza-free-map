@@ -568,7 +568,7 @@ export function HomePage(p: {
   peekRef: React.Ref<HTMLDivElement>
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
   cat: string; setCat: (c: string) => void
-  locked: boolean; onServices: () => void; onShowService: () => void; chipOrder: LayerId[]
+  locked: boolean; onServices: () => void; chipOrder: LayerId[]
   onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
@@ -577,7 +577,7 @@ export function HomePage(p: {
   const favLayers = useFavs().map(k => splitFav(k)[0] as LayerId)
   return (
     <MoreCtx.Provider value={more}>
-      <ServiceHeader layer={p.layer.id} onOpen={p.onServices} onShow={p.onShowService} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
+      <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />
       {/* everything down to the end of this block is what the sheet shows at peek: the chip row above it and this one card */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />

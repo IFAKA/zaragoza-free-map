@@ -390,7 +390,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
           cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} onShowService={() => setLevel(l => (l === CLOSED ? PEEK : l))} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
+          onServices={openServices} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
           desktop={desktop}
         />
       )

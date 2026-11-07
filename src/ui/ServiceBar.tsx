@@ -4,7 +4,7 @@ import { LAYERS } from '../layers'
 import type { LayerId } from '../lib/types'
 import { useT } from './lang'
 import { ICONS } from './icons'
-import { cardSwap, tap } from './motion'
+import { tap } from './motion'
 
 export const GROUPS: { id: string; label: { en: string; es: string }; ids: LayerId[] }[] = [
   { id: 'basics', label: { en: 'Basics', es: 'Básicos' }, ids: ['toilets', 'water', 'pharmacy', 'shelter'] },
@@ -13,20 +13,14 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
 ]
 
 /**
- * The header of the home page (about 64 px): the service you are on (left, name only) and two buttons: Favourites (a star) and Services (a text button with a magnifier, so it is clear it is for finding a service).
+ * The header of the home page (about 64 px): two equal text buttons: Favourites (list with a star) and Services (a magnifier, so it is clear it is for finding a service). The service name is not here: the card below names the place.
  * The Services button turns the drawer to the Services page (same drawer, new page).
  */
-export function ServiceHeader({ layer, onOpen, onShow, favLayers, onFavs, onFilters, filtersActive }: { layer: LayerId; onOpen: () => void; onShow: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
-  const { lang, t } = useT()
-  const cur = LAYERS[layer]
+export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersActive }: { onOpen: () => void; favLayers: LayerId[]; onFavs: () => void; onFilters?: () => void; filtersActive?: boolean }) {
+  const { t } = useT()
   return (
     <div role="group" aria-label={t('tabsLabel')} data-testid="services" className="shrink-0">
       <div className="flex items-center gap-2 px-4 pb-1.5 pt-1">
-        <button type="button" onClick={onShow} data-testid="service-on-show" className="flex min-w-0 flex-1 select-none items-center gap-3 border-0 bg-transparent p-0 text-left text-inherit">
-        <m.span key={layer + 't'} {...cardSwap} className="min-w-0 flex-1">
-          <span className="line-clamp-2 break-words font-title text-[1.15em] font-bold leading-tight text-ink">{cur.label[lang]}</span>
-        </m.span>
-        </button>
         {onFilters && (
           <m.button {...tap} type="button" onClick={onFilters} aria-label={t('filtersLabel')} data-testid="filters-open"
             className="relative grid size-14 shrink-0 place-items-center rounded-[14px] border-[1.5px] border-line bg-paper text-ink shadow-md">
@@ -35,11 +29,11 @@ export function ServiceHeader({ layer, onOpen, onShow, favLayers, onFavs, onFilt
           </m.button>
         )}
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
-          className="grid size-12 shrink-0 place-items-center rounded-full border-[1.5px] border-line bg-paper text-ink shadow-md">
-          <ListStar size="1.5em" weight="bold" aria-hidden />
+          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-[1.5px] border-line bg-paper px-3 font-bold text-ink shadow-md">
+          <ListStar size="1.3em" weight="bold" aria-hidden />{t('favsTitle')}
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
-          className="flex h-12 shrink-0 items-center gap-2 rounded-full border-0 bg-brand px-4 font-bold text-on-brand shadow-md">
+          className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand px-3 font-bold text-on-brand shadow-md">
           <MagnifyingGlass size="1.3em" weight="bold" aria-hidden />{t('tabsLabel')}
         </m.button>
       </div>
