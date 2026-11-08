@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createPortal } from 'react-dom'
 import { ICONS } from './icons'
 import { Skel, SkelRows } from './Skel'
+import { useBackLayer } from './back'
 import { DATA, dataRefreshed } from '../data'
 import { fmtDist, walkMins, walkUrl } from '../lib/geo'
 import { installEnv, installWay, promptInstall } from '../lib/install'
@@ -463,6 +464,7 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
     document.addEventListener('pointerdown', away, true)
     return () => document.removeEventListener('pointerdown', away, true)
   }, [open, onToggle])
+  useBackLayer(open, onToggle) // Back closes it too
   return (
     <m.button {...(clipped || open ? tap : {})} type="button" onClick={onToggle} disabled={!clipped && !open} aria-expanded={clipped || open ? open : undefined} data-testid="nearest-name-btn"
       className="m-0 block w-full min-w-0 select-none border-0 bg-transparent p-0 text-left disabled:cursor-default">
