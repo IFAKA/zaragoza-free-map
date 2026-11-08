@@ -35,7 +35,8 @@ import { serviceOrder } from '../layers/goals'
 import { bumpTap, parseTaps, rankByTaps } from '../lib/usage'
 import { SettingsFab } from './SettingsFab'
 import { SupportFab } from './SupportFab'
-import { FollowFab } from './FollowFab'
+import { CompassFab } from './CompassFab'
+import { useHeading } from './useHeading'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
@@ -162,8 +163,8 @@ export function App() {
   const [times, setTimes] = useState<CercaniasTimes | null>(null)
   const [fitN, setFitN] = useState(0)
   const [vehicles, setVehicles] = useState<Vehicle[]>([]) // estimated tram / Cercanías positions, published by the stop card
-  const [follow, setFollow] = useState(() => lsGet('follow') !== '0')
-  const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') }, follow)
+  const compass = useHeading()
+  const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
   const askedLocation = useRef(false)
   const flyN = useRef(0)
   const viewport = useRef<HTMLDivElement>(null)
@@ -360,7 +361,6 @@ export function App() {
     setSelected(null)
     if (!desktop) setLevel(l => Math.max(CLOSED, l - 1))
   }
-  const toggleFollow = () => { const on = !follow; setFollow(on); lsSet('follow', on ? '1' : '0'); if (on) void locate().then(ll => { if (ll) flyTo(ll, 17) }) } // turning it on: take a fresh position now and show it
   const doLocate = () => { askedLocation.current = true; void locate(true) }
   // a page that is not home (details, services) sizes the sheet to its own content (peek height) and gives back the size you had when you leave
   const levelBefore = useRef(PEEK)
@@ -413,7 +413,7 @@ export function App() {
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <Suspense fallback={null}><MapView
-              layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} fly={fly} inset={insetPx}
+              layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} heading={compass.on ? compass.heading : null} fly={fly} inset={insetPx}
               desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
             /></Suspense>
           </div>
@@ -426,13 +426,13 @@ export function App() {
               <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} onShown={onShown} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
                 {pageEl}
               </PagedDrawer>
-              {livePage === 'home' && !lineData && !chosen && !offSel && createPortal(<ServiceHeader bar onOpen={openServices} favLayers={favKeys.map(k => splitFav(k)[0] as LayerId)} onFavs={openFavs} onFilters={hasFilters(layer) && !liveState && !lineData ? openFilters : undefined} filtersActive={filtersOn(layer, cat)} />, document.body)}
+              {livePage === 'home' && !lineData && createPortal(<ServiceHeader bar onOpen={openServices} favLayers={favKeys.map(k => splitFav(k)[0] as LayerId)} onFavs={openFavs} onFilters={hasFilters(layer) && !liveState && !lineData ? openFilters : undefined} filtersActive={filtersOn(layer, cat)} />, document.body)}
             </SheetClosedCtx.Provider>
           )}
         </div>
         <SettingsFab label={t.settings} onClick={() => view.open('settings')} inert={view.isOpen} />
         <SupportFab inert={view.isOpen} />
-        {pos && !desktop && <FollowFab on={follow} onToggle={toggleFollow} inert={view.isOpen} />}
+        {pos && !desktop && <CompassFab on={compass.on} onToggle={() => (compass.on ? compass.disable() : void compass.enable())} inert={view.isOpen} />}
         <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>
       </LazyMotion></MotionConfig>

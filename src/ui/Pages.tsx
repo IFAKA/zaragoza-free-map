@@ -647,7 +647,7 @@ export function HomePage(p: {
         <div ref={setMore} />
         {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
-        {!p.desktop && !p.lineView && !p.selected && !p.off && <div aria-hidden style={{ height: FOOTER_PX }} />}
+        {!p.desktop && !p.lineView && <div aria-hidden style={{ height: FOOTER_PX }} />}
       </Scroll>
     </MoreCtx.Provider>
   )
