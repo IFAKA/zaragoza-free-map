@@ -22,7 +22,7 @@ export function NearestList({ layer, items, selected, onPick }: { layer: LayerCo
         const open = !layer.hours ? null : it.always || it.open === true ? true : it.open === false ? false : null
         return (
           <BaseButton key={it.id} onClick={() => onPick(it.id)} data-testid="near-row" aria-current={it.id === selected || undefined} render={<m.button {...tap} />}
-            className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink [transition:background-color_var(--dur-press)] hov:bg-surface', it.id === selected && 'bg-brand-tint')}>
+            className={cn('flex min-h-14 w-full items-center gap-3 border-0 border-b border-line bg-transparent px-4 py-2 text-left text-ink focus-visible:-outline-offset-2 [transition:background-color_var(--dur-press)] hov:bg-surface', it.id === selected && 'bg-brand-tint')}>
             <Icon size="1.3em" weight="fill" style={{ color: layer.color }} className="shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-bold">{it.name || type(it.type)}</span>
