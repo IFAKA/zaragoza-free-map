@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { dist } from '../lib/geo'
 import type { LatLon } from '../lib/types'
+
+/** While the app is open and shown, the position follows you; it updates after you moved this many metres (saves battery and the street-route requests). */
+const FOLLOW_STEP_M = 30
 
 export type LocateAnswer = 'granted' | 'denied' | 'error'
 
@@ -12,6 +16,25 @@ export function useLocation(onAnswer?: (a: LocateAnswer) => void) {
   const perm = useRef<PermissionState | 'unknown'>('unknown')
   const answer = useRef(onAnswer)
   answer.current = onAnswer
+  const last = useRef<LatLon | null>(null)
+  last.current = pos
+  const [shown, setShown] = useState(() => document.visibilityState !== 'hidden')
+  const has = !!pos
+
+  // follow the person once the first position is known: only while the page is visible, and only a real move changes `pos`
+  useEffect(() => {
+    const onVis = () => setShown(document.visibilityState !== 'hidden')
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+  useEffect(() => {
+    if (!has || !shown || !navigator.geolocation) return
+    const id = navigator.geolocation.watchPosition(p => {
+      const ll: LatLon = [p.coords.latitude, p.coords.longitude]
+      if (!last.current || dist(last.current, ll) >= FOLLOW_STEP_M) setPos(ll)
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 10000 })
+    return () => navigator.geolocation.clearWatch(id)
+  }, [has, shown])
 
   // follow the browser's permission state (so a blocked site is known before the first tap, and a change in settings is noticed)
   useEffect(() => {

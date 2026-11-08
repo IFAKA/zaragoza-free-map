@@ -85,6 +85,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
   const vehLine = useRef<L.Polyline | null>(null)
   const vehArrow = useRef<L.Marker | null>(null)
   const walkLine = useRef<L.Polyline | null>(null)
+  const walkTo = useRef('')
   const vehs = useRef(new Map<string, { mk: L.Marker; raf: number; fit: string }>())
   const routeGroup = useRef<L.LayerGroup | null>(null)
   const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
@@ -233,14 +234,15 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
   // you -> the closest place (the selected stop, or the stop of the shown bus line): a dotted line in the section colour
   useEffect(() => {
     const m = map.current
-    walkLine.current?.remove(); walkLine.current = null
-    if (!m || !userPos) return
-    const it = route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected) // the closest place: the selected stop, fountain, toilet..., never a vehicle mark
-    if (!it) return
+    const it = m && userPos ? route ? route.stops[route.cur] && { lat: route.stops[route.cur].lat, lon: route.stops[route.cur].lon } : items.find(i => i.id === selected) : null // the closest place: the selected stop, fountain, toilet..., never a vehicle mark
+    const target = it ? it.lat + ',' + it.lon : ''
+    if (!m || !userPos || !it || walkTo.current !== target) { walkLine.current?.remove(); walkLine.current = null } // same place, new position (you are walking): the old line stays until the new one is drawn
+    walkTo.current = target
+    if (!m || !userPos || !it) return
     const col = getComputedStyle(document.documentElement).getPropertyValue(layer.color.replace(/^var\(|\)$/g, '')).trim()
     const to: [number, number] = [it.lat, it.lon]
     const draw = (path: [number, number][]) => { walkLine.current?.remove(); walkLine.current = L.polyline(path, { color: col, weight: 3, dashArray: '2 7', lineCap: 'round', interactive: false }).addTo(m) }
-    draw([userPos, to]) // straight line until the street route arrives (and if it never does)
+    if (!walkLine.current) draw([userPos, to]) // straight line until the street route arrives (and if it never does)
     const ac = new AbortController()
     walkRoute(userPos, to, ac.signal).then(p => { if (p && !ac.signal.aborted) draw(p) })
     return () => ac.abort()
