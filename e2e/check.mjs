@@ -104,20 +104,13 @@ todo.push(async () => {
   await p.getByTestId('handle').click(); await settle(p)
   ok(await snapTop(p) > 380, 'handle goes to peek')
   await p.getByTestId('handle').click(); await settle(p) // full again: the controls below need room
-  // Open now switch persisted
-  const sw = p.getByTestId('switch-open')
-  ok(await sw.getAttribute('aria-checked') === 'true' || (await sw.getAttribute('data-checked')) !== null, 'Open now ON by default')
-  await sw.click(); await p.reload(); await ready(p)
-  await p.getByTestId('handle').click(); await settle(p) // reload starts at peek
-  ok(await p.getByTestId('switch-open').getAttribute('aria-checked') === 'false', 'Open now OFF persisted after reload')
-  await p.getByTestId('switch-open').click()
-  // water has no switch
-  await go(p, 'water', 'click'); await settle(p)
-  ok(await p.getByTestId('switch-open').count() === 0, 'water: no Open now switch')
-  // wifi: range switch and chips
+  // Open now is no longer a filter (bca6d7b): there is no switch, closed places stay on the map greyed out
+  ok(await p.getByTestId('switch-open').count() === 0, 'no Open now switch: closed places are always shown, greyed out')
+  // wifi: the type chips are on the Filters page
   await go(p, 'wifi', 'click'); await settle(p)
-  await p.getByTestId('switch-range').click(); await p.getByTestId('switch-range').click()
-  for (const name of ['Public buildings', 'Cafés and bars', 'Other', 'All']) { await p.getByRole('radio', { name }).or(p.getByRole('button', { name })).first().click(); await settle(p) }
+  await p.getByTestId('filters-open').click(); await settle(p)
+  for (const c of await p.getByTestId('filters').locator('[data-testid^=filter-]').evaluateAll(es => es.map(e => e.dataset.testid))) { await p.getByTestId(c).click(); await settle(p); ok(await p.getByTestId(c).getAttribute('aria-pressed') === 'true', `wifi filter ${c} selects`) }
+  await p.getByTestId('back').last().click(); await settle(p)
   // details page, back, escape
   await p.getByTestId('details').click(); await settle(p)
   ok(await p.getByTestId('back').last().count() === 1, 'details page opened in same drawer')
@@ -910,7 +903,7 @@ todo.push(async () => {
   await p.screenshot({ path: out + '/android.png' })
   await ctx.close()
 })
-todo.push(async () => { // a filter changes only what it must: the other markers stay, and greyed-out places stay on the map with their reason and source
+todo.push(async () => { // a change of choice does not rebuild the map: the other markers stay, and greyed-out places stay on the map with their reason and source
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'en', { layer: 'libraries' })
   await p.clock.setFixedTime(new Date('2026-11-01T11:00:00+01:00')) // a Sunday: some libraries are closed
   await p.reload(); await ready(p)
@@ -922,14 +915,14 @@ todo.push(async () => { // a filter changes only what it must: the other markers
   ok((await p.getByTestId('off-source').textContent()).includes('Source'), 'the card names the source')
   await p.getByTestId('handle').click(); await settle(p) // full: the switch is below the card
   const tagged = await p.evaluate(() => { const all = [...document.querySelectorAll('.mk')]; all.forEach(e => { e.dataset.keep = '1' }); return all.length })
-  await p.getByTestId('switch-open').click(); await settle(p)
+  await p.locator('.mk:not(.off)').evaluateAll(es => { const e = es.find(x => { const r = x.getBoundingClientRect(); return r.x > 20 && r.x < innerWidth - 20 && r.y > 60 && r.y < 400 }); e?.dispatchEvent(new MouseEvent('click', { bubbles: true })) }); await settle(p) // another place gets picked: nothing rebuilds
   const kept = await p.locator('.mk[data-keep="1"]').count()
-  ok(kept >= tagged * 0.5, `a filter change does not rebuild the markers (${kept} of ${tagged} map elements survived)`) // a rebuild would leave none; the map only drops the few that leave the view
-  ok(await p.locator('.mk.off').count() > 0, 'closed places keep their grey look after the filter change')
+  ok(kept >= tagged * 0.5, `picking another place does not rebuild the markers (${kept} of ${tagged} map elements survived)`) // a rebuild would leave none; the map only drops the few that leave the view
+  ok(await p.locator('.mk.off').count() > 0, 'closed places keep their grey look after the pick')
   await ctx.close()
 })
 // run the blocks in a pool (half the cores), then the timing-sensitive ones alone
-const pool = async (jobs, n) => { const q = [...jobs]; await Promise.all(Array.from({ length: n }, async () => { for (let j; (j = q.shift());) await j() })) }
+const pool = async (jobs, n) => { const q = [...jobs]; await Promise.all(Array.from({ length: n }, async () => { for (let j; (j = q.shift());) await j().catch(e => { fails++; console.log('FAIL block crashed: ' + String(e.message).split('\n')[0] + ' (' + (/check\.mjs:(\d+)/.exec(e.stack)?.[1] ?? '?') + ')') }) })) }
 const t0 = Date.now()
 await pool(todo, Math.max(2, Math.floor(os.cpus().length / 2)))
 await pool(late, 1)
