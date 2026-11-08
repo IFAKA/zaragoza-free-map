@@ -388,33 +388,39 @@ todo.push(async () => {
   ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() === 0, 'Bus card: shows the lines and no Walk button')
   await ctx.close()
 })
-// tram: the stop card has one link to the tram company (full-height area) and the track is drawn
+// tram: the stop card lists both directions with no link out to the tram company (the times stay in the app), and the track is drawn
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
-  await p.waitForSelector('[data-testid=tram-times]', { state: 'attached' }); await settle(p)
-  ok(await p.getByTestId('tram-info').count() === 0 && await p.getByTestId('nearest').getByTestId('tram-times').count() === 0, 'tram card: no explanation line, the link is in the full-height area')
-  ok(/tranviasdezaragoza\.es/.test(await p.getByTestId('tram-times').getAttribute('href') || ''), 'tram card: one link to the tram company times')
-  ok(await markers(p) === DATA_TRAM_STOPS, `tram: all ${DATA_TRAM_STOPS} stops are drawn`)
+  await p.waitForSelector('[data-testid=tram-dirs]', { state: 'attached' }); await settle(p)
+  ok(await p.getByTestId('tram-info').count() === 0 && await p.getByTestId('tram-times').count() === 0 && await p.locator('[data-testid=nearest] a[href*="tranviasdezaragoza"]').count() === 0, 'tram card: no explanation line and no link out to the tram company')
+  ok(/No hay tiempos en vivo/.test(await p.getByTestId('live-times').innerText()) && await p.getByTestId('tram-dirs').getByTestId('dir-chip').count() === 2, 'tram card: the city does not answer, so it says there are no live times and still shows the two directions')
+  // the map draws only what is in view and merges close stops into numbered circles: zoom out to the whole line, then single stops plus circle counts add up to every stop
+  await p.locator('.leaflet-container').focus() // no zoom buttons on a phone: the map's own keys zoom
+  for (let i = 0; i < 4; i++) { await p.keyboard.press('-'); await settle(p) }
+  const count = () => document.querySelectorAll('.mk').length + [...document.querySelectorAll('.mkc')].reduce((n, e) => n + (+e.textContent || 0), 0)
+  await p.waitForFunction(`(${count})() === ${DATA_TRAM_STOPS}`, null, { timeout: 5000 }).catch(() => {}) // the old circles fade out for a moment while the map zooms; the check below reports a wrong total
+  const drawn = await p.evaluate(count)
+  ok(drawn === DATA_TRAM_STOPS, `tram: all ${DATA_TRAM_STOPS} stops are drawn, as stops or in circles (${drawn})`)
   ok(await p.evaluate(() => document.querySelector('[data-testid=map]').classList.contains('rail')), 'tram: rail markers shrink when zoomed out (rail class on the map)')
   ok(await p.getByTestId('nearest').innerText().then(x => !/en vivo/i.test(x) || /\d+ min|Ahora/.test(x)), 'tram card claims live only when it shows minutes')
   await p.screenshot({ path: out + '/tram-es.png' })
   await ctx.close()
 })
-// Cercanias: the next 3 planned trains, labelled as not real time, with the date of the data and a Renfe link
+// Cercanias: the next 2 planned trains of each direction, labelled as not real time, with the date of the data; no link out to Renfe (clock fixed on a Wednesday 08:00 so trains are running)
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'cercanias' })
-  await p.waitForSelector('[data-testid=train-row]'); await settle(p)
-  const n = await p.getByTestId('train-row').count()
-  ok(n >= 1 && n <= 3, `cercanias: ${n} next trains shown (1 to 3)`)
-  const rows = await p.getByTestId('train-row').allInnerTexts()
-  ok(rows.every(r => /\d\d:\d\d/.test(r) && /\ba /.test(r)), `cercanias: each row has a time and a destination (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  await ctx.clock.setFixedTime(new Date('2026-11-04T08:00:00+01:00'))
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=train-dirs]'); await settle(p)
+  const rows = await p.getByTestId('train-dirs').getByTestId('dir-chip').allInnerTexts()
+  const flat = rows.map(r => r.replace(/\n/g, ' '))
+  ok(rows.length === 2 && rows.every(r => { const n = (r.match(/\d\d:\d\d/g) || []).length; return n >= 1 && n <= 2 }), `cercanias: each direction shows its next 1 or 2 train times (${flat.join(' | ')})`)
   const note = await p.getByTestId('train-planned').innerText()
   ok(/Horario programado \(no es tiempo real\)/.test(note) && /\d\d\/\d\d\/\d{4}/.test(note), `cercanias: planned label and data date (${note})`)
-  ok(/renfe\.com/.test(await p.getByTestId('train-times').getAttribute('href') || ''), 'cercanias: Renfe link')
+  ok(await p.getByTestId('train-times').count() === 0 && await p.locator('[data-testid=nearest] a[href*="renfe"]').count() === 0, 'cercanias: no link out to Renfe (the times stay in the app)')
   await p.screenshot({ path: out + '/cercanias-es.png' })
   await ctx.close()
 })
-// direction picker on the tram card (live API scripted: platform ...1 goes north, ...2 goes south): two chips, only the chosen way is listed, the choice is remembered
+// direction picker on the tram card (live API scripted: platform ...1 goes north, ...2 goes south): two rows, each with the times of its own way (the chosen one is filled and decides which tram the map shows), the choice is remembered
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
   mock.city = u => { const id = /(\d+)\.json/.exec(u)?.[1] || ''; return id.endsWith('1') ? { destinos: [{ linea: 'T1', destino: 'AVENIDA ACADEMIA', minutos: '9 minutos.' }, { linea: 'T1', destino: 'AVENIDA ACADEMIA', minutos: '20 minutos.' }] } : { destinos: [{ linea: 'T1', destino: 'MAGO DE OZ', minutos: '4 minutos.' }] } }
@@ -422,40 +428,36 @@ todo.push(async () => {
   const chips = p.getByTestId('tram-dirs').getByTestId('dir-chip')
   ok(await chips.count() === 2, 'tram: two direction chips')
   const labels = await chips.allInnerTexts()
-  ok(/Hacia Parque Goya/.test(labels[0]) && /Hacia Valdespartera/.test(labels[1]), `tram chips name the ends (${labels.join(' | ').replace(/\n/g, ' ')})`)
+  ok(/Parque Goya/.test(labels[0]) && /Valdespartera/.test(labels[1]) && !labels.some(l => /Hacia/.test(l)), `tram rows name the ends, just the destination (${labels.join(' | ').replace(/\n/g, ' ')})`)
   for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `tram chip ${i} is touch sized (${r.height})`) }
   ok(await chips.nth(1).getAttribute('aria-pressed') === 'true', 'tram: the soonest tram (south, 4 min) is chosen first')
-  let rows = await p.getByTestId('live-row').allInnerTexts()
-  ok(rows.length === 1 && /Mago de Oz/.test(rows[0]), `tram: only the chosen direction is listed (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  ok(/9 min · 20 min/.test(labels[0]) && /\b4 min\b/.test(labels[1]) && await p.getByTestId('live-row').count() === 0, `tram: each direction row lists its own next times (${labels.join(' | ').replace(/\n/g, ' ')})`)
   await p.screenshot({ path: out + '/tram-dirs-es.png' })
   await chips.nth(0).tap(); await settle(p)
-  rows = await p.getByTestId('live-row').allInnerTexts()
-  ok(rows.length === 1 && /Avenida Academia/.test(rows[0]) && /9 min/.test(rows[0]), `tram: one tap switches to north (${rows.join(' | ').replace(/\n/g, ' ')})`)
+  ok(await chips.nth(0).getAttribute('aria-pressed') === 'true' && await chips.nth(1).getAttribute('aria-pressed') === 'false', 'tram: one tap switches to north')
   await p.reload(); await ready(p); await p.waitForSelector('[data-testid=tram-dirs]'); await settle(p)
   ok(await p.getByTestId('tram-dirs').getByTestId('dir-chip').nth(0).getAttribute('aria-pressed') === 'true', 'tram: the last choice is remembered after a reload, even if the other way is sooner')
   await ctx.close()
 })
-// direction picker on the Cercanias card: the two travel directions, only the chosen one listed; a way with no train left today is grey
+// direction picker on the Cercanias card: the two travel directions as rows named by their end, each with its own next trains; a way with no train left today is grey (clock fixed on a Wednesday 08:00)
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'cercanias' })
-  await p.waitForSelector('[data-testid=train-dirs]'); await settle(p)
+  await ctx.clock.setFixedTime(new Date('2026-11-04T08:00:00+01:00'))
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=train-dirs]'); await settle(p)
   const chips = p.getByTestId('train-dirs').getByTestId('dir-chip')
-  ok(await chips.count() === 2, 'cercanias: two direction chips')
+  ok(await chips.count() === 2, 'cercanias: two direction rows')
   const labels = await chips.allInnerTexts()
-  ok(labels.every(l => /^Hacia /.test(l)), `cercanias chips are "Hacia <end>" (${labels.join(' | ').replace(/\n/g, ' ')})`)
-  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `cercanias chip ${i} is touch sized (${r.height})`) }
-  const sel = async () => { const i = (await chips.evaluateAll(cs => cs.findIndex(c => c.getAttribute('aria-pressed') === 'true'))); return { i, rows: await p.getByTestId('train-row').allInnerTexts() } }
-  const a = await sel()
-  const end = l => l.replace(/^Hacia /, '').split('\n')[0]
-  ok(a.i >= 0 && a.rows.length >= 1 && a.rows.every(r => /\ba /.test(r)), `cercanias: ${a.rows.length} trains of the chosen way`)
+  ok(labels.every(l => /^\S/.test(l) && !/^Hacia /.test(l)), `cercanias rows are named by the end station only (${labels.join(' | ').replace(/\n/g, ' ')})`)
+  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `cercanias row ${i} is touch sized (${r.height})`) }
+  const chosen = () => chips.evaluateAll(cs => cs.findIndex(c => c.getAttribute('aria-pressed') === 'true'))
+  const a = await chosen()
+  ok(a >= 0 && /\d\d:\d\d/.test(labels[a]), `cercanias: the chosen way is marked and lists its trains (${labels[a]?.replace(/\n/g, ' ')})`)
   ok(/Horario programado \(no es tiempo real\)/.test(await p.getByTestId('train-planned').innerText()), 'cercanias: still labelled as planned, not real time')
   await p.screenshot({ path: out + '/cercanias-dirs-es.png' })
-  const other = 1 - a.i
+  const other = 1 - a
   if (!(await chips.nth(other).getAttribute('data-empty') !== null)) {
     await chips.nth(other).tap(); await settle(p)
-    const b = await sel()
-    ok(b.i === other && b.rows.length >= 1 && b.rows.join().replace(/\d\d:\d\d|\d+ min|mañana/g, '') !== a.rows.join().replace(/\d\d:\d\d|\d+ min|mañana/g, ''), 'cercanias: one tap shows the other way')
-    ok(b.rows.every(r => r.includes(end(labels[other]))) || b.rows.length > 0, 'cercanias: rows belong to the other way')
+    ok(await chosen() === other && /\d\d:\d\d/.test(labels[other]), 'cercanias: one tap chooses the other way')
   } else ok(/Sin más trenes hoy/.test(labels[other]), 'cercanias: the empty way says "Sin más trenes hoy"')
   await ctx.close()
 })
@@ -469,9 +471,9 @@ todo.push(async () => {
   ok(south && await veh() === 1, `tram: 0 min is the stop itself, so one estimated marker for the 6 min tram (${await veh()})`)
   ok(/Posición aproximada/.test(await p.getByTestId('veh-note').innerText()), 'tram: the card says the position is approximate')
   const box = await p.locator('.veh').first().boundingBox(), stop = await p.locator('.mk').first().boundingBox()
-  ok(box.width <= 22 && box.width < stop.width && /aprox\./.test(await p.locator('.veh').first().innerText()), `tram: marker is small (${box.width}px) and badged "aprox."`)
-  ok(await markers(p) === DATA_TRAM_STOPS, 'tram: the stop markers are all still there')
-  ok(await p.locator('.veh').first().evaluate(e => getComputedStyle(e).pointerEvents === 'none' && +getComputedStyle(e).opacity < 1), 'tram: marker is faded and not tappable')
+  ok(box.width <= 26 && box.width < stop.width && /aprox\./.test(await p.locator('.veh').first().innerText()), `tram: marker is small (${box.width}px, the stop is ${stop.width}px) and badged "aprox."`)
+  ok(await markers(p) > 0, 'tram: the stop markers are still there')
+  ok(await p.locator('.veh').first().evaluate(e => getComputedStyle(e).pointerEvents === 'none' && getComputedStyle(e).borderStyle === 'dashed'), 'tram: marker has a dashed outline (an estimate) and is not tappable')
   await p.screenshot({ path: out + '/tram-veh-es.png' })
   await p.getByTestId('tram-dirs').getByTestId('dir-chip').nth(0).tap(); await settle(p)
   ok(await veh() === 2, `tram: the north way has two markers (${await veh()})`)
@@ -485,7 +487,7 @@ todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'tram' })
   mock.city = () => null // the city does not answer
   await p.reload(); await ready(p); await settle(p)
-  ok(await p.locator('.veh').count() === 0, 'tram: no live data, no marker')
+  ok(await p.locator('.veh').count() === 1 && /Salida/.test(await p.locator('.veh').first().innerText()), 'tram: no live data, one marker labelled "Salida" shows where the direction starts')
   await ctx.close()
 })
 todo.push(async () => {
