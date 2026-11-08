@@ -1,14 +1,14 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ChatCircleText, ArrowBendUpRight, ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
+import { ChatCircleText, ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ICONS } from './icons'
 import { Skel, SkelRows } from './Skel'
 import { useBackLayer } from './back'
 import { DATA, dataRefreshed } from '../data'
-import { fmtDist, walkMins, walkUrl } from '../lib/geo'
+import { fmtDist, walkMins } from '../lib/geo'
 import { installEnv, installWay, promptInstall } from '../lib/install'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
 import detours from '../data/detours.json'
@@ -486,10 +486,10 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
 /** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
 const hasDetails = (layer: LayerConfig, it: RankedItem) => !!(it.addr || it.phone || it.ssid || it.hours || it.sched || it.note || it.cust || it.shelter || it.type === 'lib' || layer.id === 'wifi')
 
-export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, routes, times, onLine, onDetails, onWalk }: {
+export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, routes, times, onLine, onDetails }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; origin: LatLon; cat: string
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void
-  onDetails: () => void; onWalk: () => void
+  onDetails: () => void
 }) {
   const { t, type, lang } = useT()
   const [wide, setWide] = useState<string | null>(null) // id of the place whose name is open (full width); another place starts closed
@@ -502,7 +502,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
     <m.section key={item.id} {...cardSwap} className="px-4 pb-2 pt-2" data-testid="nearest" aria-label={kind}>
       <div className="flex items-center" data-closed-edge>
       <div className="relative flex min-h-[44px] min-w-0 flex-1 items-center text-left text-ink">
-        <span className="min-w-0 flex-1" style={{ paddingRight: 44 + 52 }}>
+        <span className="min-w-0 flex-1" style={{ paddingRight: 52 }}>
           <span className={cn(overline, 'mb-0.5 flex items-center gap-1.5')} data-testid="nearest-service"><Icon size="1.2em" weight="fill" style={{ color: layer.color }} aria-hidden />{layer.label[lang]}</span>
           <NameButton name={name} open={wide === item.id} onToggle={() => setWide(w => (w === item.id ? null : item.id))} />
           <span className="flex items-center">
@@ -518,9 +518,6 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
         </span>
         <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center">
           <div className="pl-2"><FavButton layer={layer} item={item} /></div>
-          <div className="pl-2">
-            <Button {...linkProps(walkUrl(item.lat, item.lon))} onClick={onWalk} data-testid="walk" aria-label={t('walk')} title={t('walk')} className="size-11 !min-h-0 !rounded-full !p-0"><ArrowBendUpRight size={26} weight="bold" aria-hidden /></Button>
-          </div>
         </div>
       </div>
       </div>
@@ -629,7 +626,7 @@ export function HomePage(p: {
   routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void
   cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; chipOrder: LayerId[]
-  onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
+  onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void
   viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
 }) {
   const { t } = useT()
@@ -640,7 +637,7 @@ export function HomePage(p: {
       {/* everything down to the end of this block is what the sheet shows at peek: the one card and the two buttons under it */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
         {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} />
-          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
+          : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}
         {p.desktop && <ServiceHeader onOpen={p.onServices} favLayers={favLayers} onFavs={p.onFavs} onFilters={hasFilters(p.layer) && !p.liveState && !p.lineView ? p.onFilters : undefined} filtersActive={filtersOn(p.layer, p.cat)} />}

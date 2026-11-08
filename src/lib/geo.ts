@@ -13,8 +13,6 @@ export function fmtDist(d: number): string {
   return d < 1000 ? Math.max(10, Math.round(d / 10) * 10) + ' m' : (d / 1000).toFixed(1) + ' km'
 }
 export const walkMins = (d: number) => Math.max(1, Math.ceil(d / 80))
-export const walkUrl = (lat: number, lon: number) =>
-  `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=walking`
 export const okCoord = (la: unknown, lo: unknown): boolean =>
   typeof la === 'number' && typeof lo === 'number' && Number.isFinite(la) && Number.isFinite(lo)
 

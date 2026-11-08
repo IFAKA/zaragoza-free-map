@@ -403,7 +403,7 @@ todo.push(async () => {
   ok(await markers(p) > 500, 'Bus: stops are drawn')
   const next = p.getByTestId('next-buses')
   ok(await next.count() === 1 && /poste=\d+/.test(await next.getAttribute('href') || ''), 'Bus card: one Next buses link to the bus company page')
-  ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() >= 1, 'Bus card: shows the lines and a Walk button')
+  ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() === 0, 'Bus card: shows the lines and no Walk button')
   await ctx.close()
 })
 // tram: the stop card has one link to the tram company (full-height area) and the track is drawn
@@ -597,12 +597,12 @@ todo.push(async () => {
   await go(p, 'pharmacy', 'tap'); await settle(p)
   ok(await p.getByTestId('duty-failed').count() === 1 && await p.getByTestId('duty-retry').count() === 1, 'Pharmacy: failed load shows the message and Try again')
   ok((await p.getByTestId('duty-city').getAttribute('href') || '').includes('zaragoza.es/sede/servicio/farmacia'), 'Pharmacy: failure links to the city page')
-  ok(await p.getByTestId('walk').count() === 0, 'Pharmacy: no old list shown on failure')
+  ok(await p.getByTestId('nearest-name').count() === 0, 'Pharmacy: no old list shown on failure')
   await p.unroute('**/farmacia.json*')
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(new Date())
   await p.route('**/farmacia.json*', r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(farm(today)) }))
   await p.getByTestId('duty-retry').tap(); await settle(p)
-  ok(await p.getByTestId('duty-failed').count() === 0 && await p.getByTestId('walk').count() === 1 && /Farmacia Test/.test(await p.locator('body').innerText()), 'Pharmacy: Try again loads today\'s duty pharmacy and shows its card')
+  ok(await p.getByTestId('duty-failed').count() === 0 && await p.getByTestId('nearest-name').count() === 1 && /Farmacia Test/.test(await p.locator('body').innerText()), 'Pharmacy: Try again loads today\'s duty pharmacy and shows its card')
   ok(/09:00-22:00/.test(await p.locator('body').innerText()), 'Pharmacy: card shows the guardia hours')
   await ctx.close()
 })
@@ -874,17 +874,16 @@ todo.push(async () => {
 })
 
 // ---- install hint is for a real browser tab only ----
-const hintAfterWalk = async ua => {
+const hintAfterPick = async ua => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { userAgent: ua })
-  await p.getByTestId('walk').first().evaluate(a => { a.addEventListener('click', e => e.preventDefault(), true) })
-  await p.getByTestId('walk').first().click(); await p.waitForTimeout(1800)
+  await p.locator('.mk').first().click({ force: true }); await p.waitForTimeout(4500)
   const shown = (await p.locator('body').innerText()).includes('Add this app to your home screen')
   await ctx.close(); return shown
 }
 todo.push(async () => {
-  ok(await hintAfterWalk('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36') === true, 'install hint shows in a normal Android Chrome tab')
-  ok(await hintAfterWalk('Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.0.0 Mobile Safari/537.36 Reddit/Version 2024.20.0') === false, 'no install hint in the Reddit in-app browser')
-  ok(await hintAfterWalk('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0') === false, 'no install hint in the Instagram in-app browser')
+  ok(await hintAfterPick('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36') === true, 'install hint shows in a normal Android Chrome tab')
+  ok(await hintAfterPick('Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.0.0 Mobile Safari/537.36 Reddit/Version 2024.20.0') === false, 'no install hint in the Reddit in-app browser')
+  ok(await hintAfterPick('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0') === false, 'no install hint in the Instagram in-app browser')
 })
 // ---- one run as a real Android Chrome (device emulation: UA, touch, DPR, no SW tricks) ----
 todo.push(async () => {

@@ -359,9 +359,6 @@ export function App() {
     if (!desktop) setLevel(l => Math.max(CLOSED, l - 1))
   }
   const doLocate = () => { askedLocation.current = true; void locate(true) }
-  const onWalk = () => {
-    track('directions', layerId)
-  }
   // a page that is not home (details, services) sizes the sheet to its own content (peek height) and gives back the size you had when you leave
   const levelBefore = useRef(PEEK)
   // The sheet changes size once per page turn, when the new page is on screen (not while the old one still fades out): see onShown below.
@@ -397,7 +394,7 @@ export function App() {
           routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack}
           cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
-          onServices={openServices} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
+          onServices={openServices} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')}
           desktop={desktop}
         />
       )
