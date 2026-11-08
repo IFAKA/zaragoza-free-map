@@ -121,7 +121,7 @@ todo.push(async () => {
   // details page, back, escape
   await p.getByTestId('details').click(); await settle(p)
   ok(await p.getByTestId('back').last().count() === 1, 'details page opened in same drawer')
-  ok(await p.getByRole('link', { name: /Report/ }).getAttribute('href').then(h => h.includes('openstreetmap.org/note')), 'report link')
+  ok(await p.getByRole('link', { name: /Report/ }).count() === 0, 'details page: no Report link any more (the report button left it; feedback lives in Settings)')
   await p.keyboard.press('Escape'); await settle(p)
   ok(await p.getByTestId('back').last().count() === 0, 'Escape goes up a page')
   await p.getByTestId('details').click(); await settle(p)
@@ -145,6 +145,7 @@ todo.push(async () => {
   await p.getByTestId('back').last().click(); await settle(p)
   ok(await p.getByTestId('row-about').count() === 1, 'language back to Settings')
   ok(await p.getByTestId('row-support').count() === 1, 'Settings has the Ko-fi support row')
+  ok(await p.getByTestId('row-feedback').count() === 1, 'Settings has the Send feedback row')
   await p.getByTestId('row-about').click(); await settle(p)
   ok(await p.getByText(/Datos actualizados/).count() > 0, 'about shows data refreshed date')
   ok(await p.getByText(/sin relación con el Ayuntamiento/).count() > 0, 'disclaimer')
@@ -594,10 +595,10 @@ todo.push(async () => {
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && man.name === 'Zaragoza a mano', `manifest lang es (${man.lang}, ${man.name})`)
   // the header shows Toilets (first visit); the Services page lists all 11 in three groups, in Spanish
-  ok(await p.locator('[data-testid^=goal-]').count() === 0 && await layerOn(p) !== 'water' && (await p.getByTestId('services').innerText()).startsWith('Aseos'), 'header: Toilets on show on a first visit')
+  ok(await p.locator('[data-testid^=goal-]').count() === 0 && await layerOn(p) !== 'water' && /^aseos/i.test(await p.getByTestId('nearest').innerText()), 'header: Toilets on show on a first visit (the card names the service)')
   ok(await chipsFit(p), 'header button and Services page fit')
   await p.getByTestId('services-open').tap(); await p.getByTestId('tab-bus').waitFor(); await settle(p)
-  ok(JSON.stringify(await p.locator('h2').allTextContents()) === JSON.stringify(['Básicos', 'Transporte', 'Conectar']) && await p.getByTestId('tab-toilets').getAttribute('aria-pressed') === 'true', 'Services page: three groups, Toilets marked')
+  ok(JSON.stringify(await p.locator('[role=heading][aria-level="2"]').allTextContents()) === JSON.stringify(['Básicos', 'Transporte', 'Conectar']) && await p.getByTestId('tab-toilets').getAttribute('aria-pressed') === 'true', 'Services page: three groups, Toilets marked')
   await p.getByTestId('back').tap(); await settle(p)
   await p.screenshot({ path: out + '/t-start.png' })
   const cdp = await ctx.newCDPSession(p)
@@ -777,6 +778,9 @@ todo.push(async () => {
 })
 // ---- Bizi live counts (CityBikes mocked) ----
 const listText = p => p.getByTestId('peek-block').innerText()
+// the Take / Return / My bike chips live on the Filters page (the sliders button), not in a bar under the card
+const biziPick = async (p, cat) => { await p.getByTestId('filters-open').tap(); await settle(p); await p.getByTestId('filter-' + cat).tap(); await settle(p); await p.getByTestId('back').last().tap(); await settle(p) }
+const biziChips = async p => { await p.getByTestId('filters-open').tap(); await settle(p); const r = await p.getByTestId('filters').locator('[data-testid^=filter-]').evaluateAll(es => es.map(e => [e.dataset.testid, e.innerText.trim(), e.getAttribute('aria-pressed')])); await p.getByTestId('back').last().tap(); await settle(p); return r }
 const biziTab = async p => { await go(p, 'bizi', 'tap'); await settle(p); await p.waitForSelector('[data-testid=bizi-status][data-state=live]') ; await settle(p) }
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true)
@@ -786,20 +790,20 @@ todo.push(async () => {
   ok(/Live counts, updated \d\d:\d\d/.test(await p.getByTestId('bizi-status').innerText()), 'Bizi: status says the counts are live, with the time')
   const card = await p.getByTestId('bizi-counts').innerText()
   ok(/^\d+ bikes? \(\d+ electric\) · \d+ free docks?$|^\d+ bikes? · \d+ free docks?$/.test(card), `Bizi card shows bikes, e-bikes and free docks (${card})`)
-  const chips = await p.getByTestId('bizi-bar').getByRole('button').allInnerTexts()
-  ok(JSON.stringify(chips.slice(0, 3)) === JSON.stringify(['Take a bike', 'Return a bike', 'My bike']), 'Bizi: three chips ' + chips.join(' | '))
-  ok(await p.getByTestId('bizi-bar').getByRole('button', { name: 'Take a bike' }).getAttribute('aria-pressed') === 'true', 'Take a bike is the default chip')
+  const chips = await biziChips(p)
+  ok(JSON.stringify(chips.map(c => c[1])) === JSON.stringify(['Take a bike', 'Return a bike', 'My bike']), 'Bizi: three chips on the Filters page ' + chips.map(c => c[1]).join(' | '))
+  ok(chips[0][2] === 'true' && chips[1][2] === 'false', 'Take a bike is the default chip')
   const take = await listText(p)
   ok(/\d+ bikes?/.test(take) && !/\b0 bikes\b/.test(take), 'Take: the nearest card shows bikes, never a station with 0 bikes')
-  await p.getByRole('button', { name: 'Return a bike' }).tap(); await settle(p)
+  await biziPick(p, 'return')
   const ret = await listText(p)
   ok(/free docks?/.test(ret) && !/\b0 free docks\b/.test(ret), 'Return: the nearest card shows free docks, never 0')
-  await p.getByRole('button', { name: 'My bike' }).tap(); await settle(p)
+  await biziPick(p, 'mine')
   ok(await markers(p) > 0 && !/ free docks?/.test(await listText(p)) && await p.getByTestId('bizi-status').count() === 0, 'My bike: the racks, no counts, no live status')
   await p.screenshot({ path: out + '/bizi-mine-en.png' })
   // counts change without animation
-  await p.getByRole('button', { name: 'Take a bike' }).tap(); await settle(p)
-  ok(await p.evaluate(() => document.getAnimations().length) === 0, 'no animation running after a chip change')
+  await biziPick(p, 'take')
+  ok(await p.evaluate(() => document.getAnimations().filter(a => a.animationName !== 'selpulse').length) === 0, 'no animation running after a chip change (the one-shot marker pulse aside)')
   await ctx.close()
 })
 todo.push(async () => { // the same tab in Spanish, with a screenshot
@@ -807,7 +811,7 @@ todo.push(async () => { // the same tab in Spanish, with a screenshot
   await biziTab(p)
   ok(/Cifras en directo, actualizadas a las \d\d:\d\d/.test(await p.getByTestId('bizi-status').innerText()), 'ES: live status line')
   ok(/bicis?( \(.*\))? · \d+ anclajes? libres?/.test(await p.getByTestId('bizi-counts').innerText()), 'ES: card counts')
-  ok(JSON.stringify((await p.getByTestId('bizi-bar').getByRole('button').allInnerTexts()).slice(0, 3)) === JSON.stringify(['Coger una bici', 'Dejar una bici', 'Mi bici']), 'ES chips')
+  ok(JSON.stringify((await biziChips(p)).map(c => c[1])) === JSON.stringify(['Coger una bici', 'Dejar una bici', 'Mi bici']), 'ES chips')
   await p.screenshot({ path: out + '/bizi-es.png' })
   await ctx.close()
 })
@@ -893,14 +897,17 @@ todo.push(async () => {
 // ---- install hint is for a real browser tab only ----
 const hintAfterPick = async ua => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true, { userAgent: ua })
+  await p.evaluate(() => localStorage.setItem('zgz:visits', '2')) // the hint waits for a second visit
   await p.locator('.mk').first().click({ force: true }); await p.waitForTimeout(4500)
-  const shown = (await p.locator('body').innerText()).includes('Add this app to your home screen')
+  const body = await p.locator('body').innerText()
+  const shown = /Install it from your browser menu/.test(body) ? 'menu' : /Open this page in your browser/.test(body) ? 'browser' : /Add to Home Screen/.test(body) ? 'ios' : 'none'
   await ctx.close(); return shown
 }
+// a normal tab gets the way to install it; an in-app browser (cannot install) is told to open the page in a real browser
 todo.push(async () => {
-  ok(await hintAfterPick('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36') === true, 'install hint shows in a normal Android Chrome tab')
-  ok(await hintAfterPick('Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.0.0 Mobile Safari/537.36 Reddit/Version 2024.20.0') === false, 'no install hint in the Reddit in-app browser')
-  ok(await hintAfterPick('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0') === false, 'no install hint in the Instagram in-app browser')
+  ok(await hintAfterPick('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36') === 'menu', 'install hint (browser menu) shows in a normal Android Chrome tab')
+  ok(await hintAfterPick('Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.0.0 Mobile Safari/537.36 Reddit/Version 2024.20.0') === 'browser', 'Reddit in-app browser: told to open the page in the browser, no install steps')
+  ok(await hintAfterPick('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0') === 'browser', 'Instagram in-app browser: told to open the page in the browser, no install steps')
 })
 // ---- one run as a real Android Chrome (device emulation: UA, touch, DPR, no SW tricks) ----
 todo.push(async () => {
