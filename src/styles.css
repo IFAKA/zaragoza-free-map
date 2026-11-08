@@ -121,6 +121,8 @@ button:not(:disabled),[role=button]:not([aria-disabled=true]),[role=tab]:not([ar
 button:disabled,[aria-disabled=true]{cursor:not-allowed}
 }
 :focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
+/* a page or view that only takes focus from script (tabindex -1) is not a control: no ring around the whole panel */
+[tabindex="-1"]:focus-visible{outline:none}
 /* edge-to-edge list rows (panel and Settings, desktop): the ring goes inside the row, the panel edge cuts an outside ring to two lines */
 @media (min-width:900px){[data-testid=panel] .text-left:focus-visible,[data-testid=settings-view] .text-left:focus-visible{outline-offset:-2px}}
 
