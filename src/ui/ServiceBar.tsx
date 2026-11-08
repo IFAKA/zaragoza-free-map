@@ -32,11 +32,11 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
           </m.button>
         )}
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
-          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-line bg-surface px-3 font-bold text-ink shadow-md">
+          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-line bg-surface px-3 font-bold text-ink shadow-md [transition:background-color_var(--dur-press)] hov:bg-line">
           <Star size="1.3em" weight="fill" className="text-ink" aria-hidden />{t('favsTitle')}
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
-          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-line bg-surface px-3 font-bold text-ink shadow-md">
+          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-line bg-surface px-3 font-bold text-ink shadow-md [transition:background-color_var(--dur-press)] hov:bg-line">
           <SquaresFour size="1.3em" weight="fill" className="text-ink" aria-hidden />{t('tabsLabel')}
         </m.button>
       </div>
@@ -57,7 +57,7 @@ export function ServiceGroups({ layer, onPick }: { layer: LayerId; onPick: (id: 
               const J = ICONS[LAYERS[id].icon], on = id === layer
               return (
                 <m.button {...tap} key={id} type="button" onClick={() => onPick(id)} aria-pressed={on} data-testid={`tab-${id}`}
-                  className={'flex min-h-[44px] min-w-0 grow items-center justify-center gap-1.5 rounded-btn border-0 px-2.5 text-[0.87em] font-semibold ' + (on ? 'bg-brand text-on-brand' : 'bg-surface text-ink')}>
+                  className={'flex min-h-[44px] min-w-0 grow items-center justify-center gap-1.5 rounded-btn border-0 px-2.5 text-[0.87em] font-semibold ' + (on ? 'bg-brand text-on-brand hov:bg-brand-pressed' : 'bg-surface text-ink hov:bg-line') + ' [transition:background-color_var(--dur-press)]'}>
                   <J size="1.3em" className="shrink-0" weight={on ? 'fill' : 'regular'} aria-hidden /><span className="min-w-0 truncate">{LAYERS[id].short[lang]}</span>
                 </m.button>
               )

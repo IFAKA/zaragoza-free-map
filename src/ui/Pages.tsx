@@ -72,7 +72,7 @@ function Actions({ fav, extra }: { fav: ReactNode; extra?: ReactNode }) {
 export function CloseButton({ onClick, label, testId }: { onClick: () => void; label: string; testId?: string }) {
   return (
     <m.button {...tap} type="button" onClick={onClick} aria-label={label} title={label} data-testid={testId}
-      className="ml-auto mr-1 inline-flex size-11 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-brand-text"><CloseIcon size="1.4em" weight="bold" aria-hidden /></m.button>
+      className="ml-auto mr-1 inline-flex size-11 select-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-brand-text [transition:background-color_var(--dur-press)] hov:bg-surface"><CloseIcon size="1.4em" weight="bold" aria-hidden /></m.button>
   )
 }
 
@@ -81,7 +81,7 @@ export function PageHeader({ title, onBack, action, noBack }: { title: string; o
   return (
     <div className="flex shrink-0 items-center gap-1 px-2 pb-1 pt-0">
       {noBack ? <span className="w-2 shrink-0" aria-hidden /> : (
-        <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className="inline-flex size-[44px] items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
+        <BaseButton onClick={onBack} aria-label={t('back')} data-testid="back" render={<m.button {...tap} />} className="inline-flex size-[44px] items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:background-color_var(--dur-press)] hov:bg-surface">
           <CaretLeft size="1.4em" weight="bold" aria-hidden />
         </BaseButton>
       )}
@@ -94,7 +94,7 @@ export function PageHeader({ title, onBack, action, noBack }: { title: string; o
 /** Header of the full Settings view: title on the left, a close cross on the right (where the Settings button was). Sub-pages also get a small chevron to go up one level. */
 function ViewHeader({ title, onBack, onClose }: { title: string; onBack?: () => void; onClose: () => void }) {
   const { t } = useT()
-  const btn = 'inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text'
+  const btn = 'inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:background-color_var(--dur-press)] hov:bg-surface'
   return (
     <div className="flex shrink-0 items-center gap-1 pb-1 pl-2 pt-[max(0.75rem,env(safe-area-inset-top))] mr-[calc(max(0.75rem,env(safe-area-inset-right))-env(safe-area-inset-right))]">
       {onBack && (
@@ -251,7 +251,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
             <ul className="m-0 mt-1 flex list-none flex-col divide-y divide-line p-0">
               {rows.map((r, i) => (
                 <li key={r.line + r.dest} className="py-1.5 first:pt-0 last:pb-0" data-testid="live-row">
-                  {onLine && lineOk?.(r.line) ? <BaseButton onClick={() => onLine(r.line)} render={<m.button {...tap} />} data-testid="live-row-open" data-line={r.line} aria-label={t('lineChip').replace('{n}', r.line)} className={cn(rowCls, 'w-full min-h-9 border-0 bg-transparent p-0 text-left text-inherit')}>{rowBody(r, i)}<CaretRight size="1em" weight="bold" className="shrink-0 text-ink-soft" aria-hidden /></BaseButton> : <div className={cn(rowCls, 'min-h-9')}>{rowBody(r, i)}{onLine && <span className="w-[1em] shrink-0" aria-hidden />}</div>}
+                  {onLine && lineOk?.(r.line) ? <BaseButton onClick={() => onLine(r.line)} render={<m.button {...tap} />} data-testid="live-row-open" data-line={r.line} aria-label={t('lineChip').replace('{n}', r.line)} className={cn(rowCls, 'w-full min-h-9 border-0 bg-transparent p-0 text-left text-inherit [transition:background-color_var(--dur-press)] hov:bg-surface')}>{rowBody(r, i)}<CaretRight size="1em" weight="bold" className="shrink-0 text-ink-soft" aria-hidden /></BaseButton> : <div className={cn(rowCls, 'min-h-9')}>{rowBody(r, i)}{onLine && <span className="w-[1em] shrink-0" aria-hidden />}</div>}
                 </li>
               ))}
             </ul>
@@ -424,7 +424,7 @@ export function LineBlock({ view, origin, onBack }: { view: LineView; origin: La
         <div className="min-w-0 flex-1">
           <h2 className={h2} data-testid="line-title">{title}</h2>
         </div>
-        <BaseButton onClick={onBack} aria-label={t('lineBack')} title={t('lineBack')} data-testid="line-back" render={<m.button {...tap} />} className="-mr-2 -mt-2 inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text">
+        <BaseButton onClick={onBack} aria-label={t('lineBack')} title={t('lineBack')} data-testid="line-back" render={<m.button {...tap} />} className="-mr-2 -mt-2 inline-flex size-[44px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-brand-text [transition:background-color_var(--dur-press)] hov:bg-surface">
           <CloseIcon size="1.4em" weight="bold" aria-hidden />
         </BaseButton>
       </div>
