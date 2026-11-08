@@ -35,6 +35,7 @@ import { serviceOrder } from '../layers/goals'
 import { bumpTap, parseTaps, rankByTaps } from '../lib/usage'
 import { SettingsFab } from './SettingsFab'
 import { SupportFab } from './SupportFab'
+import { FollowFab } from './FollowFab'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
 import { useLocation } from './useLocation'
@@ -161,7 +162,8 @@ export function App() {
   const [times, setTimes] = useState<CercaniasTimes | null>(null)
   const [fitN, setFitN] = useState(0)
   const [vehicles, setVehicles] = useState<Vehicle[]>([]) // estimated tram / Cercanías positions, published by the stop card
-  const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
+  const [follow, setFollow] = useState(() => lsGet('follow') !== '0')
+  const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') }, follow)
   const askedLocation = useRef(false)
   const flyN = useRef(0)
   const viewport = useRef<HTMLDivElement>(null)
@@ -358,6 +360,7 @@ export function App() {
     setSelected(null)
     if (!desktop) setLevel(l => Math.max(CLOSED, l - 1))
   }
+  const toggleFollow = () => { const on = !follow; setFollow(on); lsSet('follow', on ? '1' : '0'); if (on) void locate().then(ll => { if (ll) flyTo(ll, 17) }) } // turning it on: take a fresh position now and show it
   const doLocate = () => { askedLocation.current = true; void locate(true) }
   // a page that is not home (details, services) sizes the sheet to its own content (peek height) and gives back the size you had when you leave
   const levelBefore = useRef(PEEK)
@@ -429,6 +432,7 @@ export function App() {
         </div>
         <SettingsFab label={t.settings} onClick={() => view.open('settings')} inert={view.isOpen} />
         <SupportFab inert={view.isOpen} />
+        {pos && <FollowFab on={follow} onToggle={toggleFollow} inert={view.isOpen} />}
         <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>
       </LazyMotion></MotionConfig>
