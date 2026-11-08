@@ -384,9 +384,9 @@ todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true)
   await go(p, 'bus', 'tap'); await p.waitForFunction(() => document.querySelectorAll('.mk').length > 10); await settle(p) // the stops load in their own chunk (the tab asks for them at once); the map draws only the stops in view (markercluster), around 30 at street zoom
   ok(await markers(p) > 10, `Bus: stops are drawn (${await markers(p)} in view)`)
-  const next = p.getByTestId('next-buses')
-  ok(await next.count() === 1 && /poste=\d+/.test(await next.getAttribute('href') || ''), 'Bus card: one Next buses link to the bus company page')
-  ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() === 0, 'Bus card: shows the lines and no Walk button')
+  // the times show inside the app (city stops); there is no link out to the bus company and no Walk button
+  await p.getByTestId('live-times').waitFor({ timeout: 5000 })
+  ok(await p.getByTestId('nearest').locator('a[href*="poste="]').count() === 0 && await p.getByTestId('walk').count() === 0, 'Bus card: the times are in the app, no link out and no Walk button')
   await ctx.close()
 })
 // tram: the stop card lists both directions with no link out to the tram company (the times stay in the app), and the track is drawn
@@ -632,6 +632,7 @@ todo.push(async () => {
   await p.getByTestId('row-about').tap(); await settle(p); await scan('about')
   await p.getByTestId('back').last().tap(); await settle(p); await p.getByTestId('close').last().tap(); await settle(p)
   for (const id of ['water', 'toilets', 'charge', 'wifi', 'libraries', 'bizi']) { await go(p, id, 'tap'); await settle(p); await scan(id) }
+  await go(p, 'toilets', 'tap'); await settle(p) // Bizi stations have no details page
   await p.getByTestId('details').tap(); await settle(p); await scan('details')
   ok(leaks.length === 0, 'no English left in Spanish mode ' + JSON.stringify(leaks))
   // Language choice persists, and the html lang follows
