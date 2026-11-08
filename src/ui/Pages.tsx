@@ -30,6 +30,7 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, biziLine, clockMadrid, fmtHours, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
+import { ThemeSwitch } from './ThemeSwitch'
 import { busAlternatives, ensureBakedBad, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
 import { chooseDir, outsideCentre, railGroups, shownDir, towardCentre, type DirOpt } from '../lib/direction'
 import { lsGet, lsSet } from '../lib/cache'
@@ -675,6 +676,7 @@ export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClos
     <>
       <ViewHeader title={t('settingsTitle')} onClose={onClose} />
       <Scroll locked={locked}>
+        <ThemeSwitch />
         <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
  {!installEnv().standalone && <PageRow testId="row-install" icon={<DownloadSimple size="1.4em" aria-hidden />} title={t('installRow')} onClick={() => go('install')} />}
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
