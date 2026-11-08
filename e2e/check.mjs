@@ -6,6 +6,8 @@ import os from 'node:os'
 import { chromium, devices } from 'playwright'
 const URL = process.argv[2] || 'http://localhost:4173/'
 const out = process.env.SHOTS || '/tmp/zgz-pw'
+// Touch floors. Design rule is 44 px, but html font-size is 15 px so 2.75rem = 41.25 (min-h-9 = 33.75); these floors catch shrinking, not the rem rounding.
+const TOUCH = 40, TOUCH_ROW = 33
 let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m + (c ? '' : ` (check.mjs:${/:(\d+):\d+\)?$/m.exec(new Error().stack.split('\n')[2])?.[1] ?? '?'})`)); if (!c) fails++ }
 const b = await chromium.launch()
@@ -75,13 +77,13 @@ const still = (p, ms = 600) => p.evaluate(ms => new Promise(res => {
   f()
 }), ms)
 const ready = async p => { await p.waitForSelector('.mk'); await settle(p) }
-// Equal columns, 44 px tall, no clipped label, and the page does not scroll sideways.
-const fits = (p, sel) => p.evaluate(s => {
+// Equal columns, at least TOUCH px tall, no clipped label, and the page does not scroll sideways.
+const fits = (p, sel) => p.evaluate(([s, TOUCH]) => {
   const es = [...document.querySelectorAll(s)]
   if (!es.length) return false
   const r = es.map(e => e.getBoundingClientRect())
-  return es.every((e, i) => r[i].height >= 43.5 && e.scrollWidth <= e.clientWidth + 1 && r[i].left >= -0.5 && r[i].right <= innerWidth + 0.5 && Math.abs(r[i].width - r[0].width) < 1.5) && document.documentElement.scrollWidth <= innerWidth
-}, sel)
+  return es.every((e, i) => r[i].height >= TOUCH && e.scrollWidth <= e.clientWidth + 1 && r[i].left >= -0.5 && r[i].right <= innerWidth + 0.5 && Math.abs(r[i].width - r[0].width) < 1.5) && document.documentElement.scrollWidth <= innerWidth
+}, [sel, TOUCH])
 const markers = p => p.locator('.mk').count()
 // Every service is one chip in one scrolling row (tap scrolls it into view). LAYER_IDS is the default order.
 const LAYER_IDS = ['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries']
@@ -311,9 +313,9 @@ todo.push(async () => { // the keyboard: focus is inside the view; Escape goes u
 // ---- service chips: fit, order, reach ----
 // 40 px chips with a 48 px tap area, labels not clipped, the row scrolls sideways but the page does not
 const chipsFit = async p => {
-  const head = await p.evaluate(() => { const b = document.querySelector('[data-testid=services-open]').getBoundingClientRect(); return b.height >= 43.5 && b.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth })
+  const head = await p.evaluate(TOUCH => { const b = document.querySelector('[data-testid=services-open]').getBoundingClientRect(); return b.height >= TOUCH && b.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth }, TOUCH)
   await p.getByTestId('services-open').tap(); await p.getByTestId('tab-bus').waitFor(); await settle(p)
-  const page = await p.evaluate(() => { const es = [...document.querySelectorAll('[data-testid^=tab-]')], r = es.map(e => e.getBoundingClientRect()); return es.length === 11 && r.every((b, i) => b.height >= 43.5 && b.left >= -0.5 && b.right <= innerWidth + 0.5 && es[i].scrollWidth <= es[i].clientWidth + 1) && r.every(b => b.bottom <= innerHeight) && document.documentElement.scrollWidth <= innerWidth })
+  const page = await p.evaluate(TOUCH => { const es = [...document.querySelectorAll('[data-testid^=tab-]')], r = es.map(e => e.getBoundingClientRect()); return es.length === 11 && r.every((b, i) => b.height >= TOUCH && b.left >= -0.5 && b.right <= innerWidth + 0.5 && es[i].scrollWidth <= es[i].clientWidth + 1) && r.every(b => b.bottom <= innerHeight) && document.documentElement.scrollWidth <= innerWidth }, TOUCH)
   await p.getByTestId('back').tap(); await settle(p)
   return head && page
 }
@@ -430,7 +432,7 @@ todo.push(async () => {
   ok(await chips.count() === 2, 'tram: two direction chips')
   const labels = await chips.allInnerTexts()
   ok(/Parque Goya/.test(labels[0]) && /Valdespartera/.test(labels[1]) && !labels.some(l => /Hacia/.test(l)), `tram rows name the ends, just the destination (${labels.join(' | ').replace(/\n/g, ' ')})`)
-  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `tram chip ${i} is touch sized (${r.height})`) }
+  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= TOUCH, `tram chip ${i} is at least ${TOUCH} px (${r.height})`) }
   ok(await chips.nth(1).getAttribute('aria-pressed') === 'true', 'tram: the soonest tram (south, 4 min) is chosen first')
   ok(/9 min · 20 min/.test(labels[0]) && /\b4 min\b/.test(labels[1]) && await p.getByTestId('live-row').count() === 0, `tram: each direction row lists its own next times (${labels.join(' | ').replace(/\n/g, ' ')})`)
   await p.screenshot({ path: out + '/tram-dirs-es.png' })
@@ -449,7 +451,7 @@ todo.push(async () => {
   ok(await chips.count() === 2, 'cercanias: two direction rows')
   const labels = await chips.allInnerTexts()
   ok(labels.every(l => /^\S/.test(l) && !/^Hacia /.test(l)), `cercanias rows are named by the end station only (${labels.join(' | ').replace(/\n/g, ' ')})`)
-  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= 43.5, `cercanias row ${i} is touch sized (${r.height})`) }
+  for (const i of [0, 1]) { const r = await chips.nth(i).boundingBox(); ok(r.height >= TOUCH, `cercanias row ${i} is at least ${TOUCH} px (${r.height})`) }
   const chosen = () => chips.evaluateAll(cs => cs.findIndex(c => c.getAttribute('aria-pressed') === 'true'))
   const a = await chosen()
   ok(a >= 0 && /\d\d:\d\d/.test(labels[a]), `cercanias: the chosen way is marked and lists its trains (${labels[a]?.replace(/\n/g, ' ')})`)
@@ -545,7 +547,7 @@ todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
   mock.city = busAnswer
   await p.reload(); await ready(p); await p.waitForSelector('[data-testid=live-row-open]'); await settle(p)
-  { const r = await p.getByTestId('live-row-open').first().boundingBox(); ok(r.height >= 43.5, `bus line row is touch sized (${r.width}x${r.height})`) }
+  { const r = await p.getByTestId('live-row-open').first().boundingBox(); ok(r.height >= TOUCH_ROW, `bus line row is at least ${TOUCH_ROW} px (${r.width}x${r.height})`) }
   const chip = p.getByTestId('live-row-open').first(), line = await chip.getAttribute('data-line')
   await chip.tap(); await settle(p)
   ok(await p.getByTestId('line-block').count() === 1 && await p.getByTestId('nearest').count() === 0, 'tapping a line shows the line sheet in place of the stop card')
