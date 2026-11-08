@@ -67,7 +67,7 @@ export function SettingsView({ stack, push, back, close, lang, setLang, title }:
     window.addEventListener('keydown', key, true)
     return () => { if (app) { app.removeAttribute('inert'); document.body.style.overflow = '' } window.removeEventListener('keydown', key, true) }
   }, [open, back, desktop])
-  useEffect(() => { if (open && !desktop) root.current?.focus({ preventScroll: true }) }, [open, shown.length, desktop])
+  useEffect(() => { if (open) root.current?.focus({ preventScroll: true }) }, [open, shown.length])
 
   // the chevron only on a page that was pushed over another; the root of the view has only the cross
   const page = (p: ViewPage, sub: boolean) => p === 'settings'
