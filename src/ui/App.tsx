@@ -437,17 +437,19 @@ export function App() {
       <MotionConfig reducedMotion="user"><LazyMotion features={domAnimation} strict>
       <ToastHost>
         <div className="fixed inset-0 overflow-hidden bg-surface" data-desktop={desktop ? '' : undefined}>
+          {/* the panel comes first in the DOM, so Tab starts in it and reaches the map controls after */}
+          {desktop && (
+            <aside aria-label={t.panel} data-testid="panel" className="absolute inset-y-0 left-0 z-10 flex w-[400px] flex-col border-r border-line bg-paper shadow-[2px_0_14px_rgb(0_0_0/0.12)]">
+              <PageFrame turn={turn} onShown={onShown} pageRef={pageRef}>{pageEl}</PageFrame>
+            </aside>
+          )}
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <Suspense fallback={null}><MapView
               layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} heading={compass.on ? compass.heading : null} fly={fly} inset={insetPx}
               desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles} onAway={setAway}
             /></Suspense>
           </div>
-          {desktop ? (
-            <aside aria-label={t.panel} data-testid="panel" className="absolute inset-y-0 left-0 z-10 flex w-[400px] flex-col border-r border-line bg-paper shadow-[2px_0_14px_rgb(0_0_0/0.12)]">
-              <PageFrame turn={turn} onShown={onShown} pageRef={pageRef}>{pageEl}</PageFrame>
-            </aside>
-          ) : (
+          {!desktop && (
             <SheetClosedCtx.Provider value={mobileClosed}>
               <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} onShown={onShown} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
                 {pageEl}
