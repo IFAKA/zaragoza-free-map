@@ -10,6 +10,10 @@ let fails = 0
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m + (c ? '' : ` (check.mjs:${/:(\d+):\d+\)?$/m.exec(new Error().stack.split('\n')[2])?.[1] ?? '?'})`)); if (!c) fails++ }
 const b = await chromium.launch()
 const DATA_TRAM_STOPS = JSON.parse(fs.readFileSync([process.env.APP_DIR, process.cwd()].filter(Boolean).map(d => d + '/src/data/tram.json').find(f => fs.existsSync(f)), 'utf8')).rows.length
+const appJson = name => JSON.parse(fs.readFileSync([process.env.APP_DIR, process.cwd()].filter(Boolean).map(d => d + '/src/data/' + name).find(f => fs.existsSync(f)), 'utf8'))
+const BUS = appJson('bus.json').rows, BUS_LINES = appJson('busroutes.json').lines
+// the city's live answer for a bus stop, scripted: one arrival of a line that serves the stop and has a bundled route (only those rows open the route view), and one of another line
+const busAnswer = u => { const id = /tuzsa-(\d+)\.json/.exec(u)?.[1], line = BUS.find(r => r[0] === id)?.[2].split(',').find(l => BUS_LINES[l]); return line ? { destinos: [{ linea: line, destino: 'CENTRO', primero: '3 minutos.', segundo: '11 minutos.' }, { linea: 'ZZ', destino: 'OTRA', primero: '1 minuto.', segundo: '' }] } : null }
 const todo = [], late = [] // each block below is independent (own browser context): `todo` blocks run in parallel, `late` (timing measurements) alone afterwards
 // CityBikes is mocked (the real feed changes every minute): one station per bundled Bizi place, counts from its position in the list.
 // Station names are as the real feed writes them ("8-Puerta del Sol"), the stamp as the real feed writes it ("...+00:00Z").
@@ -87,8 +91,6 @@ const go = async (p, id, how = 'click') => {
   await p.getByTestId('tab-' + id)[how]()
 }
 const layerOn = p => p.evaluate(() => localStorage.getItem('zgz:v2:layer'))
-// the handle cycles the sheet: from peek one tap opens it to full height (where the line chips and links are)
-const full = async p => { await p.getByTestId('handle').tap(); await settle(p) }
 const snapTop = p => p.evaluate(() => Math.round(document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top))
 
 // ---- mobile ----
@@ -379,8 +381,8 @@ todo.push(async () => { // the place-selected moment: a ring on the marker only 
 // ---- bus stops and duty pharmacies ----
 todo.push(async () => {
   const { ctx, p } = await open({ width: 390, height: 844 }, true)
-  await go(p, 'bus', 'tap'); await settle(p)
-  ok(await markers(p) > 500, 'Bus: stops are drawn')
+  await go(p, 'bus', 'tap'); await p.waitForFunction(() => document.querySelectorAll('.mk').length > 10); await settle(p) // the stops load in their own chunk (the tab asks for them at once); the map draws only the stops in view (markercluster), around 30 at street zoom
+  ok(await markers(p) > 10, `Bus: stops are drawn (${await markers(p)} in view)`)
   const next = p.getByTestId('next-buses')
   ok(await next.count() === 1 && /poste=\d+/.test(await next.getAttribute('href') || ''), 'Bus card: one Next buses link to the bus company page')
   ok(await p.getByTestId('bus-lines').count() === 1 && await p.getByTestId('walk').count() === 0, 'Bus card: shows the lines and no Walk button')
@@ -521,29 +523,27 @@ todo.push(async () => {
     await ctx.close()
   }
 })
-// the bus route view: live times of THIS line at this stop; the other direction button keeps working
+// the bus route view: live times of THIS line at this stop
 todo.push(async () => {
   const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
-  await p.waitForSelector('[data-testid=bus-line-chip]', { state: 'attached' }); await settle(p); await full(p)
-  const chip = p.getByTestId('bus-line-chip').first(), line = await chip.getAttribute('data-line')
-  mock.city = () => ({ destinos: [{ linea: line, destino: 'CENTRO', primero: '3 minutos.', segundo: '11 minutos.' }, { linea: 'ZZ', destino: 'OTRA', primero: '1 minuto.', segundo: '' }] })
-  await chip.tap(); await p.waitForSelector('[data-testid=live-times] [data-testid=live-row]'); await settle(p)
-  const rows = await p.getByTestId('live-row').allInnerTexts()
+  mock.city = busAnswer
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=live-row-open]'); await settle(p)
+  const chip = p.getByTestId('live-row-open').first(), line = await chip.getAttribute('data-line')
+  await chip.tap(); await p.waitForSelector('[data-testid=line-block] [data-testid=live-times] [data-testid=live-row]'); await settle(p)
+  const rows = await p.getByTestId('line-block').getByTestId('live-row').allInnerTexts()
   ok(rows.length === 1 && rows[0].includes(line) && /3 min/.test(rows[0]) && !/OTRA/.test(rows[0]), `route view: live minutes of this line only (${rows.join(' | ').replace(/\n/g, ' ')})`)
   ok(/Esta parada/i.test(await p.getByTestId('live-times').innerText()), 'route view: the live box is titled "Esta parada"')
-  ok(await p.getByTestId('next-buses').count() === 1 && /poste=/.test(await p.getByTestId('next-buses').getAttribute('href') || ''), 'route view: the link-out stays (secondary)')
+  ok(await p.getByTestId('next-buses').count() === 0, 'route view: no link out to the bus company (the times stay in the app)')
   await p.screenshot({ path: out + '/bus-line-live-es.png' })
-  if (await p.getByTestId('line-dir').count()) { await p.getByTestId('line-dir').tap(); await settle(p); ok(await p.getByTestId('line-block').count() === 1, 'route view: direction flip keeps the sheet') }
   await ctx.close()
 })
-// a bus line: tap a line chip on the stop card, the route replaces the markers, the sheet shows the stepper; back returns
+// a bus line: tap a line row on the stop card, the route replaces the markers, the sheet shows the stepper; back returns
 todo.push(async () => {
-  const { ctx, p } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
-  await p.waitForSelector('[data-testid=bus-line-chip]', { state: 'attached' }); await settle(p); await full(p)
-  const rows = await p.getByTestId('bus-lines').evaluate(e => new Set([...e.querySelectorAll('li')].map(l => Math.round(l.getBoundingClientRect().top))).size)
-  ok(rows <= 2, `bus card: the line chips take at most 2 rows (${rows})`)
-  { const r = await p.getByTestId('bus-line-chip').first().boundingBox(); ok(r.height >= 43.5 && r.width >= 40, `bus line chips are touch sized (${r.width}x${r.height})`) }
-  const chip = p.getByTestId('bus-line-chip').first(), line = await chip.getAttribute('data-line')
+  const { ctx, p, mock } = await open({ width: 390, height: 844 }, true, {}, 'es', { geo: 'blocked', layer: 'bus' })
+  mock.city = busAnswer
+  await p.reload(); await ready(p); await p.waitForSelector('[data-testid=live-row-open]'); await settle(p)
+  { const r = await p.getByTestId('live-row-open').first().boundingBox(); ok(r.height >= 43.5, `bus line row is touch sized (${r.width}x${r.height})`) }
+  const chip = p.getByTestId('live-row-open').first(), line = await chip.getAttribute('data-line')
   await chip.tap(); await settle(p)
   ok(await p.getByTestId('line-block').count() === 1 && await p.getByTestId('nearest').count() === 0, 'tapping a line shows the line sheet in place of the stop card')
   const title = await p.getByTestId('line-title').innerText()
@@ -551,23 +551,20 @@ todo.push(async () => {
   ok(await p.evaluate(() => window.__ev.includes('bus-line-' + document.querySelector('[data-testid=line-title]').textContent.split(' ')[1])), 'event bus-line-<line> sent: ' + await p.evaluate(() => window.__ev.join(',')))
   ok(await markers(p) === 0, 'line mode: the stop markers are replaced by the route')
   ok(await p.getByTestId('line-steps').locator('li').count() >= 2 && await p.getByTestId('line-steps').locator('li[data-here]').count() === 1, 'the stepper lists the stops in order, this stop first')
-  ok((await p.getByTestId('next-buses').getAttribute('href') || '').includes('poste='), 'Próximos buses link is on the line sheet')
-  // the route is on the canvas and fully above the sheet
+  // the route is drawn on the canvas; the map frames this stop and the line's bus mark next to it (not the whole route, which can run far off screen), above the sheet
+  await p.waitForFunction(() => { const b = document.querySelector('.leaflet-veh-pane .vbus')?.getBoundingClientRect(); return !!b && b.top >= 0 }, null, { timeout: 5000 }).catch(() => {}) // the map flies to the stop first; the assertion below reports it if the mark never arrives
   const px = await p.evaluate(() => {
-    const c = document.querySelector('.leaflet-overlay-pane canvas'), g = c.getContext('2d'), w = c.width, h = c.height, d = g.getImageData(0, 0, w, h).data
-    let top = h, bottom = -1
-    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (d[(y * w + x) * 4 + 3] > 0) { if (y < top) top = y; if (y > bottom) bottom = y }
-    const r = c.getBoundingClientRect(), k = r.height / h
-    return { top: r.top + top * k, bottom: r.top + bottom * k, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top }
+    const c = document.querySelector('.leaflet-overlay-pane canvas'), g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data
+    let drawn = 0
+    for (let i = 3; i < d.length; i += 4 * 97) if (d[i] > 0) drawn++
+    const bus = document.querySelector('.leaflet-veh-pane .vbus')?.getBoundingClientRect()
+    return { drawn, bus: bus && { top: bus.top, bottom: bus.bottom, left: bus.left, right: bus.right }, sheet: document.querySelector('[data-slot=drawer-popup]').getBoundingClientRect().top }
   })
-  ok(px.bottom > 0 && px.bottom < px.sheet && px.top >= 0, `the whole route is drawn above the sheet (route ${Math.round(px.top)}..${Math.round(px.bottom)}, sheet top ${Math.round(px.sheet)})`)
+  ok(px.drawn > 0, `the route is drawn on the map (${px.drawn} sampled pixels)`)
+  ok(!!px.bus && px.bus.top >= 0 && px.bus.bottom < px.sheet && px.bus.left >= 0 && px.bus.right <= 390, `the line's bus mark is on screen above the sheet (${px.bus ? Math.round(px.bus.top) + '..' + Math.round(px.bus.bottom) : 'none'}, sheet top ${Math.round(px.sheet)})`)
   await p.screenshot({ path: out + '/bus-line-es.png' })
-  if (await p.getByTestId('line-dir').count()) {
-    await p.getByTestId('line-dir').tap(); await settle(p)
-    ok(await p.getByTestId('line-title').innerText() !== title, 'the direction button shows the other direction')
-  }
   await p.getByTestId('line-back').tap(); await settle(p)
-  ok(await p.getByTestId('line-block').count() === 0 && await p.getByTestId('nearest').count() === 1 && await markers(p) > 100, 'back returns to the nearest stop and its markers')
+  ok(await p.getByTestId('line-block').count() === 0 && await p.getByTestId('nearest').count() === 1 && await markers(p) > 10, 'back returns to the nearest stop and its markers')
   await ctx.close()
 })
 const farm = (date, hours = '09:00-22:00') => ({ result: [{ id: 'x1', title: 'Farmacia Test', geometry: { type: 'Point', coordinates: [-0.8773, 41.6488] }, calle: 'Calle Test 1', telefonos: '976000000', guardia: { fecha: date, horario: hours, sector: 'Centro' } }] })
