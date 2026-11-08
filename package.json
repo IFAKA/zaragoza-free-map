@@ -21,6 +21,7 @@
     "@fontsource-variable/nunito-sans": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "leaflet": "^1.9.4",
+    "leaflet-rotate": "^0.5.3",
     "leaflet.markercluster": "^1.5.3",
     "motion": "^14.9.0",
     "react": "^19.3.1",

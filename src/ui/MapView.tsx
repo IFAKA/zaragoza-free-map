@@ -3,6 +3,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../lib/leafletGlobal'
 import 'leaflet.markercluster'
+import 'leaflet-rotate'
 import { useEffect, useRef } from 'react'
 import { CENTER, rangeMetres } from '../lib/geo'
 import { pointAt } from '../lib/transit'
@@ -126,7 +127,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     // A line removed after the map is gone (another cleanup) still asks the canvas for a redraw; the canvas has no context by then and Leaflet throws "reading 'save'". Skip that redraw.
     const redraw = (canvas as unknown as { _redraw(): void })._redraw
     ;(canvas as unknown as { _redraw(): void })._redraw = function (this: { _ctx?: unknown }) { if (this._ctx) redraw.call(this) }
-    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: canvas }).setView(CENTER, 15)
+    const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: canvas, rotate: true, bearing: 0, touchRotate: false, rotateControl: false } as L.MapOptions).setView(CENTER, 15)
     if (desktop) L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
     m.attributionControl.setPosition('topleft') // top left: the Settings button floats at the top right
     m.on('click', () => cb.current.onBackgroundClick())
@@ -319,9 +320,13 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
   useEffect(() => { // the beam on your dot turns with the phone (set on the element, so the dot is not rebuilt 20 times a second)
     const el = me.current?.getElement()?.querySelector<HTMLElement>('.me-cone')
     if (!el) return
-    if (heading == null) el.style.removeProperty('--h'); else el.style.setProperty('--h', heading + 'deg')
+    el.style.setProperty('--h', '0deg') // the map turns to where you face, so the beam always points up the screen
     el.classList.toggle('on', heading != null)
   }, [heading, userPos])
+  useEffect(() => { // the map turns with the phone: what is in front of you is at the top, like a paper map in your hand
+    const m = map.current as (L.Map & { setBearing?: (b: number) => void }) | null
+    m?.setBearing?.(heading == null ? 0 : (360 - heading) % 360) // this plugin turns the map clockwise by the bearing, so facing east (90) needs the map turned 270
+  }, [heading])
 
   // fly requests: interruptible (a new request retargets), no movement when reduced motion is on
   useEffect(() => {
