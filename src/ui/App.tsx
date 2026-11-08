@@ -432,7 +432,7 @@ export function App() {
         </div>
         <SettingsFab label={t.settings} onClick={() => view.open('settings')} inert={view.isOpen} />
         <SupportFab inert={view.isOpen} />
-        {pos && <FollowFab on={follow} onToggle={toggleFollow} inert={view.isOpen} />}
+        {pos && !desktop && <FollowFab on={follow} onToggle={toggleFollow} inert={view.isOpen} />}
         <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>
       </LazyMotion></MotionConfig>
