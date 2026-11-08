@@ -741,6 +741,20 @@ todo.push(async () => {
   const w = await p.getByTestId('panel').evaluate(e => e.getBoundingClientRect().width)
   ok(w === 400, 'desktop panel 400px')
   await p.screenshot({ path: out + '/d-water.png' })
+  // the round buttons and the zoom control sit in their own strip: no pin under them, and a mouse click reaches them
+  for (const vp of [{ width: 1280, height: 800 }, { width: 1920, height: 1080 }, { width: 1024, height: 700 }]) {
+    await p.setViewportSize(vp); await settle(p)
+    const hit = await p.evaluate(() => {
+      const boxes = ['open-settings', 'open-support', 'map-rail'].map(id => document.querySelector(`[data-testid=${id}]`).getBoundingClientRect()).concat([...document.querySelectorAll('.leaflet-control-zoom a')].map(a => a.getBoundingClientRect()))
+      return [...document.querySelectorAll('.mk')].filter(m => { const r = m.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2; return boxes.some(q => x > q.left && x < q.right && y > q.top && y < q.bottom) }).length
+    })
+    ok(hit === 0, `desktop ${vp.width}x${vp.height}: no pin centre under the map buttons (${hit})`)
+    const gb = await p.getByTestId('open-settings').boundingBox()
+    await p.mouse.click(gb.x + gb.width / 2, gb.y + gb.height / 2); await settle(p)
+    ok(await p.getByTestId('settings-view').count() > 0, `desktop ${vp.width}x${vp.height}: a mouse click on the Settings button opens Settings`)
+    await p.keyboard.press('Escape'); await settle(p)
+  }
+  await p.setViewportSize({ width: 1280, height: 800 }); await settle(p)
   // the Nearest list fills the home page: 6 rows, a click selects that place like its pin
   ok(await p.getByTestId('near-row').count() === 6, 'desktop: Nearest list has 6 rows')
   const row2 = (await p.getByTestId('near-row').nth(1).innerText()).split('\n')[0]
