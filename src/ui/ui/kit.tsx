@@ -72,7 +72,7 @@ export function Scroll({ children, locked, className, viewportRef }: { children:
   return (
     <ScrollArea.Root className={cn('relative min-h-0 flex-1', className)} inert={closed}>
       <ScrollArea.Viewport ref={viewportRef} className={cn('h-full overscroll-contain', locked && 'overflow-y-hidden!')} data-testid="scroll">
-        <ScrollArea.Content>{children}</ScrollArea.Content>
+        <ScrollArea.Content className="flow-root">{children}</ScrollArea.Content>
       </ScrollArea.Viewport>
       <ScrollArea.Scrollbar className="m-0.5 flex w-1.5 justify-center opacity-0 [transition:opacity_var(--dur-small)] data-[hovering]:opacity-100 data-[scrolling]:opacity-100">
         <ScrollArea.Thumb className="w-full rounded-full bg-handle" />

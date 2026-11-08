@@ -445,7 +445,7 @@ export function LineBlock({ view, origin, onBack }: { view: LineView; origin: La
           )
         })}
       </ol>
-      {detour && <More><p className={cn(sub, 'm-0 px-4 pb-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p></More>}
+      {detour && <More><p className={cn(sub, 'm-0 px-4 pb-2 mt-1.5 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p></More>}
     </m.section>
   )
 }
@@ -650,7 +650,7 @@ export function HomePage(p: {
         <div ref={setMore} />
         {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
-        {!p.desktop && <div aria-hidden style={{ height: FOOTER_PX }} />}
+        {!p.desktop && !p.lineView && !p.selected && !p.off && <div aria-hidden style={{ height: FOOTER_PX }} />}
       </Scroll>
     </MoreCtx.Provider>
   )

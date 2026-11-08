@@ -426,7 +426,7 @@ export function App() {
               <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} onShown={onShown} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>
                 {pageEl}
               </PagedDrawer>
-              {livePage === 'home' && createPortal(<ServiceHeader bar onOpen={openServices} favLayers={favKeys.map(k => splitFav(k)[0] as LayerId)} onFavs={openFavs} onFilters={hasFilters(layer) && !liveState && !lineData ? openFilters : undefined} filtersActive={filtersOn(layer, cat)} />, document.body)}
+              {livePage === 'home' && !lineData && !chosen && !offSel && createPortal(<ServiceHeader bar onOpen={openServices} favLayers={favKeys.map(k => splitFav(k)[0] as LayerId)} onFavs={openFavs} onFilters={hasFilters(layer) && !liveState && !lineData ? openFilters : undefined} filtersActive={filtersOn(layer, cat)} />, document.body)}
             </SheetClosedCtx.Provider>
           )}
         </div>
