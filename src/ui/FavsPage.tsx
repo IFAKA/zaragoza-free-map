@@ -7,6 +7,7 @@ import { type FavKind, favTitle, filterKind, isStopLayer, nearestFavs, removeFav
 import type { LatLon } from '../lib/types'
 import { useT } from './lang'
 import { tap } from './motion'
+import { useHeavy } from './useHeavy'
 import { type Fav, FavRow, resolveFavs, useSteadyPos } from './Favs'
 import { CloseButton, PageHeader } from './Pages'
 import { toasts } from './ToastHost'
@@ -20,7 +21,8 @@ export function FavsPage({ onOpen, onBack, peekRef, locked, pos }: { onOpen: (la
   const keys = useFavs()
   const labels = useFavLabels()
   const steady = useSteadyPos(pos)
-  const all = useMemo(() => nearestFavs(resolveFavs(keys), steady, keys.length), [keys, steady])
+  const heavy = useHeavy() // bus stops and racks load late: favourites on them appear when they have
+  const all = useMemo(() => nearestFavs(resolveFavs(keys), steady, keys.length), [keys, steady, heavy])
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<FavKind>('all')
   const [mode, setMode] = useState<'edit' | 'delete' | null>(null)

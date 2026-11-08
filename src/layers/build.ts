@@ -1,4 +1,4 @@
-import type { Data } from '../data'
+import type { Data, Heavy } from '../data'
 import { cleanName, dist } from '../lib/geo'
 import type { DutyRow, EquipRow, OsmRow } from '../lib/sources.ts'
 import type { Item, LayerConfig, LayerId } from '../lib/types'
@@ -78,12 +78,11 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
       id: 'bizi', icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Take or return a bike', es: 'Coger o dejar una bici' }, hours: false, cats: ['take', 'return', 'mine'], catDefault: 'take',
       items: [
         ...dedupe(d.bizi.rows.map(r => ({ id: 'b' + r[0], part: 'city' as const, type: 'bizi', cat: 'station', name: r[1], lat: r[2], lon: r[3], upd: d.bizi.updated ?? undefined })), 8),
-        ...dedupe(d.racks.rows.map(r => ({ id: 'r' + r[0], part: 'city' as const, type: r[4] === 'c' ? 'rack_closed' : r[4] === 'g' ? 'rack_guarded' : 'rack', cat: 'mine', name: cleanName(r[1]), lat: r[2], lon: r[3], upd: d.racks.updated ?? undefined })), 10),
       ],
     },
     shelter: L('shelter', { icon: 'shelter', color: 'var(--color-shelter)', ...shelterName(seasonOf(now)), hint: { en: 'Public buildings with climate control', es: 'Edificios públicos con clima' }, hours: true }, shelters, 0),
     bus: L('bus', { icon: 'bus', color: 'var(--color-bus)', label: { en: 'Bus stops', es: 'Paradas de bus' }, short: { en: 'Bus', es: 'Bus' }, hint: { en: 'Next buses at your stop', es: 'Próximos buses en tu parada' }, hours: false },
-      d.bus.rows.map(r => ({ id: 'u' + r[0], part: 'city' as const, type: 'bus', name: r[1], lines: r[2], stop: /^\d+$/.test(r[0]) ? r[0] : undefined, lat: r[3], lon: r[4], upd: d.bus.updated ?? undefined })), 0),
+      [], 0), // filled by heavyItems when the bus file has loaded
     tram: L('tram', { icon: 'tram', color: 'var(--color-tram)', label: { en: 'Tram stops', es: 'Paradas de tranvía' }, short: { en: 'Tram', es: 'Tranvía' }, hint: { en: 'Line T1, both directions', es: 'Línea T1, en los dos sentidos' }, hours: false },
       d.tram.rows.map(r => ({ id: 't' + r[0], part: 'city' as const, type: 'tram', name: r[1], lat: r[2], lon: r[3], upd: d.tram.updated ?? undefined, tramIds: r[5] })), 0),
     cercanias: L('cercanias', { icon: 'train', color: 'var(--color-train)', label: { en: 'Cercanías stations', es: 'Estaciones de Cercanías' }, short: { en: 'Cercanías', es: 'Cercanías' }, hint: { en: 'Planned trains from your station', es: 'Trenes previstos en tu estación' }, hours: false },
@@ -92,6 +91,12 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
     pharmacy: { id: 'pharmacy', icon: 'pharmacy', color: 'var(--color-pharmacy)', label: { en: 'Pharmacies on duty', es: 'Farmacias de guardia' }, short: { en: 'Pharmacy', es: 'Farmacia' }, hint: { en: 'Open today, day and night', es: 'Abiertas hoy, de día y de noche' }, hours: false, live: true, items: [] },
   }
 }
+
+/** Items of the two late-loading files: the bus stops and the street bike racks (never merged into Bizi stations). */
+export const heavyItems = (h: Heavy): { bus: Item[]; racks: Item[] } => ({
+  bus: dedupe(h.bus.rows.map(r => ({ id: 'u' + r[0], part: 'city' as const, type: 'bus', name: r[1], lines: r[2], stop: /^\d+$/.test(r[0]) ? r[0] : undefined, lat: r[3], lon: r[4], upd: h.bus.updated ?? undefined })), 0),
+  racks: dedupe(h.racks.rows.map(r => ({ id: 'r' + r[0], part: 'city' as const, type: r[4] === 'c' ? 'rack_closed' : r[4] === 'g' ? 'rack_guarded' : 'rack', cat: 'mine', name: cleanName(r[1]), lat: r[2], lon: r[3], upd: h.racks.updated ?? undefined })), 10),
+})
 
 /** Items of the live pharmacy layer, from today's duty rows (lib/duty.ts). */
 export const dutyItems = (rows: DutyRow[]): Item[] =>

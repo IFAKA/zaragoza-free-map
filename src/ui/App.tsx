@@ -14,7 +14,8 @@ import { loadBusRoutes, loadCercaniasTimes, type CercaniasTimes } from '../data/
 import { decodePolyline, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
 import { CENTER, dist } from '../lib/geo'
 import type { LatLon, LayerId, RankedItem } from '../lib/types'
-import { LAYERS, defaultLayer } from '../layers'
+import { LAYERS, defaultLayer, loadHeavyLayers } from '../layers'
+import { useHeavy } from './useHeavy'
 import { dutyItems } from '../layers/build'
 import { LangCtx } from './lang'
 import { LocatingCtx, SheetClosedCtx } from './sheet'
@@ -185,6 +186,13 @@ export function App() {
   const viewport = useRef<HTMLDivElement>(null)
 
   const layer = LAYERS[layerId]
+  const heavy = useHeavy()
+  // bus stops and bike racks load after the first screen: at once when their tab is open, else when the browser is idle
+  useEffect(() => {
+    if (layerId === 'bus' || layerId === 'bizi') { void loadHeavyLayers(); return }
+    const id = setTimeout(() => void loadHeavyLayers(), 1500)
+    return () => clearTimeout(id)
+  }, [layerId])
   // Pharmacies on duty: loaded live when that tab is open, and only ever today's list (see lib/duty.ts)
   const today = madridDate()
   const [duty, setDuty] = useState<{ rows: DutyRow[] | null; failed: boolean }>({ rows: null, failed: false })
@@ -201,7 +209,7 @@ export function App() {
   const liveState: 'loading' | 'failed' | null = !layer.live || dutyRows ? null : duty.failed ? 'failed' : 'loading'
   // Bizi: live bike and dock counts while that tab is open (see lib/bizi.ts); the places always show
   const bizi = useBizi(layerId === 'bizi', BIZI_STATIONS)
-  const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layerId === 'bizi' ? withCounts(layer.items, bizi.counts) : layer.items), [layer, layerId, dutyRows, bizi.counts])
+  const layerItems = useMemo(() => (layer.live ? (dutyRows ? dutyItems(dutyRows) : []) : layerId === 'bizi' ? withCounts(layer.items, bizi.counts) : layer.items), [layer, layerId, dutyRows, bizi.counts, heavy])
   useEffect(() => { if (layerId === 'cercanias' && !times) void loadCercaniasTimes().then(setTimes) }, [layerId, times])
   useEffect(() => { if (layerId === 'bus' && !routes) void loadBusRoutes().then(setRoutes) }, [layerId, routes])
   const zoomTitles = useMemo(() => ({ in: t.zoomIn, out: t.zoomOut }), [t])
@@ -266,7 +274,7 @@ export function App() {
     const view: LineView = { line: lineSel.line, dir, dirs: ln.d.length, to: d.to, stops, idx, stop: a.stop }
     const route: RouteView = { key: lineSel.line + '|' + dir, paths: d.p.map(decodePolyline), stops, cur: idx }
     return { view, route }
-  }, [lineSel, routes, layerId, layer])
+  }, [lineSel, routes, layerId, layer, heavy])
 
   // the rail line of the tram / Cercanías tab, drawn under the stops
   const track_ = useMemo(() => (layerId === 'tram' ? DATA.tram.line : layerId === 'cercanias' ? DATA.cercanias.line : null)?.map(decodePolyline) ?? null, [layerId])

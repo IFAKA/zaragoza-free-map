@@ -1,28 +1,34 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { DATA, dataRefreshed } from './index'
-import { ORDER, LAYERS } from '../layers'
+import { ORDER, LAYERS, HEAVY, loadHeavyLayers } from '../layers'
 import { dist } from '../lib/geo'
 import { rank } from '../lib/rank'
 import type { LayerId } from '../lib/types'
 
 const ALL = ORDER.filter(id => !LAYERS[id].live) as LayerId[] // live layers (pharmacies on duty) have no bundled items
 const ids = (rows: unknown[][]) => rows.map(r => r[0])
+beforeAll(() => loadHeavyLayers()) // bus stops and racks load late in the app: here before the tests
+const heavy = () => HEAVY!
 
 describe('bundled data', () => {
   it('every city file has rows and a snapshot date', () => {
-    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'racks', 'bus', 'toiletsgo', 'shelters', 'tram', 'cercanias'] as const) {
+    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'toiletsgo', 'shelters', 'tram', 'cercanias'] as const) {
       expect(DATA[k].rows.length, k).toBeGreaterThan(0)
       expect(DATA[k].updated, k).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }
-    expect(dataRefreshed()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    for (const k of ['racks', 'bus'] as const) {
+      expect(heavy()[k].rows.length, k).toBeGreaterThan(0)
+      expect(heavy()[k].updated, k).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    }
+    expect(dataRefreshed(DATA, heavy())).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
   it('counts are in the expected range', () => {
     expect(DATA.fountains.rows.length).toBeGreaterThan(600)
     expect(DATA.wifi.rows.length).toBeGreaterThan(100)
     expect(DATA.libraries.rows.length).toBeGreaterThan(50)
     expect(DATA.bizi.rows.length).toBeGreaterThan(200)
-    expect(DATA.racks.rows.length).toBeGreaterThan(1500)
-    expect(DATA.bus.rows.length).toBeGreaterThan(1200)
+    expect(heavy().racks.rows.length).toBeGreaterThan(1500)
+    expect(heavy().bus.rows.length).toBeGreaterThan(1200)
   })
 })
 
@@ -95,7 +101,7 @@ describe('layers built from the data', () => {
   it('bus stops: every one has a name; city stops (numbers only) have a live-times number, rural stops do not', () => {
     const L = LAYERS.bus
     expect(L.hours).toBe(false)
-    expect(L.items.length).toBe(DATA.bus.rows.length)
+    expect(L.items.length).toBe(heavy().bus.rows.length)
     expect(L.items.filter(i => i.stop).length).toBeGreaterThan(900)
     expect(L.items.filter(i => !i.stop).length).toBeGreaterThan(0)
     for (const i of L.items) { expect(i.name.length).toBeGreaterThan(0); expect(i.type).toBe('bus'); expect(i.lines).toMatch(/^[\w]*(,[\w]+)*$/) }

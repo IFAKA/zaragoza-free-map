@@ -8,6 +8,8 @@ import { ICONS } from './icons'
 import { Skel, SkelRows } from './Skel'
 import { useBackLayer } from './back'
 import { DATA, dataRefreshed } from '../data'
+import { HEAVY, loadHeavyLayers } from '../layers'
+import { useHeavy } from './useHeavy'
 import { fmtDist, walkMins } from '../lib/geo'
 import { installEnv, installWay, promptInstall } from '../lib/install'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
@@ -270,7 +272,7 @@ function BusActions({ item, origin, fav, onLine, lineOk }: { item: RankedItem; o
   // the neighbours are picked after the list of always-failing stops is loaded, so the nearest ones that can answer are chosen (see lib/busbad.ts)
   const load = useCallback(async (s: AbortSignal) => {
     await ensureBakedBad()
-    return loadBus(stop ?? '', s, undefined, undefined, stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, DATA.bus.rows) : [])
+    return loadBus(stop ?? '', s, undefined, undefined, stop && item.lines ? busAlternatives(stop, item.lines, [item.lat, item.lon], origin, HEAVY?.bus.rows ?? []) : [])
   }, [stop, item.lines, item.lat, item.lon, origin])
   return (
     <>
@@ -720,7 +722,8 @@ export function LanguagePage({ lang, setLang, onBack, onClose, locked }: { lang:
 
 export function AboutPage({ onBack, onClose, locked }: { onBack?: () => void; onClose: () => void; locked: boolean }) {
   const { t } = useT()
-  const d = dataRefreshed()
+  useHeavy(); useEffect(() => { void loadHeavyLayers() }, []) // the credits show the bus file's date
+  const d = dataRefreshed(DATA, HEAVY)
   return (
     <>
       <ViewHeader title={t('aboutTitle')} onBack={onBack} onClose={onClose} />
@@ -733,7 +736,7 @@ export function AboutPage({ onBack, onClose, locked }: { onBack?: () => void; on
           <a className="font-bold text-brand-text" href="https://github.com/IFAKA/zaragoza-free-map" target="_blank" rel="noopener">{t('openSource')}</a>
           <h2 className="font-title text-[1.1em] font-semibold text-ink">{t('sources')}</h2>
           <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
-            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({DATA.bus.updated})</li><li>{t('creditsTram')} ({DATA.tram.updated})</li><li>{t('creditsTrain')} ({DATA.cercanias.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsBizi')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
+            <li>{t('creditsCity')}</li><li>{t('creditsFountains')}</li><li>{t('creditsOsm')}</li><li>{t('creditsShelters')} ({DATA.shelters.updated})</li><li>{t('creditsBus')} ({HEAVY?.bus.updated})</li><li>{t('creditsTram')} ({DATA.tram.updated})</li><li>{t('creditsTrain')} ({DATA.cercanias.updated})</li><li>{t('creditsPharmacy')}</li><li>{t('creditsBizi')}</li><li>{t('creditsTgo')}</li><li>{t('creditsTiles')}</li>
           </ul>
           {d && <p className="m-0 font-bold" data-testid="refreshed">{t('dataRefreshed')}: {d}</p>}
           <a className="font-bold text-brand-text" href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">{t('fixOsm')}</a>

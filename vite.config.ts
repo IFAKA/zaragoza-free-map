@@ -57,7 +57,7 @@ export default defineConfig({
             { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 30 },
             { name: 'motion', test: /node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/, priority: 20 },
             { name: 'baseui', test: /node_modules[\\/]@base-ui[\\/]/, priority: 20 },
-            { name: 'citydata', test: /src[\\/]data[\\/](bizi|bus|cercanias|civic|fountains|libraries|osm|racks|shelters|tram|toiletsgo|wifi)\.json/, priority: 10 },
+            { name: 'citydata', test: /src[\\/]data[\\/](bizi|cercanias|civic|fountains|libraries|osm|shelters|tram|toiletsgo|wifi)\.json/, priority: 10 },
           ],
         },
       },
