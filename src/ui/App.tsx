@@ -46,7 +46,7 @@ type Page = 'home' | 'place' | 'services' | 'favs' | 'filters'
 // Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 1 // two states: closed (the header only) and open (the height of the content, the whole screen when it needs more)
 const DEFAULT_CLOSED_PX = 94, DEFAULT_PEEK_PX = 360
-const SETTLE_MS = 250 // a measured open height must hold this long before the sheet moves to it
+const SETTLE_HOME_MS = 250, SETTLE_MS = 60 // a measured open height must hold this long before the sheet moves to it: the home page gets live data in steps, so it waits longer; the other pages are static, so they follow at once
 const OPEN_SHARE = 0.04 // the open sheet may use all but this much of the screen
 const MAP_SHARE_MIN = 0.72 // the map is framed as if the sheet were at most this tall (a taller sheet covers the rest)
 /** The phone's bottom safe area (home indicator) in px. */
@@ -221,7 +221,7 @@ export function App() {
   const fullPx = useFullPx(viewport, livePage === 'home' && !desktop)
   // open: the home sheet fits all its content; the other pages fit their block. Either becomes the whole screen when it needs more than the screen.
   const openMeasured: string | number = livePage === 'home' ? fullPx : pagePx >= window.innerHeight * (1 - OPEN_SHARE) ? 1 : pagePx + 'px'
-  const openSnap = useSettled(openMeasured, SETTLE_MS)
+  const openSnap = useSettled(openMeasured, livePage === 'home' ? SETTLE_HOME_MS : SETTLE_MS)
   const peekPx = typeof openSnap === 'number' ? Math.round(window.innerHeight * MAP_SHARE_MIN) : Math.min(parseInt(openSnap), Math.round(window.innerHeight * MAP_SHARE_MIN))
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, openSnap], [closedPx, openSnap])
   const mobileClosed = !desktop && level === CLOSED
