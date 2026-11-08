@@ -464,12 +464,14 @@ export function App() {
               <PageFrame turn={turn} onShown={onShown} pageRef={pageRef}>{pageEl}</PageFrame>
             </aside>
           )}
-          <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
+          <div className={desktop ? 'absolute inset-y-0 right-[68px] left-[400px]' : 'absolute inset-0'}>
             <Suspense fallback={null}><MapView
               layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} heading={compass.on ? compass.heading : null} fly={fly} inset={insetPx}
               desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles} onAway={setAway}
             /></Suspense>
           </div>
+          {/* desktop: a quiet strip for the round buttons and the zoom control, so no pin sits under them (the map ends at its edge, so fits and flights never land there either) */}
+          {desktop && <div id="map-rail" data-testid="map-rail" className="absolute inset-y-0 right-0 w-[68px] border-l border-line bg-paper" />}
           {!desktop && (
             <SheetClosedCtx.Provider value={mobileClosed}>
               <PagedDrawer snapPoints={snapPoints} snap={snapPoints[level]} onSnap={v => { const l = levelOf(v); if (l != null) setLevel(l) }} onEscape={escape} onFlickDown={() => setLevel(l => Math.max(CLOSED, l - 1))} turn={turn} onShown={onShown} pageRef={pageRef} handleLabel={t.handle} title={t.title} onHandle={cycle}>

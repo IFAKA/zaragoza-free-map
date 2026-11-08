@@ -143,7 +143,10 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     const redraw = (canvas as unknown as { _redraw(): void })._redraw
     ;(canvas as unknown as { _redraw(): void })._redraw = function (this: { _ctx?: unknown }) { if (this._ctx) redraw.call(this) }
     const m = L.map(el.current!, { zoomControl: false, attributionControl: true, renderer: canvas, rotate: true, bearing: 0, touchRotate: false, rotateControl: false } as L.MapOptions).setView(CENTER, 15)
-    if (desktop) L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
+    // desktop: the zoom control lives in the strip beside the map (App's #map-rail), not over the pins
+    const zoom = desktop ? L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m) : null
+    const rail = document.getElementById('map-rail')
+    if (zoom && rail) rail.appendChild(zoom.getContainer()!)
     m.attributionControl.setPosition('topleft') // top left: the Settings button floats at the top right
     m.on('click', () => cb.current.onBackgroundClick())
     const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, maxNativeZoom: 16, updateWhenIdle: false, updateInterval: 150, attribution: 'Tiles © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(m)
@@ -165,7 +168,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     m.on('zoomend', far); far()
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
-    return () => { mq.removeEventListener('change', onScheme); window.removeEventListener(THEME_EVENT, onScheme); m.off('moveend', reportAway); ro.disconnect(); vehs.current.forEach(v => cancelAnimationFrame(v.raf)); vehs.current.clear(); vehGroup.current = null; m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
+    return () => { mq.removeEventListener('change', onScheme); window.removeEventListener(THEME_EVENT, onScheme); m.off('moveend', reportAway); ro.disconnect(); zoom?.remove(); vehs.current.forEach(v => cancelAnimationFrame(v.raf)); vehs.current.clear(); vehGroup.current = null; m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

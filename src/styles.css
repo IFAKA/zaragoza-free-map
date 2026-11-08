@@ -170,6 +170,7 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 /* zoom buttons (desktop): press feedback like every other control; no sticky hover on touch screens */
 .leaflet-bar a{transition:transform var(--dur-press) var(--ease-out),background-color var(--dur-press)}
 .leaflet-bar a:active{transform:scale(.97)}
+#map-rail .leaflet-control{position:absolute;left:50%;bottom:1.5rem;margin:0;transform:translateX(-50%)}
 @media (hover:none),(pointer:coarse){.leaflet-bar a:hover{background-color:var(--color-paper)}}
 .me-cone{display:none;position:absolute;left:50%;top:50%;width:7em;height:7em;margin:-3.5em 0 0 -3.5em;border-radius:50%;pointer-events:none;background:conic-gradient(from -28deg, color-mix(in srgb, var(--color-me) 80%, transparent), transparent 56deg, transparent 360deg);-webkit-mask-image:radial-gradient(circle, #000 15%, transparent 70%);mask-image:radial-gradient(circle, #000 15%, transparent 70%);transform:rotate(var(--h,0deg))}.me-cone.on{display:block}
 .me{position:relative;width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
