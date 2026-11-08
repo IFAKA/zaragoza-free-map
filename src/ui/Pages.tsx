@@ -1,7 +1,7 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ChatCircleText, ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
+import { ChatCircleText, ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Moon, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ICONS } from './icons'
@@ -30,7 +30,7 @@ import { DUTY_PAGE, madridDate } from '../lib/duty'
 import { BUZ_URL, biziLine, clockMadrid, fmtHours, srcExplain, srcLabel } from './labels'
 import type { useBizi } from './useBizi'
 import { useT } from './lang'
-import { ThemeSwitch } from './ThemeSwitch'
+import { THEME_EVENT, getTheme, setTheme, type Theme } from '../lib/theme'
 import { busAlternatives, ensureBakedBad, loadBus, loadTram, routeAlternatives, towardEnd, type Arrival } from '../lib/live'
 import { chooseDir, outsideCentre, railGroups, shownDir, towardCentre, type DirOpt } from '../lib/direction'
 import { lsGet, lsSet } from '../lib/cache'
@@ -670,13 +670,15 @@ function PageRow({ icon, title, description, status, onClick, testId, active }: 
   )
 }
 
-export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClose: () => void; go: (p: 'language' | 'about' | 'install') => void; locked: boolean }) {
+export function SettingsPage({ lang, onClose, go, locked }: { lang: Lang; onClose: () => void; go: (p: 'theme' | 'language' | 'about' | 'install') => void; locked: boolean }) {
   const { t } = useT()
+  const [theme, setThemeNow] = useState<Theme>(getTheme)
+  useEffect(() => { const f = () => setThemeNow(getTheme()); window.addEventListener(THEME_EVENT, f); return () => window.removeEventListener(THEME_EVENT, f) }, [])
   return (
     <>
       <ViewHeader title={t('settingsTitle')} onClose={onClose} />
       <Scroll locked={locked}>
-        <ThemeSwitch />
+        <PageRow testId="row-theme" icon={<Moon size="1.4em" aria-hidden />} title={t('theme')} status={t(theme === 'light' ? 'themeLight' : theme === 'dark' ? 'themeDark' : 'themeAuto')} onClick={() => go('theme')} />
         <PageRow testId="row-language" icon={<Translate size="1.4em" aria-hidden />} title={t('language')} status={lang === 'en' ? 'English' : 'Español'} onClick={() => go('language')} />
  {!installEnv().standalone && <PageRow testId="row-install" icon={<DownloadSimple size="1.4em" aria-hidden />} title={t('installRow')} onClick={() => go('install')} />}
         <PageRow testId="row-about" icon={<InfoIcon size="1.4em" aria-hidden />} title={t('about')} onClick={() => go('about')} />
@@ -715,6 +717,28 @@ export function LanguagePage({ lang, setLang, onBack, onClose, locked }: { lang:
           {(['en', 'es'] as Lang[]).map(l => (
             <Radio.Root key={l} value={l} data-testid={`lang-${l}`} render={<m.button {...tap} />} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:background-color_var(--dur-press)] hov:bg-surface">
               <span className="flex-1">{l === 'en' ? t('langEn') : t('langEs')}</span>
+              <Radio.Indicator className="text-brand-text"><Check size="1.3em" weight="bold" aria-hidden /></Radio.Indicator>
+            </Radio.Root>
+          ))}
+        </RadioGroup>
+      </Scroll>
+    </>
+  )
+}
+
+const THEMES: { v: Theme; key: 'themeAuto' | 'themeLight' | 'themeDark' }[] = [{ v: 'auto', key: 'themeAuto' }, { v: 'light', key: 'themeLight' }, { v: 'dark', key: 'themeDark' }]
+
+export function ThemePage({ onBack, onClose, locked }: { onBack?: () => void; onClose: () => void; locked: boolean }) {
+  const { t } = useT()
+  const [theme, setThemeNow] = useState<Theme>(getTheme)
+  return (
+    <>
+      <ViewHeader title={t('theme')} onBack={onBack} onClose={onClose} />
+      <Scroll locked={locked}>
+        <RadioGroup value={theme} onValueChange={v => { setThemeNow(v as Theme); setTheme(v as Theme) }} aria-label={t('theme')} data-testid="theme">
+          {THEMES.map(c => (
+            <Radio.Root key={c.v} value={c.v} data-testid={`theme-${c.v}`} render={<m.button {...tap} />} className="flex min-h-14 w-full cursor-pointer items-center gap-3 border-0 border-b border-line bg-transparent px-4 text-left font-bold text-ink [transition:background-color_var(--dur-press)] hov:bg-surface">
+              <span className="flex-1">{t(c.key)}</span>
               <Radio.Indicator className="text-brand-text"><Check size="1.3em" weight="bold" aria-hidden /></Radio.Indicator>
             </Radio.Root>
           ))}

@@ -3,10 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
 import type { Lang } from '../lib/i18n'
-import { AboutPage, InstallPage, LanguagePage, SettingsPage } from './Pages'
+import { AboutPage, InstallPage, LanguagePage, SettingsPage, ThemePage } from './Pages'
 import { viewVariants } from './motion'
 
-export type ViewPage = 'settings' | 'language' | 'about' | 'install'
+export type ViewPage = 'settings' | 'theme' | 'language' | 'about' | 'install'
 
 /**
  * Settings is a full view over the map and the sheet, not a page of the sheet. It keeps its own stack of pages (Settings, then Language or About)
@@ -73,6 +73,7 @@ export function SettingsView({ stack, push, back, close, lang, setLang, title }:
   const page = (p: ViewPage, sub: boolean) => p === 'settings'
     ? <SettingsPage lang={lang} onClose={close} locked={false} go={push} />
     : p === 'install' ? <InstallPage onBack={sub ? () => back() : undefined} onClose={close} locked={false} />
+    : p === 'theme' ? <ThemePage onBack={sub ? () => back() : undefined} onClose={close} locked={false} />
     : p === 'language' ? <LanguagePage lang={lang} setLang={setLang} onBack={sub ? () => back() : undefined} onClose={close} locked={false} /> : <AboutPage onBack={sub ? () => back() : undefined} onClose={close} locked={false} />
   const box = 'absolute inset-0 flex flex-col bg-paper pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]'
   return createPortal(
