@@ -37,6 +37,7 @@ import { bumpTap, parseTaps, rankByTaps } from '../lib/usage'
 import { SettingsFab } from './SettingsFab'
 import { SupportFab } from './SupportFab'
 import { CompassFab } from './CompassFab'
+import { LocateFab } from './LocateFab'
 import { useHeading } from './useHeading'
 import { ToastHost, toasts } from './ToastHost'
 import { useBizi } from './useBizi'
@@ -183,6 +184,7 @@ export function App() {
   const { pos, locating, denied, locate, alreadyGranted, blocked } = useLocation(a => { if (a !== 'error') track(a === 'granted' ? 'locate-granted' : 'locate-denied') })
   const askedLocation = useRef(false)
   const flyN = useRef(0)
+  const [away, setAway] = useState(false) // the map is not centred on you
   const viewport = useRef<HTMLDivElement>(null)
 
   const layer = LAYERS[layerId]
@@ -438,7 +440,7 @@ export function App() {
           <div className={desktop ? 'absolute inset-y-0 right-0 left-[400px]' : 'absolute inset-0'}>
             <Suspense fallback={null}><MapView
               layer={layer} items={lineData ? [] : mapItems} pick={pick} selected={lineData ? null : offSel ? offSel.id : chosen ? chosen.id : focus?.id ?? null} userPos={pos} heading={compass.on ? compass.heading : null} fly={fly} inset={insetPx}
-              desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles}
+              desktop={desktop} onSelect={select} onBackgroundClick={mapTap} route={lineData?.route ?? null} track={track_} fitN={fitN} vehicles={vehicles} vehBadge={t.vehBadge} vehStart={t.vehStart} onRouteStop={lineStop} label={t.map} zoomTitles={zoomTitles} onAway={setAway}
             /></Suspense>
           </div>
           {desktop ? (
@@ -456,6 +458,7 @@ export function App() {
         </div>
         <SettingsFab label={t.settings} onClick={() => view.open('settings')} inert={view.isOpen} />
         <SupportFab inert={view.isOpen} />
+        {(away || !pos) && <LocateFab onTap={() => (pos ? flyTo(pos, 16) : doLocate())} inert={view.isOpen} />}
         {pos && !desktop && <CompassFab on={compass.on} onToggle={() => (compass.on ? compass.disable() : void compass.enable())} inert={view.isOpen} />}
         <SettingsView stack={view.stack} push={view.push} back={view.back} close={view.close} lang={lang} setLang={setLang} title={t.settingsTitle} />
       </ToastHost>

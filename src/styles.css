@@ -67,8 +67,9 @@
   --dur-pick: 300ms;
   --pick-scale: 1.15;
 }
+/* Dark colours: the system setting (unless the person chose Light) or the person's choice of Dark (data-theme on <html>, see src/lib/theme.ts) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --color-brand-text: #FF8279;
     --color-brand-tint: #4A2523;
     --color-ink: #ECECEB;
@@ -83,6 +84,22 @@
     color-scheme: dark;
   }
 }
+:root[data-theme='dark'] {
+  --color-brand-text: #FF8279;
+  --color-brand-tint: #4A2523;
+  --color-ink: #ECECEB;
+  --color-ink-soft: #B4B4B2;
+  --color-paper: #1D1D1C;
+  --color-surface: #2C2C2B;
+  --color-line: #444443;
+  --color-line-strong: #7C7C7B;
+  --color-handle: #7C7C7B;
+  --color-warn-ink: #F2B84B;
+  --color-success-ink: #5FD38D;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] { color-scheme: light; }
 
 /* hover only on real hover devices with a fine pointer */
 @custom-variant hov {

@@ -5,7 +5,8 @@ import '../lib/leafletGlobal'
 import 'leaflet.markercluster'
 import 'leaflet-rotate'
 import { useEffect, useRef } from 'react'
-import { CENTER, rangeMetres } from '../lib/geo'
+import { CENTER, dist, rangeMetres } from '../lib/geo'
+import { isDark, THEME_EVENT } from '../lib/theme'
 import { pointAt } from '../lib/transit'
 import { bearingAt } from '../lib/pathBearing'
 import { walkRoute } from '../lib/walkRoute'
@@ -42,9 +43,13 @@ interface Props {
   onRouteStop?: (post: string) => void
   label: string
   zoomTitles: { in: string; out: string }
+  /** Tells whether the person's dot is away from the middle of the visible map (false when there is no position). */
+  onAway?: (away: boolean) => void
 }
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
-const dark = () => matchMedia('(prefers-color-scheme: dark)').matches
+const dark = isDark
+/** The map counts as centred on the person when the middle of the visible map (above the sheet) is closer than this. */
+export const CENTRED_M = 30
 // Esri light/dark gray canvas: keyless, looks like Positron / Dark Matter. CARTO's own tile URLs now answer "API KEY REQUIRED".
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/'
 const TILES = (d: boolean) => `${ESRI}${d ? 'World_Dark_Gray_Base' : 'World_Light_Gray_Base'}/MapServer/tile/{z}/{y}/{x}`
@@ -75,7 +80,7 @@ function lineArrow(bearing: number, to: LatLon, color: string, up = 33): L.Marke
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
 const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
 
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, desktop, onSelect, onBackgroundClick, route = null, track = null, heading = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, desktop, onSelect, onBackgroundClick, route = null, track = null, heading = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles, onAway }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.MarkerClusterGroup | null>(null)
@@ -90,8 +95,17 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
   const walkTo = useRef('')
   const vehs = useRef(new Map<string, { mk: L.Marker; raf: number; fit: string }>())
   const routeGroup = useRef<L.LayerGroup | null>(null)
-  const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop })
-  cb.current = { onSelect, onBackgroundClick, inset, onRouteStop, desktop }
+  const cb = useRef({ onSelect, onBackgroundClick, inset, onRouteStop, desktop, onAway })
+  cb.current = { onSelect, onBackgroundClick, inset, onRouteStop, desktop, onAway }
+  const user = useRef(userPos)
+  user.current = userPos
+  // is the person's dot away from the middle of the visible map? (the fly calls below put a place half the sheet height above the map centre)
+  const reportAway = () => {
+    const m = map.current, u = user.current
+    if (!m) return
+    const mid = m.unproject(m.project(m.getCenter()).subtract([0, cb.current.inset() / 2]))
+    cb.current.onAway?.(!!u && dist(u, [mid.lat, mid.lng]) > CENTRED_M)
+  }
   const live = useRef({ layer, items, selected, vehicles })
   live.current = { layer, items, selected, vehicles }
 
@@ -105,6 +119,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
   }, [zoomTitles.in, zoomTitles.out])
 
   useEffect(() => { el.current?.classList.toggle('rail', !!track) }, [track])
+  useEffect(reportAway, [userPos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const drawRings = () => {
     const m = map.current, g = rings.current
@@ -136,6 +151,7 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     const mq = matchMedia('(prefers-color-scheme: dark)')
     const onScheme = () => { tiles.setUrl(TILES(dark())); labels.setUrl(LABELS(dark())) }
     mq.addEventListener('change', onScheme)
+    window.addEventListener(THEME_EVENT, onScheme)
     rings.current = L.layerGroup().addTo(m)
     routeGroup.current = L.layerGroup().addTo(m)
     m.createPane('vehPane').style.zIndex = '640' // above the stop markers (markerPane 600), whatever their screen position
@@ -144,11 +160,12 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     group.current = L.markerClusterGroup({ maxClusterRadius: 50, disableClusteringAtZoom: 16, showCoverageOnHover: false, spiderfyOnMaxZoom: false, chunkedLoading: true, iconCreateFunction: c => { const n = c.getChildCount(); return L.divIcon({ className: 'mkw', html: `<div class="mkc" style="--c:${live.current.layer.color}">${n}</div>`, iconSize: [38, 38], iconAnchor: [19, 19] }) } }).addTo(m)
     map.current = m
     m.on('moveend zoomend', drawRings)
+    m.on('moveend', reportAway)
     const far = () => el.current?.classList.toggle('far', m.getZoom() < 15) // zoomed out: rail stops shrink so the line shows between them (see .rail.far in styles.css)
     m.on('zoomend', far); far()
     const ro = new ResizeObserver(() => m.invalidateSize())
     ro.observe(el.current!)
-    return () => { mq.removeEventListener('change', onScheme); ro.disconnect(); vehs.current.forEach(v => cancelAnimationFrame(v.raf)); vehs.current.clear(); vehGroup.current = null; m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
+    return () => { mq.removeEventListener('change', onScheme); window.removeEventListener(THEME_EVENT, onScheme); m.off('moveend', reportAway); ro.disconnect(); vehs.current.forEach(v => cancelAnimationFrame(v.raf)); vehs.current.clear(); vehGroup.current = null; m.remove(); map.current = null; group.current = null; routeGroup.current = null; rings.current = null; sig.current = ''; markers.current.clear(); me.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

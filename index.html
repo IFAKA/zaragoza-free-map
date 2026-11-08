@@ -13,6 +13,7 @@
 <meta property="og:locale:alternate" content="en_GB">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script>try{var t=localStorage.getItem("zar-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <title>Zaragoza a mano · Lo que necesitas, cerca de ti</title>
 </head>
 <body>
@@ -22,7 +23,8 @@ html,body{margin:0;height:100%;background:#E9EAEA}
 #shell{position:fixed;inset:0;background:#E9EAEA}
 #shell i{position:absolute;left:0;right:0;bottom:0;height:min(360px,45%);background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgb(0 0 0/.12)}
 #shell i:before{content:"";position:absolute;left:50%;top:8px;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:#909091}
-@media (prefers-color-scheme:dark){html,body,#shell{background:#1E2022}#shell i{background:#2A2C2E}}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]),html:not([data-theme=light]) body,html:not([data-theme=light]) #shell{background:#1E2022}html:not([data-theme=light]) #shell i{background:#2A2C2E}}
+html[data-theme=dark],html[data-theme=dark] body,html[data-theme=dark] #shell{background:#1E2022}html[data-theme=dark] #shell i{background:#2A2C2E}
 </style>
 <div id="root"><div id="shell"><i></i></div></div>
 <script type="module" src="/src/main.tsx"></script>
