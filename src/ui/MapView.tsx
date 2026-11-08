@@ -22,6 +22,7 @@ interface Props {
   /** Counts up on every pick by the person (a row or a marker), never on a refresh: each one plays the pick moment once. */
   pick: number
   userPos: LatLon | null
+  heading?: number | null // where the phone points (0 = north, clockwise), while the compass is on
   fly: FlyRequest | null
   /** Pixels at the bottom of the map that the drawer covers. */
   inset: () => number
@@ -73,7 +74,7 @@ function lineArrow(bearing: number, to: LatLon, color: string, up = 33): L.Marke
 /** A small arrow above a marker that points the way it travels (bearing in degrees, 0 = north). */
 const dirHtml = (bearing: number) => `<b class="vdir" style="transform:rotate(${Math.round(bearing)}deg)"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M6 1 11 11 6 8.5 1 11Z" fill="var(--c, currentColor)" stroke="var(--color-on-brand)" stroke-width="2" stroke-linejoin="round"/></svg></b>`
 
-export function MapView({ layer, items, selected, pick, userPos, fly, inset, desktop, onSelect, onBackgroundClick, route = null, track = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
+export function MapView({ layer, items, selected, pick, userPos, fly, inset, desktop, onSelect, onBackgroundClick, route = null, track = null, heading = null, fitN = 0, vehicles = [], vehBadge = '', vehStart = '', onRouteStop, label, zoomTitles }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const group = useRef<L.MarkerClusterGroup | null>(null)
@@ -313,8 +314,14 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     const m = map.current
     if (!m) return
     me.current?.remove(); me.current = null
-    if (userPos) me.current = L.marker(userPos, { icon: L.divIcon({ className: 'mkw', html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 3000 }).addTo(m)
+    if (userPos) me.current = L.marker(userPos, { icon: L.divIcon({ className: 'mkw', html: '<div class="me-cone"></div><div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 3000 }).addTo(m)
   }, [userPos])
+  useEffect(() => { // the beam on your dot turns with the phone (set on the element, so the dot is not rebuilt 20 times a second)
+    const el = me.current?.getElement()?.querySelector<HTMLElement>('.me-cone')
+    if (!el) return
+    if (heading == null) el.style.removeProperty('--h'); else el.style.setProperty('--h', heading + 'deg')
+    el.classList.toggle('on', heading != null)
+  }, [heading, userPos])
 
   // fly requests: interruptible (a new request retargets), no movement when reduced motion is on
   useEffect(() => {

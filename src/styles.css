@@ -148,7 +148,8 @@ button:disabled,[aria-disabled=true]{cursor:not-allowed}
 .leaflet-bar a{transition:transform var(--dur-press) var(--ease-out),background-color var(--dur-press)}
 .leaflet-bar a:active{transform:scale(.97)}
 @media (hover:none),(pointer:coarse){.leaflet-bar a:hover{background-color:var(--color-paper)}}
-.me{width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
+.me-cone{display:none;position:absolute;left:50%;top:50%;width:7em;height:7em;margin:-3.5em 0 0 -3.5em;border-radius:50%;pointer-events:none;background:conic-gradient(from -28deg, color-mix(in srgb, var(--color-me) 80%, transparent), transparent 56deg, transparent 360deg);-webkit-mask-image:radial-gradient(circle, #000 15%, transparent 70%);mask-image:radial-gradient(circle, #000 15%, transparent 70%);transform:rotate(var(--h,0deg))}.me-cone.on{display:block}
+.me{position:relative;width:1.2em;height:1.2em;border-radius:50%;background:var(--color-me);border:2.5px solid var(--color-on-brand);box-shadow:0 0 0 0.9em color-mix(in srgb, var(--color-me) 25%, transparent)}
 @media (prefers-reduced-motion:reduce){.mk.pulse,.mk.pulse::after{animation:none}.mk,.leaflet-bar a{transition:none}.mk:active,.leaflet-bar a:active{transform:none}}
 .no-scrollbar{scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
 .mk.sel::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--c);animation:selpulse 1.6s ease-out 2 both;pointer-events:none}

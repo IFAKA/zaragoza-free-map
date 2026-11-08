@@ -8,7 +8,7 @@ const FOLLOW_STEP_M = 30
 export type LocateAnswer = 'granted' | 'denied' | 'error'
 
 /** Browser geolocation. The position stays in memory on this device; it is never sent anywhere. */
-export function useLocation(onAnswer?: (a: LocateAnswer) => void, follow = true) {
+export function useLocation(onAnswer?: (a: LocateAnswer) => void) {
   const [pos, setPos] = useState<LatLon | null>(null)
   const [locating, setLocating] = useState(false)
   const [denied, setDenied] = useState(false)
@@ -28,13 +28,13 @@ export function useLocation(onAnswer?: (a: LocateAnswer) => void, follow = true)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
   useEffect(() => {
-    if (!has || !shown || !follow || !navigator.geolocation) return
+    if (!has || !shown || !navigator.geolocation) return
     const id = navigator.geolocation.watchPosition(p => {
       const ll: LatLon = [p.coords.latitude, p.coords.longitude]
       if (!last.current || dist(last.current, ll) >= FOLLOW_STEP_M) setPos(ll)
     }, () => {}, { enableHighAccuracy: true, maximumAge: 10000 })
     return () => navigator.geolocation.clearWatch(id)
-  }, [has, shown, follow])
+  }, [has, shown])
 
   // follow the browser's permission state (so a blocked site is known before the first tap, and a change in settings is noticed)
   useEffect(() => {
