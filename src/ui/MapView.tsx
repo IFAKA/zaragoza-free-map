@@ -131,8 +131,8 @@ export function MapView({ layer, items, selected, pick, userPos, fly, inset, des
     if (desktop) L.control.zoom({ position: 'bottomright', zoomInTitle: zoomTitles.in, zoomOutTitle: zoomTitles.out }).addTo(m)
     m.attributionControl.setPosition('topleft') // top left: the Settings button floats at the top right
     m.on('click', () => cb.current.onBackgroundClick())
-    const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(m)
-    const labels = L.tileLayer(LABELS(dark()), { maxZoom: 19, maxNativeZoom: 16, pane: 'shadowPane' }).addTo(m)
+    const tiles = L.tileLayer(TILES(dark()), { maxZoom: 19, maxNativeZoom: 16, updateWhenIdle: false, updateInterval: 150, attribution: 'Tiles © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(m)
+    const labels = L.tileLayer(LABELS(dark()), { maxZoom: 19, maxNativeZoom: 16, updateWhenIdle: false, updateInterval: 150, pane: 'shadowPane' }).addTo(m)
     const mq = matchMedia('(prefers-color-scheme: dark)')
     const onScheme = () => { tiles.setUrl(TILES(dark())); labels.setUrl(LABELS(dark())) }
     mq.addEventListener('change', onScheme)
