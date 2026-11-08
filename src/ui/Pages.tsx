@@ -1,8 +1,8 @@
 import { Button as BaseButton } from '@base-ui/react/button'
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { ChatCircleText, ArrowBendUpRight, ArrowUpRight, ArrowsLeftRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ChatCircleText, ArrowBendUpRight, ArrowUpRight, CaretLeft, CaretRight, Check, X as CloseIcon, Crosshair, DownloadSimple, Translate, Info as InfoIcon, Heart, Thermometer, GithubLogo } from '@phosphor-icons/react'
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ICONS } from './icons'
 import { Skel, SkelRows } from './Skel'
@@ -252,7 +252,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
               ))}
             </ul>
           )}
-          <More><div className="flex items-center gap-2 px-4 pb-1">
+          <More><div className="flex items-center gap-2 px-4 pb-1 pt-1.5">
             <div className={cn(sub, 'flex min-w-0 items-center gap-1 text-[0.8em]')} data-testid="live-updated">{state === 'live' && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}<span className="truncate">{t('liveUpdated').replace('{t}', clockMadrid(live.at))}</span></div>
           </div></More>
           <VehNote show={tramVeh.length > 0} />
@@ -392,11 +392,13 @@ function LiveMessage({ state, onRetry }: { state: 'loading' | 'failed'; onRetry:
   )
 }
 
+const stepLi = 'relative flex items-center gap-3 py-1.5 text-[0.93em] before:absolute before:left-[0.3rem] before:top-0 before:h-full before:w-0.5 before:bg-brand/40 first:before:top-1/2 first:before:h-1/2 last:before:h-1/2'
+
 /** What the line mode needs to show: the line, the direction on show, the stops in order and the place of the current one in them (-1 = none). */
 export interface LineView { line: string; dir: number; dirs: number; to?: string; stops: { post: string; name: string; lat: number; lon: number }[]; idx: number; stop?: string }
 
 /** A bus line chosen: "Line 38 · toward X", a way to flip direction, the stops still to come in order, and the link to the next buses. */
-export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; origin: LatLon; onBack: () => void; onDir: () => void }) {
+export function LineBlock({ view, origin, onBack }: { view: LineView; origin: LatLon; onBack: () => void }) {
   const { t, lang } = useT()
   const det = (detours.lines as Record<string, { until: string; es: string; en: string }>)[view.line]
   const detour = det && det.until >= new Date().toISOString().slice(0, 10) ? det[lang] : (routecheck.lines as Record<string, number>)[view.line] ? t('routeMaybe') : undefined
@@ -411,10 +413,10 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
   const toEnd = useCallback((a: Arrival[]) => towardEnd(a, view.to), [view.to])
   const title = [t('busLine').replace('{n}', view.line), view.to && t('toward').replace('{to}', view.to)].filter(Boolean).join(' · ')
   const [allStops, setAllStops] = useState(false)
-  const from = Math.max(0, view.idx), upcoming = view.stops.slice(from, allStops ? undefined : from + 3), left = view.stops.length - (from + upcoming.length)
+  const from = Math.max(0, view.idx), last = view.stops.length - 1, mid = from < last ? view.stops.slice(from + 1, last) : []
   return (
     <m.section key={view.line + view.dir} {...cardSwap} className="px-4 pb-3 pt-4" data-testid="line-block" aria-label={title}>
-      <div className="flex items-start gap-2">
+      <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-start gap-2 bg-paper px-4 pb-2 pt-4">
         <div className="min-w-0 flex-1">
           <h2 className={h2} data-testid="line-title">{title}</h2>
         </div>
@@ -422,22 +424,26 @@ export function LineBlock({ view, origin, onBack, onDir }: { view: LineView; ori
           <CloseIcon size="1.4em" weight="bold" aria-hidden />
         </BaseButton>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {view.dirs > 1 && <Button variant="secondary" onClick={onDir} data-testid="line-dir"><ArrowsLeftRight size="1.2em" aria-hidden />{t('otherDir')}</Button>}
-      </div>
       {post && <LiveTimes key={post + '|' + view.line} kind="bus" stopKey={post + '|' + view.line} load={load} pick={toEnd} title={t('liveHere')} line={view.line} />}
-      <ol className="m-0 mt-2 list-none p-0" aria-label={t('stepsLabel')} data-testid="line-steps">
-        {upcoming.map((s, i) => {
-          const here = view.idx >= 0 && i === 0
+      <ol className={cn('m-0 mt-2 list-none p-0', allStops && 'max-h-[min(38dvh,18rem)] overflow-y-auto overscroll-contain')} aria-label={t('stepsLabel')} data-testid="line-steps">
+        {[from, ...(allStops ? mid.map((_, k) => from + 1 + k) : []), ...(last > from ? [last] : [])].map((si, i) => {
+          const s = view.stops[si], here = view.idx >= 0 && si === from, end = si === last && last > from
           return (
-            <li key={s.post + i} className={cn('flex items-center gap-2 py-0.5 text-[0.93em]', here ? 'font-bold text-brand-text' : 'text-ink')} data-here={here ? '' : undefined}>
-              <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full border-2 border-brand', here ? 'bg-brand' : 'bg-paper')} />
-              <span className="min-w-0 truncate">{s.name}</span>
-              {here && <span className="shrink-0 text-[0.87em] font-semibold text-ink-soft">{t('stepHere')}</span>}
-            </li>
+            <Fragment key={s.post + si}>
+              <li className={cn(stepLi, here ? 'font-bold text-brand-text' : 'text-ink', end && 'font-bold')} data-here={here ? '' : undefined}>
+                <span aria-hidden className={cn('relative size-3.5 shrink-0 rounded-full border-2 border-brand', here || end ? 'bg-brand' : 'bg-paper')} />
+                <span className="min-w-0 truncate">{s.name}</span>
+                {here && <span className="shrink-0 text-[0.87em] font-semibold text-ink-soft">{t('stepHere')}</span>}
+              </li>
+              {i === 0 && mid.length > 0 && <li className={stepLi}>
+                <span aria-hidden className="size-3.5 shrink-0" />
+                <BaseButton onClick={() => setAllStops(v => !v)} aria-expanded={allStops} data-testid="line-more" render={<m.button {...tap} />} className="inline-flex min-h-9 items-center gap-1 rounded-btn border-0 bg-transparent p-0 text-[0.93em] font-bold text-brand-text">
+                  <CaretRight size="1em" weight="bold" className={allStops ? '-rotate-90' : 'rotate-90'} aria-hidden />{t('rideStops').replace('{n}', String(mid.length + 1))}
+                </BaseButton>
+              </li>}
+            </Fragment>
           )
         })}
-        {(left > 0 || allStops) && <li className="pt-1"><BaseButton onClick={() => setAllStops(v => !v)} aria-expanded={allStops} data-testid="line-more" render={<m.button {...tap} />} className="inline-flex min-h-9 items-center gap-1 rounded-btn border-0 bg-transparent p-0 text-[0.93em] font-bold text-brand-text">{allStops ? t('lineLess') : t('stepMore').replace('{n}', String(left))}<CaretRight size="1em" weight="bold" className={allStops ? '-rotate-90' : 'rotate-90'} aria-hidden /></BaseButton></li>}
       </ol>
       {detour && <More><p className={cn(sub, 'm-0 px-4 pb-2 font-semibold text-ink')} role="note" data-testid="line-detour">{detour}</p></More>}
     </m.section>
@@ -620,7 +626,7 @@ export function HomePage(p: {
   off: RankedItem | null
   layer: LayerConfig; liveState: 'loading' | 'failed' | null; onRetry: () => void; arr: RankedItem[]; allClosed: boolean; allOut: boolean; denied: boolean; bizi: ReturnType<typeof useBizi>; focus: RankedItem | null; selected: string | null; hasPos: boolean; origin: LatLon; locating: boolean
   peekRef: React.Ref<HTMLDivElement>
-  routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void; onLineDir: () => void
+  routes: BusRoutes | null; times: CercaniasTimes | null; onLine: (line: string) => void; lineView: LineView | null; onLineBack: () => void
   cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; chipOrder: LayerId[]
   onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void; onWalk: () => void
@@ -633,7 +639,7 @@ export function HomePage(p: {
     <MoreCtx.Provider value={more}>
       {/* everything down to the end of this block is what the sheet shows at peek: the one card and the two buttons under it */}
       <div className="shrink-0" ref={p.peekRef} data-testid="peek-block">
-        {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} onDir={p.onLineDir} />
+        {p.lineView ? <LineBlock view={p.lineView} origin={p.origin} onBack={p.onLineBack} />
           : p.liveState ? <LiveMessage state={p.liveState} onRetry={p.onRetry} /> : p.off ? <OffBlock item={p.off} hasPos={p.hasPos} /> : <NearestBlock layer={p.layer} item={p.focus} isSelected={!!p.selected} hasPos={p.hasPos} origin={p.origin} cat={p.cat} routes={p.routes} times={p.times} onLine={p.onLine} onDetails={p.onDetails} onWalk={p.onWalk} />}
         {!p.lineView && p.allClosed && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-closed">{t('allClosed')}</p>}
         {p.allOut && <p className={cn(sub, 'm-0 px-4 pb-2')} data-testid="all-out">{t(p.cat === 'return' ? 'biziNoDocks' : 'biziNoBikes')}</p>}

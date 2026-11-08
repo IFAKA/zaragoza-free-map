@@ -346,7 +346,6 @@ export function App() {
     setLineSel({ line, dir: pickDirection(ln, routes.stops, focus.stop, [focus.lat, focus.lon]).dir, anchor: focus.id })
     if (!desktop) setLevel(PEEK)
   }
-  const lineDir = () => setLineSel(l => (l && routes ? { ...l, dir: (l.dir + 1) % routes.lines[l.line].d.length } : l))
   // back to the nearest-stop mode: the markers return and the map shows the stop again
   const lineBack = () => {
     setLineSel(null)
@@ -395,7 +394,7 @@ export function App() {
       default: return (
         <HomePage
           off={offSel} layer={layer} liveState={liveState} onRetry={() => setDutyTry(n => n + 1)} arr={arr} allClosed={allClosed} allOut={allOut} denied={denied} bizi={bizi} focus={focus} selected={chosen ? chosen.id : null} hasPos={!!pos} origin={pos ?? CENTER} locating={locating} peekRef={setPeekEl}
-          routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack} onLineDir={lineDir}
+          routes={routes} times={times} onLine={pickLine} lineView={lineData?.view ?? null} onLineBack={lineBack}
           cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
           onServices={openServices} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')} onWalk={onWalk}
