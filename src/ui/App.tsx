@@ -393,18 +393,39 @@ export function App() {
   // The sheet changes size once per page turn, when the new page is on screen (not while the old one still fades out): see onShown below.
   const pendingLevel = useRef<number | null>(null)
   const pageNow = useRef(page); pageNow.current = page
+  const desktopNow = useRef(desktop); desktopNow.current = desktop
+  const lineNow = useRef(lineSel); lineNow.current = lineSel
+  const opener = useRef<string | null>(null)
   const onShown = useCallback(() => {
     // the sheet grows or shrinks once, smoothly, under the fading-in page (not twice: no tall blank sheet that then shrinks)
     if (pendingLevel.current != null) { setLevel(pendingLevel.current); pendingLevel.current = null }
     setLivePage(pageNow.current)
+    // desktop: back on home, focus goes back to the control that opened the page (the page remounts, so find it by test id)
+    if (desktopNow.current && pageNow.current === 'home' && opener.current) document.querySelector<HTMLElement>(`[data-testid=panel] [data-testid="${opener.current}"]`)?.focus({ preventScroll: true })
+    if (pageNow.current === 'home') opener.current = null
   }, [])
-  const turnTo = (p: Page) => { levelBefore.current = level; go(p); pendingLevel.current = PEEK }
+  const turnTo = (p: Page) => { levelBefore.current = level; opener.current = document.activeElement?.closest('[data-testid=panel]') ? (document.activeElement as HTMLElement).dataset.testid ?? null : null; go(p); pendingLevel.current = PEEK }
   const back = () => { if (goUp() && page !== 'home') pendingLevel.current = levelBefore.current }
   const openServices = () => turnTo('services')
   const openFilters = () => turnTo('filters')
   const openFavs = () => { turnTo('favs'); if (getFavs().length > 4) pendingLevel.current = FULL }
   // Escape and the back gesture: up one page, then lower the sheet one step
   const escape = () => { if (view.isOpen) return; if (lineSel) return lineBack(); if (goUp()) { if (page !== 'home') pendingLevel.current = levelBefore.current } else setLevel(l => Math.max(CLOSED, l - 1)) }
+  // desktop: opening or closing a bus line removes the button that had focus; keep focus in the panel instead of dropping it on the page body
+  const lineSeen = useRef(lineSel)
+  useEffect(() => {
+    if (lineSeen.current === lineSel) return // not on first load
+    lineSeen.current = lineSel
+    if (desktopNow.current && document.activeElement === document.body) pageRef.current?.focus({ preventScroll: true })
+  }, [lineSel, pageRef])
+  // desktop has no drawer to catch Escape: one window listener does what the drawer does on a phone (up one page or line)
+  const escapeNow = useRef(escape); escapeNow.current = escape
+  useEffect(() => {
+    if (!desktop) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented && (pageNow.current !== 'home' || lineNow.current)) escapeNow.current() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [desktop])
   // the back gesture closes what is open (a bus line, then the page) and only leaves the app from the home page
   useBackLayer(page !== 'home', () => { if (goUp()) pendingLevel.current = levelBefore.current })
   useBackLayer(!!lineSel, lineBack)
