@@ -14,7 +14,7 @@ export const GROUPS: { id: string; label: { en: string; es: string }; ids: Layer
 ]
 
 /**
- * The header of the home page (about 64 px): two equal buttons: Favourites (filled star, red tint, like the save star) and Services (grid icon, grey), so they differ at a glance. The service you are on is named in the card below, above the place.
+ * The header of the home page (about 64 px): two equal buttons: same grey style, told apart by the icon: Favourites (red filled star, like the save star) and Services (grid). The service you are on is named in the card below, above the place.
  * The Services button turns the drawer to the Services page (same drawer, new page).
  */
 /** Height of the phone footer bar (px), without the bottom safe area. The home page keeps this much room at its end, and the closed sheet ends above it. */
@@ -32,7 +32,7 @@ export function ServiceHeader({ onOpen, favLayers, onFavs, onFilters, filtersAct
           </m.button>
         )}
         <m.button {...tap} type="button" onClick={onFavs} aria-label={`${t('favsTitle')}${favLayers.length ? `: ${t('favsSee').replace('{n}', String(favLayers.length))}` : ''}`} data-testid="fav-all"
-          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-brand-text bg-brand-tint px-3 font-bold text-ink shadow-md">
+          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-line bg-surface px-3 font-bold text-ink shadow-md">
           <Star size="1.3em" weight="fill" className="text-brand-text" aria-hidden />{t('favsTitle')}
         </m.button>
         <m.button {...tap} type="button" onClick={onOpen} data-testid="services-open"
