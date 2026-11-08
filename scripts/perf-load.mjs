@@ -16,7 +16,7 @@ for (let i = 0; i < RUNS; i++) {
   await p.setRequestInterception(true)
   p.on('request', r => (/localhost/.test(r.url()) ? r.continue() : r.abort()))
   await p.evaluateOnNewDocument(() => { window.__m = {}; new PerformanceObserver(l => { for (const e of l.getEntries()) window.__m[e.name === "first-paint" ? "fp" : "fcp"] = e.startTime }).observe({ type: 'paint', buffered: true }); new PerformanceObserver(l => { for (const e of l.getEntries()) window.__m.lcp = e.startTime }).observe({ type: 'largest-contentful-paint', buffered: true }) })
-  await p.goto(URL, { waitUntil: 'networkidle0' })
+  if (process.env.WARM) { await p.goto(URL, { waitUntil: "networkidle0" }); await new Promise(r => setTimeout(r, 4000)); bytes = 0; reqs = 0; await p.reload({ waitUntil: "networkidle0" }) } else await p.goto(URL, { waitUntil: "networkidle0" })
   const m = await p.evaluate(() => window.__m)
   res.push({ fp: m.fp, fcp: m.fcp, lcp: m.lcp, kb: bytes / 1024, reqs }); await ctx.close()
 }
