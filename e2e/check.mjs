@@ -753,6 +753,12 @@ todo.push(async () => {
   const w = await p.getByTestId('panel').evaluate(e => e.getBoundingClientRect().width)
   ok(w === 400, 'desktop panel 400px')
   await p.screenshot({ path: out + '/d-water.png' })
+  // the Nearest list fills the home page: 6 rows, a click selects that place like its pin
+  ok(await p.getByTestId('near-row').count() === 6, 'desktop: Nearest list has 6 rows')
+  const row2 = (await p.getByTestId('near-row').nth(1).innerText()).split('\n')[0]
+  await p.getByTestId('near-row').nth(1).click(); await settle(p)
+  ok(await p.getByTestId('nearest-name').innerText() === row2, 'desktop: clicking Nearest row 2 selects that place')
+  ok(await p.getByTestId('near-row').nth(1).getAttribute('aria-current') === 'true', 'desktop: the selected row is marked')
   for (const id of ['toilets', 'charge', 'wifi', 'water']) { await go(p, id); await settle(p); ok(await markers(p) > 0, `desktop ${id} renders`) }
   await go(p, 'libraries', 'click'); await settle(p)
   await p.screenshot({ path: out + '/d-libs.png' })

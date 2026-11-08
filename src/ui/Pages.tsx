@@ -22,6 +22,7 @@ import type { Key, Lang } from '../lib/i18n'
 import type { LatLon, LayerConfig, LayerId, RankedItem } from '../lib/types'
 import { FOOTER_PX, ServiceGroups, ServiceHeader } from './ServiceBar'
 import { Tick } from './Tick'
+import { NearestList } from './NearestList'
 import { cardSwap, tap } from './motion'
 import { m } from 'motion/react'
 import { rangeMetres } from '../lib/geo'
@@ -629,7 +630,7 @@ export function HomePage(p: {
   cat: string; setCat: (c: string) => void
   locked: boolean; onServices: () => void; chipOrder: LayerId[]
   onFavs: () => void; onFilters: () => void; onLocate: () => void; onDetails: () => void
-  viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean
+  viewportRef?: React.Ref<HTMLDivElement>; desktop: boolean; onPick: (id: string) => void
 }) {
   const { t } = useT()
   const [more, setMore] = useState<HTMLElement | null>(null)
@@ -648,6 +649,7 @@ export function HomePage(p: {
       <Scroll locked={p.locked} viewportRef={p.viewportRef}>
         <div ref={setMore} />
         {!p.liveState && <Notes layer={p.layer} cat={p.cat} bizi={p.bizi} />}
+        {p.desktop && !p.liveState && !p.lineView && <NearestList layer={p.layer} items={p.arr} selected={p.selected} onPick={p.onPick} />}
         {!p.liveState && <Locate hasPos={p.hasPos} locating={p.locating} denied={p.denied} onLocate={p.onLocate} />}
         {!p.desktop && !p.lineView && <div aria-hidden style={{ height: FOOTER_PX }} />}
       </Scroll>

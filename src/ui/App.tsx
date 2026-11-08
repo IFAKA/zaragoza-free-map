@@ -422,7 +422,7 @@ export function App() {
           cat={cat} setCat={c => { setCat(c); setSelected(null) }}
           locked={mobileLow} viewportRef={viewport}
           onServices={openServices} chipOrder={chipOrder} onFavs={openFavs} onFilters={openFilters} onLocate={doLocate} onDetails={() => turnTo('place')}
-          desktop={desktop}
+          desktop={desktop} onPick={select}
         />
       )
     }
