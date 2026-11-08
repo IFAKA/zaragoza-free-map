@@ -53,7 +53,7 @@ async function open(vp, mobile, extra = {}, lang = 'en', o = {}) {
   await p.goto(URL); await ready(p)
   return { ctx, p, blocked, mock }
 }
-// Wait until the page stops moving: no running animation or transition, and the drawer, map and a marker hold still for 4 frames. Replaces fixed sleeps.
+// Wait until the page stops moving: no running animation or transition, and the drawer, map and a marker hold still for 18 frames (the open height settles 250 ms after a page swap). Replaces fixed sleeps.
 const settle = p => p.evaluate(() => new Promise(res => {
   const state = () => {
     const pop = document.querySelector('[data-slot=drawer-popup]'), mk = document.querySelector('.mk'), mp = document.querySelector('.leaflet-map-pane')
@@ -61,7 +61,7 @@ const settle = p => p.evaluate(() => new Promise(res => {
     return { running, sig: [pop?.getBoundingClientRect().top, mk?.getBoundingClientRect().x, mp?.style.transform].join('|') }
   }
   let last = '', same = 0, frames = 0
-  const f = () => { const { running, sig } = state(); if (sig === last) same++; else { same = 0; last = sig } if ((same >= 4 && running === 0 && frames >= 8) || ++frames > 150) res(); else requestAnimationFrame(f) }
+  const f = () => { const { running, sig } = state(); if (sig === last) same++; else { same = 0; last = sig } if ((same >= 18 && running === 0 && frames >= 8) || ++frames > 150) res(); else requestAnimationFrame(f) }
   f()
 }))
 const ready = async p => { await p.waitForSelector('.mk'); await settle(p) }

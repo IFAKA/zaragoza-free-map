@@ -46,6 +46,7 @@ type Page = 'home' | 'place' | 'services' | 'favs' | 'filters'
 // Drawer levels. Closed shows only the service header; peek adds the card of the nearest place and the two after it; full adds the controls and the rest of the page.
 const CLOSED = 0, PEEK = 1, FULL = 1 // two states: closed (the header only) and open (the height of the content, the whole screen when it needs more)
 const DEFAULT_CLOSED_PX = 94, DEFAULT_PEEK_PX = 360
+const SETTLE_MS = 250 // a measured open height must hold this long before the sheet moves to it
 const OPEN_SHARE = 0.04 // the open sheet may use all but this much of the screen
 const MAP_SHARE_MIN = 0.72 // the map is framed as if the sheet were at most this tall (a taller sheet covers the rest)
 /** The phone's bottom safe area (home indicator) in px. */
@@ -131,6 +132,20 @@ function useFullPx(viewport: React.RefObject<HTMLElement | null>, on: boolean): 
   return px
 }
 
+/**
+ * A value that only changes once it has stayed the same for `ms`. The open height is measured while a page is swapping (old page leaving, new one mounting,
+ * data arriving), and the stale readings in between made the sheet move the wrong way for a moment. Only the reading that stays is used: one move, old height to new height.
+ */
+function useSettled<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    if (value === settled) return
+    const id = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(id)
+  }, [value, settled, ms])
+  return settled
+}
+
 /** The Bizi stations (not the bike racks): the places that live counts are joined to. */
 const BIZI_STATIONS = LAYERS.bizi.items.filter(i => i.cat === 'station')
 /** Chip selected when a tab opens: Bizi starts on "Take a bike", the others on "All". */
@@ -205,7 +220,8 @@ export function App() {
   const pagePx = usePeekPx(peekEl, OPEN_SHARE)
   const fullPx = useFullPx(viewport, livePage === 'home' && !desktop)
   // open: the home sheet fits all its content; the other pages fit their block. Either becomes the whole screen when it needs more than the screen.
-  const openSnap: string | number = livePage === 'home' ? fullPx : pagePx >= window.innerHeight * (1 - OPEN_SHARE) ? 1 : pagePx + 'px'
+  const openMeasured: string | number = livePage === 'home' ? fullPx : pagePx >= window.innerHeight * (1 - OPEN_SHARE) ? 1 : pagePx + 'px'
+  const openSnap = useSettled(openMeasured, SETTLE_MS)
   const peekPx = typeof openSnap === 'number' ? Math.round(window.innerHeight * MAP_SHARE_MIN) : Math.min(parseInt(openSnap), Math.round(window.innerHeight * MAP_SHARE_MIN))
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, openSnap], [closedPx, openSnap])
   const mobileClosed = !desktop && level === CLOSED

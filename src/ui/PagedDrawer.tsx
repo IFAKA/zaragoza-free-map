@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { flushSync } from 'react-dom'
 import { Button as BaseButton } from '@base-ui/react/button'
 import { useReducedMotion } from 'motion/react'
 import { MS } from './motion'
@@ -53,7 +54,7 @@ export function PagedDrawer({ snapPoints, snap, onSnap, onEscape, onFlickDown, t
   return (
     <Drawer
       open modal={false} disablePointerDismissal showSwipeHandle
-      snapPoints={snapPoints} snapPoint={snap} onSnapPointChange={(s, d) => { if (s != null) onSnap(s); else { d.cancel(); onFlickDown() } }}
+      snapPoints={snapPoints} snapPoint={snap} onSnapPointChange={(s, d) => { if (s != null) flushSync(() => onSnap(s)); else { d.cancel(); onFlickDown() } }}
       onOpenChange={(o, d) => { if (!o) { d.cancel(); if (d.reason === 'escape-key' || d.reason === 'close-watcher') onEscape() } }}
     >
       <DrawerContent aria-label={title} initialFocus={false} handleSlot={<HandleButton label={handleLabel} onTap={onHandle} />}>
