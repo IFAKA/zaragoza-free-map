@@ -234,7 +234,7 @@ function LiveTimes({ kind, stopKey, load, stopName, title, pick, at, origin, lin
   return (
     <div className="mt-1 min-h-[3.5rem]" data-testid="live-times" data-state={state}>
       {title && <div className={overline}>{title}</div>}
-      {!live ? <div className="mt-1" role="status"><span className="sr-only">{t('liveLoading')}</span><SkelRows /></div> : (
+      {!live ? <div className="mt-1" role="status"><span className="sr-only">{t('liveLoading')}</span><SkelRows /><More><div className="flex items-center gap-2 px-4 pb-1 pt-1.5" aria-hidden><div className={cn(sub, 'invisible text-[0.8em]')}>&nbsp;</div></div></More></div> : (
         <>
           {live.via && (live.via.side ? (
             <div className="m-0 mt-1 leading-snug" data-testid="live-via" data-side={live.via.side}>

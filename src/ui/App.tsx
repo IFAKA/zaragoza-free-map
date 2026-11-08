@@ -136,13 +136,13 @@ function useFullPx(viewport: React.RefObject<HTMLElement | null>, on: boolean): 
  * A value that only changes once it has stayed the same for `ms`. The open height is measured while a page is swapping (old page leaving, new one mounting,
  * data arriving), and the stale readings in between made the sheet move the wrong way for a moment. Only the reading that stays is used: one move, old height to new height.
  */
-function useSettled<T>(value: T, ms: number): T {
+function useSettled<T>(value: T, ms: number, hold = false): T {
   const [settled, setSettled] = useState(value)
   useEffect(() => {
-    if (value === settled) return
+    if (hold || value === settled) return
     const id = setTimeout(() => setSettled(value), ms)
     return () => clearTimeout(id)
-  }, [value, settled, ms])
+  }, [value, settled, ms, hold])
   return settled
 }
 
@@ -221,7 +221,7 @@ export function App() {
   const fullPx = useFullPx(viewport, livePage === 'home' && !desktop)
   // open: the home sheet fits all its content; the other pages fit their block. Either becomes the whole screen when it needs more than the screen.
   const openMeasured: string | number = livePage === 'home' ? fullPx : pagePx >= window.innerHeight * (1 - OPEN_SHARE) ? 1 : pagePx + 'px'
-  const openSnap = useSettled(openMeasured, livePage === 'home' ? SETTLE_HOME_MS : SETTLE_MS)
+  const openSnap = useSettled(openMeasured, livePage === 'home' ? SETTLE_HOME_MS : SETTLE_MS, !!lineSel && !routes) // a chosen line whose route file is still loading has no page yet: keep the height
   const peekPx = typeof openSnap === 'number' ? Math.round(window.innerHeight * MAP_SHARE_MIN) : Math.min(parseInt(openSnap), Math.round(window.innerHeight * MAP_SHARE_MIN))
   const snapPoints = useMemo<(string | number)[]>(() => [closedPx, openSnap], [closedPx, openSnap])
   const mobileClosed = !desktop && level === CLOSED
