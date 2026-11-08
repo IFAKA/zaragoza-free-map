@@ -64,6 +64,12 @@ const settle = p => p.evaluate(() => new Promise(res => {
   const f = () => { const { running, sig } = state(); if (sig === last) same++; else { same = 0; last = sig } if ((same >= 18 && running === 0 && frames >= 8) || ++frames > 150) res(); else requestAnimationFrame(f) }
   f()
 }))
+// Resolves when the sheet's top edge has not moved for `ms`: after a page swap the sheet first holds the old page's height, then eases to the new one 250 ms later (settle() can return in between).
+const still = (p, ms = 600) => p.evaluate(ms => new Promise(res => {
+  const pop = document.querySelector('[data-slot=drawer-popup]'); let last = null, since = performance.now()
+  const f = () => { const t = Math.round(pop.getBoundingClientRect().top); if (t !== last) { last = t; since = performance.now() } if (performance.now() - since >= ms) res(); else requestAnimationFrame(f) }
+  f()
+}), ms)
 const ready = async p => { await p.waitForSelector('.mk'); await settle(p) }
 // Equal columns, 44 px tall, no clipped label, and the page does not scroll sideways.
 const fits = (p, sel) => p.evaluate(s => {
@@ -170,17 +176,18 @@ todo.push(async () => {
   // a spot on the bare map (no marker, no control) above the peek sheet
   const bare = p => p.evaluate(() => { for (let y = 120; y < 330; y += 30) for (let x = 40; x < 360; x += 40) { const e = document.elementFromPoint(x, y); if (e && e.closest('.leaflet-container') && !e.closest('.mkw,.leaflet-control')) return { x, y } } return null })
   const scrollTop = p => p.evaluate(() => document.querySelector('[data-testid=scroll]').scrollTop)
-  // peek -> full by dragging the handle
+  // a page taller than the screen: the open sheet takes the whole screen and its content scrolls (a landscape phone is 320-400 px high)
   todo.push(async () => {
-    const { ctx, p, drag } = await sess(560) // a short screen, so the page below the card is taller than the sheet
-    await drag(195, 400, 100); ok(await lvl(p) === 'open', 'handle drag up: a short screen shows the open sheet')
+    const { ctx, p, drag } = await sess(320)
+    const top0 = await snapTop(p); ok(top0 <= 90, `short screen: the open sheet fills the screen (top ${top0})`)
     await p.screenshot({ path: out + '/g-full.png' })
-    // full: content scrolls; a drag down while scrolled scrolls back; at the top the same drag lowers the sheet
-    const sb = await p.getByTestId('scroll').boundingBox(), y0 = Math.round(sb.y + sb.height - 20), y1 = Math.round(sb.y + 20) // inside the scrolling part only
-    await drag(195, y0, y1); ok(await scrollTop(p) > 20 && await lvl(p) === 'open', 'open: content drag scrolls the list, sheet stays')
-    await drag(195, y1, y1 + 40, 200); ok(await lvl(p) === 'open', `open: drag down while scrolled does not move the sheet (${await lvl(p)}, scroll ${await scrollTop(p)})`)
+    // content scrolls; a drag down while scrolled scrolls back; at the top the same drag lowers the sheet
+    const sb = await p.getByTestId('scroll').boundingBox(), bar = await p.getByTestId('services-open').boundingBox() // the footer bar covers the bottom of the scroll area
+    const y0 = Math.round(bar.y - 12), y1 = Math.round(sb.y + 8) // inside the visible scrolling part only
+    await drag(195, y0, y1); ok(await scrollTop(p) > 10 && await snapTop(p) === top0, `open: content drag scrolls the list, sheet stays (scroll ${await scrollTop(p)}, top ${await snapTop(p)})`)
+    await drag(195, y1, y1 + 40, 200); ok(await snapTop(p) === top0, `open: drag down while scrolled does not move the sheet (top ${await snapTop(p)}, scroll ${await scrollTop(p)})`)
     await p.evaluate(() => { document.querySelector('[data-testid=scroll]').scrollTop = 0 })
-    await drag(195, 300, 480); { const t = await snapTop(p); ok(t > 130 && t < 520, `full: drag down at the top hands the gesture to the sheet (-> top ${t}, peek on this short screen)`) }
+    await drag(195, y1, y1 + 150); { const t = await snapTop(p); ok(t > top0 + 40 && await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), `open: drag down at the top hands the gesture to the sheet, which closes (top ${t}, was ${top0})`) }
     await ctx.close()
   })
   // down to closed and back
@@ -194,12 +201,12 @@ todo.push(async () => {
     ok(vis.handle.bottom <= vis.h && vis.handle.height >= 24 && vis.handle.width >= 44, 'closed: handle visible, at least 44 wide and 24 tall')
     ok(await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), 'closed: page body is inert (no focus off-screen)')
     ok(await p.locator('.mk').count() > 0 && (await p.getByTestId('map').boundingBox()).height === 844, 'closed: map fully visible')
-    await go(p, 'toilets', 'tap'); await settle(p)
+    await go(p, 'toilets', 'tap'); await settle(p); await still(p)
     ok(await lvl(p) === 'open', 'closed: picking a service on the Services page opens the sheet')
     ok(await layerOn(p) === 'toilets' && await p.getByTestId('services-open').count() === 1, 'and selects that layer, back on home')
-    await go(p, 'toilets', 'tap'); await settle(p); ok(await lvl(p) === 'open', 'picking the service on show keeps the sheet open')
-    await drag(195, 650, 800, 300); ok(await lvl(p) === 'closed', 'open -> closed again by dragging down')
-    await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'open', 'closed: handle tap opens the sheet')
+    await go(p, 'toilets', 'tap'); await settle(p); await still(p); ok(await lvl(p) === 'open', 'picking the service on show keeps the sheet open')
+        await drag(195, 650, 800, 300); ok(await lvl(p) === 'closed', `open -> closed again by dragging down (top ${await snapTop(p)})`)
+    await p.getByTestId('handle').tap(); await settle(p); ok(await lvl(p) === 'open', `closed: handle tap opens the sheet (top ${await snapTop(p)})`)
     await drag(195, 650, 800, 300); ok(await lvl(p) === 'closed', 'closed again')
     await ctx.close()
   })
@@ -653,9 +660,9 @@ todo.push(async () => {
 // ---- narrow desktop window with a mouse ----
 todo.push(async () => {
   const { ctx, p } = await open({ width: 600, height: 800 }, false)
-  const t0 = await snapTop(p)
-  await p.mouse.move(300, t0 + 12); await p.mouse.down(); for (let i = 1; i <= 20; i++) { await p.mouse.move(300, t0 + 12 + 10 * i); await p.waitForTimeout(16) } await p.mouse.up(); await settle(p)
-  ok(await snapTop(p) > t0 + 100, `600x800 mouse drag down from the handle lowers the sheet (${t0} -> ${await snapTop(p)})`)
+  await still(p); const t0 = await snapTop(p)
+  await p.mouse.move(300, t0 + 12); await p.mouse.down(); for (let i = 1; i <= 20; i++) { await p.mouse.move(300, t0 + 12 + 10 * i); await p.waitForTimeout(16) } await p.mouse.up(); await settle(p); await still(p)
+  ok(await snapTop(p) > t0 + 60 && await p.getByTestId('scroll').evaluate(e => !!e.closest('[inert]')), `600x800 mouse drag down from the handle closes the sheet (${t0} -> ${await snapTop(p)})`)
   await p.getByTestId('handle').click(); await settle(p)
   ok(await snapTop(p) < await p.evaluate(() => innerHeight) - 60, 'handle click opens it again')
   await p.screenshot({ path: out + '/n-600.png' })
