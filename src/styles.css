@@ -121,6 +121,8 @@ button:not(:disabled),[role=button]:not([aria-disabled=true]),[role=tab]:not([ar
 button:disabled,[aria-disabled=true]{cursor:not-allowed}
 }
 :focus-visible{outline:2px solid var(--color-info);outline-offset:2px}
+/* edge-to-edge list rows (panel and Settings, desktop): the ring goes inside the row, the panel edge cuts an outside ring to two lines */
+@media (min-width:900px){[data-testid=panel] .text-left:focus-visible,[data-testid=settings-view] .text-left:focus-visible{outline-offset:-2px}}
 
 /* Page turn inside the drawer (Settings, About, Details; never a tab switch): the old page fades out (--dur-page-out), then the new page fades in (--dur-small).
    A transition from @starting-style, not a keyframe animation, so a quick second turn retargets instead of restarting. */
