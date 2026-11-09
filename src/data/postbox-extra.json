@@ -1,0 +1,5 @@
+{"note":"Mailboxes reported by users and missing from OpenStreetMap. Merged into osm.json post rows by build-data.mjs, so a data refresh keeps them. Drop a row once OpenStreetMap has the box. Positions are from Street View, about 10 m.",
+"rows":[
+["local/1","",41.674548,-0.876972,"postbox","",""],
+["local/2","",41.666636,-0.87143,"postbox","",""]
+]}

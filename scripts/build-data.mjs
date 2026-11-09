@@ -129,6 +129,11 @@ if (!process.argv.includes('--no-transit')) await writeTransit(OUT).catch(e => {
 if (!process.argv.includes('--no-busprobe')) await probeBus({ out: OUT }).catch(e => { console.error('busprobe failed, keeping the committed file:', String(e)); process.exitCode = 1 })
 if (!skipOsm) await routeCheck({ out: OUT }).catch(e => console.error('route-check failed, keeping the committed file:', String(e)))
 
+// boxes users reported that OpenStreetMap lacks (src/data/postbox-extra.json); skipped when OSM already has one within 15 m
+function addLocalBoxes(o) {
+  const extra = JSON.parse(readFileSync(`${OUT}/postbox-extra.json`, 'utf8')).rows
+  for (const r of extra) if (!o.post.some(p => Math.hypot((p[2] - r[2]) * 111000, (p[3] - r[3]) * 83000) < 15)) o.post.push(r)
+}
 if (skipOsm) console.log('osm: skipped (--no-osm), keeping', existsSync(`${OUT}/osm.json`) ? 'the existing file' : 'nothing (run without --no-osm somewhere Overpass works)')
 else {
   let last
@@ -140,6 +145,7 @@ else {
       const j = await get(ep, 'json', 120000, { method: 'POST', headers: OVERPASS_HEADERS, body: 'data=' + encodeURIComponent(OSM_QUERY) })
       if (!Array.isArray(j.elements)) throw new Error('bad response')
       const o = splitOsm(j.elements)
+      addLocalBoxes(o)
       const n = o.wifi.length + o.water.length + o.toilets.length + o.charge.length
       if (n < 50) throw new Error('suspiciously small result: ' + n)
       mkdirSync(OUT, { recursive: true })
