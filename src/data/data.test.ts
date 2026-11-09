@@ -12,7 +12,7 @@ const heavy = () => HEAVY!
 
 describe('bundled data', () => {
   it('every city file has rows and a snapshot date', () => {
-    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'bizi', 'toiletsgo', 'shelters', 'tram', 'cercanias'] as const) {
+    for (const k of ['fountains', 'wifi', 'libraries', 'civic', 'post', 'bizi', 'toiletsgo', 'shelters', 'tram', 'cercanias'] as const) {
       expect(DATA[k].rows.length, k).toBeGreaterThan(0)
       expect(DATA[k].updated, k).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     }
@@ -26,6 +26,8 @@ describe('bundled data', () => {
     expect(DATA.fountains.rows.length).toBeGreaterThan(600)
     expect(DATA.wifi.rows.length).toBeGreaterThan(100)
     expect(DATA.libraries.rows.length).toBeGreaterThan(50)
+    expect(DATA.post.rows.length).toBeGreaterThan(10)
+    expect(DATA.osm.post.length).toBeGreaterThan(50)
     expect(DATA.bizi.rows.length).toBeGreaterThan(200)
     expect(heavy().racks.rows.length).toBeGreaterThan(1500)
     expect(heavy().bus.rows.length).toBeGreaterThan(1200)
@@ -71,7 +73,7 @@ describe('layers built from the data', () => {
       const ids = new Set(L.items.map(i => i.id))
       expect(ids.size).toBe(L.items.length)
       // charge/libraries are real buildings: the layer builder keeps them 8 m apart at least; everything else 15 m
-      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'bus' || id === 'tram' || id === 'cercanias' ? 0 : 15 // bizi: stations 8 m, racks 10 m (8 is the weaker bound)
+      const m = id === 'shelter' ? 0 : id === 'charge' || id === 'libraries' || id === 'bizi' ? 8 : id === 'post' ? 5 : id === 'bus' || id === 'tram' || id === 'cercanias' ? 0 : 15 // bizi: stations 8 m, racks 10 m (8 is the weaker bound)
       for (let i = 0; i < L.items.length; i++) for (let j = i + 1; j < L.items.length; j++) {
         const a = L.items[i], b = L.items[j]
         if (id === 'bizi' && a.cat !== b.cat) continue // a rack may stand next to a station: the two groups are never merged

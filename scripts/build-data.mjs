@@ -3,6 +3,7 @@
 //   node scripts/build-data.mjs --no-osm   skip Overpass (keeps the existing src/data/osm.json)
 //   node scripts/build-data.mjs --transit-only    rebuild only busroutes.json, tram.json, cercanias.json (see scripts/transit.mjs; --no-transit skips them)
 //   node scripts/build-data.mjs --hours-only      rebuild only the files that carry opening hours: wifi, libraries, civic, shelters, toiletsgo
+//   node scripts/build-data.mjs --post-only       rebuild only src/data/post.json (post offices)
 //   node scripts/build-data.mjs --shelters-only   rebuild only src/data/shelters.json (add --shelters PATH to read a local GeoJSON)
 // The app itself makes NO runtime data requests: it only reads these files. Re-run (the refresh-data workflow does) to update.
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -11,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 import { writeTransit } from './transit.mjs'
 import { probeBus } from './probe-bus.mjs'
 import { routeCheck } from './route-check.mjs'
-import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
+import { biziRows, busRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, parseTgo, shelterRows, postRows, splitOsm, emptyOsm, OSM_QUERY } from '../src/lib/sources.ts'
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '../src/data')
 const skipOsm = process.argv.includes('--no-osm')
@@ -19,6 +20,7 @@ const fi = process.argv.indexOf('--fountains') // optional local copy of the Zen
 const fountainsFile = fi > 0 ? process.argv[fi + 1] : null
 const si = process.argv.indexOf('--shelters') // optional local copy of the climate shelters GeoJSON
 const sheltersFile = si > 0 ? process.argv[si + 1] : null
+const POST_URL = `https://www.zaragoza.es/sede/servicio/equipamiento/basic/oficinas-de-correos.geojson?srsname=wgs84`
 const SHELTERS_URL = 'https://www.zaragoza.es/contenidos/datosabiertos/islas_calor/refugios_climaticos_wgs84v2.geojson'
 const today = new Date().toISOString().slice(0, 10)
 const ZGZ = 'https://www.zaragoza.es/sede/servicio/'
@@ -77,6 +79,11 @@ if (process.argv.includes('--shelters-only')) {
   process.exit(0)
 }
 
+if (process.argv.includes('--post-only')) {
+  write('post', 'city', must('post', postRows(await get(POST_URL))))
+  process.exit(0)
+}
+
 if (process.argv.includes('--hours-only')) {
   const [wifi, libs, civic, tgo, shelters] = await Promise.all([get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`), get(catalog('title==Biblioteca*')), get(catalog('title==Centro Cívico*')), get(TGO_URL, 'text'), getShelters()])
   const hours = await equipHours([...(wifi.result || []).map(r => r.internal_id).filter(Boolean), ...tgoIds(tgo)])
@@ -90,10 +97,11 @@ if (process.argv.includes('--hours-only')) {
 
 if (process.argv.includes('--transit-only')) { await writeTransit(OUT); process.exit(0) }
 
-const [wifi, libs, civic, bizi, racks, bus, fount, tgo, shelters] = await Promise.all([
+const [wifi, libs, civic, post, bizi, racks, bus, fount, tgo, shelters] = await Promise.all([
   get(`${ZGZ}punto-wifi.json?rows=500&srsname=wgs84`),
   get(catalog('title==Biblioteca*')),
   get(catalog('title==Centro Cívico*')),
+  get(POST_URL),
   // Bizi is the flakiest city endpoint (sometimes an empty body for hours): if it fails, keep the committed file instead of failing the whole refresh
   get(`${ZGZ}urbanismo-infraestructuras/estacion-bicicleta.json?rows=500&srsname=wgs84`).catch(e => { console.warn('bizi: source failed, keeping the committed bizi.json:', String(e)); return null }),
   getAll(`${ZGZ}urbanismo-infraestructuras/equipamiento/aparcamiento-bicicleta.json?srsname=wgs84`),
@@ -106,6 +114,7 @@ const hours = await equipHours([...(wifi.result || []).map(r => r.internal_id).f
 write('wifi', 'city', must('wifi', cityWifiRows(wifi, hours)))
 write('libraries', 'city', must('libraries', cityEquipRows(libs)))
 write('civic', 'city', must('civic', cityEquipRows(civic)))
+write('post', 'city', must('post', postRows(post)))
 if (bizi) write('bizi', 'city', must('bizi', biziRows(bizi)))
 write('racks', 'city', must('racks', rackRows(racks)))
 write('bus', 'city', must('bus', busRows(bus)))

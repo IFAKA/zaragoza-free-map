@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { equipSched, biziRows, busRows, dutyRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, splitOsm, type OsmElement } from './sources'
+import { equipSched, biziRows, busRows, dutyRows, rackRows, cityEquipRows, cityWifiRows, fountainRows, fountainStreet, parseTgo, postRows, splitOsm, type OsmElement } from './sources'
 
 describe('city normalisers', () => {
   it('wifi: swaps lon/lat and skips records without geometry', () => {
@@ -85,6 +85,13 @@ describe('parseTgo', () => {
   })
 })
 
+describe('postRows', () => {
+  it('reads the city GeoJSON: lon/lat swapped, "Oficina de Correos" shortened, link-only hours stay unknown', () => {
+    const rows = postRows({ features: [{ geometry: { coordinates: [-0.88, 41.65] }, properties: { id: '9', title: 'Oficina de Correos Sagasta ', streetAddress: 'Pº de Sagasta, 6', telephone: '976 1', lastUpdated: '2026-08-17T14:28:14Z', openingHours: '<ul><li><a href="https://www.correos.es/">Consultar horario</a></li></ul>' } }] })
+    expect(rows).toEqual([['9', 'Correos Sagasta', 'Pº de Sagasta, 6', '976 1', 41.65, -0.88, 2026, 0]])
+  })
+})
+
 describe('splitOsm', () => {
   const els: OsmElement[] = [
     { type: 'node', id: 1, lat: 41.65, lon: -0.88, tags: { amenity: 'drinking_water' } },
@@ -94,6 +101,8 @@ describe('splitOsm', () => {
     { type: 'node', id: 5, lat: 41.65, lon: -0.89, tags: { amenity: 'cafe', name: 'Café X', internet_access: 'wlan', 'internet_access:fee': 'no', 'internet_access:ssid': 'cafex' } },
     { type: 'node', id: 6, tags: { amenity: 'drinking_water' } },
     { type: 'node', id: 7, lat: 41.64, lon: -0.9, tags: { amenity: 'library', name: 'Biblioteca Universitaria' } },
+    { type: 'node', id: 8, lat: 41.65, lon: -0.88, tags: { amenity: 'post_box', collection_times: 'Mo-Fr 17:00' } },
+    { type: 'node', id: 9, lat: 41.65, lon: -0.88, tags: { amenity: 'post_box', access: 'private' } },
   ]
   it('splits by tag and drops private, fee and coordinate-less records', () => {
     const o = splitOsm(els)
@@ -103,5 +112,6 @@ describe('splitOsm', () => {
     expect(o.charge[0][0]).toBe('way/4')
     expect(o.wifi[0].slice(1, 7)).toEqual(['Café X', 41.65, -0.89, 'cafe', '', 'cafex'])
     expect(o.buz).toHaveLength(1)
+    expect(o.post).toEqual([['node/8', '', 41.65, -0.88, 'postbox', '', 'Mo-Fr 17:00']])
   })
 })

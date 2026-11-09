@@ -22,7 +22,7 @@ const without = (list: Item[], base: Item[], m: number) => list.filter(it => !ba
 const osmItems = (rows: OsmRow[], upd: string | undefined, f: (r: OsmRow) => Partial<Item> & Pick<Item, 'type'>): Item[] =>
   rows.map(r => ({ id: 'o' + r[0].replace('/', ''), part: 'osm' as const, name: r[1], lat: r[2], lon: r[3], osm: r[0], upd, ...f(r) }))
 
-const equip = (rows: EquipRow[], type: 'lib' | 'civic', upd?: string): Item[] =>
+const equip = (rows: EquipRow[], type: 'lib' | 'civic' | 'postoffice', upd?: string): Item[] =>
   rows.map(r => ({
     id: 'c' + r[0], part: 'city' as const, type, name: r[1], addr: r[2], phone: r[3], lat: r[4], lon: r[5], yr: r[6],
     building: true, upd, ...(r[7] ? { sched: r[7] } : {}),
@@ -42,6 +42,8 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
   const lib = equip(d.libraries.rows, 'lib', d.libraries.updated ?? undefined)
   const civic = equip(d.civic.rows, 'civic', d.civic.updated ?? undefined)
   // Shelters that are already civic centres: one marker (the civic one), tagged. The shelter layer lists all of the city's shelters.
+  const postOffices = equip(d.post.rows, 'postoffice', d.post.updated ?? undefined)
+  const postBoxes = osmItems(o.post, ou, r => ({ type: 'postbox', hours: r[5], always: !r[5], ...(r[6] ? { collect: r[6] } : {}) }))
   const shelterIds = new Set(d.shelters.rows.map(r => 'c' + r[0]))
   for (const it of civic) if (shelterIds.has(it.id)) it.shelter = true
   const shelters = equip(d.shelters.rows, 'civic', d.shelters.updated ?? undefined).map(it => ({ ...it, type: /^centro de convivencia/i.test(it.name) ? 'senior' : /^centro c/i.test(it.name) ? 'civic' : 'office', shelter: true }))
@@ -73,6 +75,8 @@ export function buildLayers(d: Data, now: Date = new Date()): Record<LayerId, La
     charge: L('charge', { icon: 'charge', color: 'var(--color-charge)', label: { en: 'Charge', es: 'Cargar' }, short: { en: 'Charge', es: 'Cargar' }, hint: { en: 'Charge your phone', es: 'Cargar el móvil' }, hours: true }, [...lib, ...civic, ...chargers], 8),
     wifi: L('wifi', { icon: 'wifi', color: 'var(--color-wifi)', label: { en: 'WiFi', es: 'WiFi' }, short: { en: 'WiFi', es: 'WiFi' }, hint: { en: 'WiFi hotspots', es: 'Puntos WiFi' }, hours: true, cats: ['muni', 'food', 'other'] }, [...wifiCity, ...without(wifiOsm, wifiCity, 30)]),
     libraries: L('libraries', { icon: 'library', color: 'var(--color-library)', label: { en: 'Libraries', es: 'Bibliotecas' }, short: { en: 'Libraries', es: 'Bibliotecas' }, hint: { en: 'Quiet places to sit and read', es: 'Sitios tranquilos para leer' }, hours: true }, lib, 8),
+    // offices first, so a box mapped on the same doorstep never hides an office; boxes are a partial OpenStreetMap list (see srcInfoPostbox)
+    post: L('post', { icon: 'mail', color: 'var(--color-post)', label: { en: 'Post', es: 'Correos' }, short: { en: 'Post', es: 'Correos' }, hint: { en: 'Post offices and mailboxes', es: 'Oficinas y buzones' }, hours: true }, [...postOffices, ...postBoxes], 5),
     // Bizi tab: stations (cat 'station', live counts joined at runtime) and the street bike racks (cat 'mine'). Racks are never merged into stations.
     bizi: {
       id: 'bizi', icon: 'bike', color: 'var(--color-bike)', label: { en: 'Bizi bikes', es: 'Bizi' }, short: { en: 'Bizi', es: 'Bizi' }, hint: { en: 'Take or return a bike', es: 'Coger o dejar una bici' }, hours: false, cats: ['take', 'return', 'mine'], catDefault: 'take',

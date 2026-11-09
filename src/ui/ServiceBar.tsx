@@ -8,7 +8,7 @@ import { ICONS } from './icons'
 import { tap } from './motion'
 
 export const GROUPS: { id: string; label: { en: string; es: string }; ids: LayerId[] }[] = [
-  { id: 'basics', label: { en: 'Basics', es: 'Básicos' }, ids: ['toilets', 'water', 'pharmacy', 'shelter'] },
+  { id: 'basics', label: { en: 'Basics', es: 'Básicos' }, ids: ['toilets', 'water', 'pharmacy', 'shelter', 'post'] },
   { id: 'transport', label: { en: 'Transport', es: 'Transporte' }, ids: ['bus', 'tram', 'bizi', 'cercanias'] },
   { id: 'connect', label: { en: 'Connect', es: 'Conectar' }, ids: ['wifi', 'charge', 'libraries'] },
 ]

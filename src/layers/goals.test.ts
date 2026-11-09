@@ -9,8 +9,8 @@ describe('services', () => {
     expect(new Set(SERVICES).size).toBe(SERVICES.length)
     expect([...SERVICES].sort()).toEqual(Object.keys(LAYERS).sort())
   })
-  it('the default order is Aseos, Agua, Farmacias, Refugio, Bus, Tranvía, Bizi, Cercanías, Wifi, Charge, Libraries', () => {
-    expect(serviceOrder(summer)).toEqual(['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries'])
+  it('the default order is Aseos, Agua, Farmacias, Refugio, Bus, Tranvía, Bizi, Cercanías, Wifi, Charge, Libraries, Post', () => {
+    expect(serviceOrder(summer)).toEqual(['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries', 'post'])
     expect(serviceOrder(spring)).toEqual(serviceOrder(summer))
   })
   it('shelter is 3rd from November to March and 4th otherwise', () => {

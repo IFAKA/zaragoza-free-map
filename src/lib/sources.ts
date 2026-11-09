@@ -58,6 +58,13 @@ export function cityEquipRows(j: CityResponse | undefined): EquipRow[] {
   }
   return out
 }
+/** Post offices (city GeoJSON, CRS84): same row shape as city equipment. The city's hours are mostly a link to Correos, which the reader leaves unknown (0). */
+export function postRows(j: ShelterCollection | undefined): EquipRow[] {
+  return cityEquipRows({ result: (j?.features || []).map(f => {
+    const p = f.properties || {}
+    return { id: p.id as number, title: String(p.title ?? '').replace(/^Oficina de Correos\s+/i, 'Correos '), calle: p.streetAddress as string, tel: p.telephone as string, lastUpdated: p.lastUpdated as string, horario: String(p.openingHours ?? ''), geometry: f.geometry }
+  }) })
+}
 /**
  * Climate shelters (city GeoJSON, CRS84): same row shape as city equipment, so the same hours reader applies.
  * The city's HTML has a few broken entities ("S&aacute,bado": comma instead of semicolon); they are repaired before reading.
@@ -212,14 +219,15 @@ export const OSM_QUERY = '[out:json][timeout:90];(' +
   `nwr["amenity"="drinking_water"]${BBOX};` +
   `nwr["amenity"="toilets"]["fee"!="yes"]${BBOX};` +
   `nwr["amenity"="device_charging_station"]${BBOX};` +
+  `nwr["amenity"="post_box"]${BBOX};` +
   `nwr["amenity"="library"]["operator"~"Universidad de Zaragoza|Unizar",i]${BBOX};` +
   `nwr["amenity"="library"]["name"~"Universidad de Zaragoza|Unizar|Universitaria",i]${BBOX};` +
   ');out center tags;'
 export interface OsmElement { type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }
-/** [osm ref like "node/12", name, lat, lon, type, opening_hours, extra]. extra: wifi = ssid, toilets = "c" when customers only. */
+/** [osm ref like "node/12", name, lat, lon, type, opening_hours, extra]. extra: wifi = ssid, toilets = "c" when customers only, mailbox = collection times (when the post is taken, not opening hours). */
 export type OsmRow = [string, string, number, number, string, string, string]
-export interface OsmRows { wifi: OsmRow[]; water: OsmRow[]; toilets: OsmRow[]; charge: OsmRow[]; buz: OsmRow[] }
-export const emptyOsm = (): OsmRows => ({ wifi: [], water: [], toilets: [], charge: [], buz: [] })
+export interface OsmRows { wifi: OsmRow[]; water: OsmRow[]; toilets: OsmRow[]; charge: OsmRow[]; post: OsmRow[]; buz: OsmRow[] }
+export const emptyOsm = (): OsmRows => ({ wifi: [], water: [], toilets: [], charge: [], post: [], buz: [] })
 
 export function splitOsm(elements: OsmElement[] | undefined): OsmRows {
   const out = emptyOsm()
@@ -235,6 +243,7 @@ export function splitOsm(elements: OsmElement[] | undefined): OsmRows {
     if (g.amenity === 'drinking_water' && g.access !== 'private' && g.drinking_water !== 'no') out.water.push(row('fountain'))
     if (g.amenity === 'toilets' && g.fee !== 'yes' && g.access !== 'private') out.toilets.push(row('toilet', g.opening_hours || '', g.access === 'customers' ? 'c' : ''))
     if (g.amenity === 'device_charging_station') out.charge.push(row('charger', g.opening_hours || ''))
+    if (g.amenity === 'post_box' && g.access !== 'private') out.post.push(row('postbox', g.opening_hours || '', g.collection_times || ''))
     if (g.amenity === 'library' && /universidad de zaragoza|unizar|universitaria/i.test((g.operator || '') + ' ' + (g.name || ''))) out.buz.push(row('library'))
   }
   return out

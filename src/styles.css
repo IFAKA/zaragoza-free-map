@@ -48,6 +48,7 @@
   --color-bus: #3B4BA6;            /* indigo: bus stops (7.7:1 with white) */
   --color-tram: #B04A00;           /* burnt orange: tram stops (5.4:1 with white) */
   --color-train: #0F6B5A;          /* teal green: Cercanías stations (6.4:1 with white) */
+  --color-post: #B8860B;           /* Correos yellow, darkened for the white glyph */
   --color-pharmacy: #B3261E;       /* deep red: pharmacies on duty (6.5:1 with white) */
   --color-me: #4B83B4;
 

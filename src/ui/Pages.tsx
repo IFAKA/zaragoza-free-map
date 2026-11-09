@@ -488,7 +488,7 @@ function NameButton({ name, open, onToggle }: { name: string; open: boolean; onT
 // ---------- the block with the nearest (or selected) place ----------
 /** The ONE answer of the peeking sheet: the place, how far, open or closed, and one Walk button. A tap on the card opens its details. Transit cards show the next times instead of buttons (their links go to the full-height area). */
 /** A place has a details page worth opening only when it holds more than the card shows (address, hours, phone, network, a note). Stops and stations do not. */
-const hasDetails = (layer: LayerConfig, it: RankedItem) => !!(it.addr || it.phone || it.ssid || it.hours || it.sched || it.note || it.cust || it.shelter || it.type === 'lib' || layer.id === 'wifi')
+const hasDetails = (layer: LayerConfig, it: RankedItem) => !!(it.addr || it.phone || it.ssid || it.hours || it.collect || it.sched || it.note || it.cust || it.shelter || it.type === 'lib' || layer.id === 'wifi')
 
 export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, routes, times, onLine, onDetails }: {
   layer: LayerConfig; item: RankedItem | null; isSelected: boolean; hasPos: boolean; origin: LatLon; cat: string
@@ -804,6 +804,8 @@ export function PlacePage({ layer, item, hasPos, onBack, locked, peekRef }: { la
           <Separator />
           {field('address', item.addr)}
           {field('hours', hours && <><span className="whitespace-pre-line">{hours.replace(/; /g, '\n')}</span><div className={sub}>{t('holidays')}</div></>)}
+          {field('collect', item.collect && <span className="whitespace-pre-line">{fmtHours(lang, item.collect).replace(/; /g, '\n')}</span>)}
+          {item.type === 'postbox' && <div className={sub}>{t('postPartial')}</div>}
           {field('phone', tel && <a className="font-bold text-brand-text" href={`tel:${tel}`}>{item.phone}</a>)}
           {field('ssid', item.ssid)}
           {layer.id === 'wifi' && <div className={sub}>{t('rangeEst')} {item.building ? t('rangeCity') : t('rangeOsm')} ({rangeMetres(item)} m).</div>}

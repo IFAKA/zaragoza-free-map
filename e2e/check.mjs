@@ -86,7 +86,7 @@ const fits = (p, sel) => p.evaluate(([s, TOUCH]) => {
 }, [sel, TOUCH])
 const markers = p => p.locator('.mk').count()
 // Every service is one chip in one scrolling row (tap scrolls it into view). LAYER_IDS is the default order.
-const LAYER_IDS = ['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries']
+const LAYER_IDS = ['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries', 'post']
 // the home header shows the service on show; the others are on the Services page behind the 2x2 button
 const go = async (p, id, how = 'click') => {
   if (!await p.getByTestId('tab-' + id).count()) { await p.getByTestId('services-open')[how](); await p.getByTestId('tab-' + id).waitFor(); await settle(p) }
@@ -136,6 +136,8 @@ todo.push(async () => {
   const pop = p.getByRole('button', { name: 'Why no numbers?' }).first()
   if (await pop.count()) { await pop.click(); await settle(p); ok(await p.getByText(/do not guess/).isVisible(), 'occupancy info popover opens'); await p.keyboard.press('Escape') }
   await p.screenshot({ path: out + '/m-libs.png' })
+  await go(p, 'post', 'click'); await settle(p)
+  ok(await markers(p) > 0, 'post renders (offices and mailboxes)')
   ok(await p.getByTestId('tab-racks').count() === 0, 'no separate racks tab')
   await go(p, 'bizi', 'click'); await settle(p)
   ok(await markers(p) > 0, 'bizi locations render')
@@ -315,13 +317,13 @@ todo.push(async () => { // the keyboard: focus is inside the view; Escape goes u
 const chipsFit = async p => {
   const head = await p.evaluate(TOUCH => { const b = document.querySelector('[data-testid=services-open]').getBoundingClientRect(); return b.height >= TOUCH && b.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth }, TOUCH)
   await p.getByTestId('services-open').tap(); await p.getByTestId('tab-bus').waitFor(); await settle(p)
-  const page = await p.evaluate(TOUCH => { const es = [...document.querySelectorAll('[data-testid^=tab-]')], r = es.map(e => e.getBoundingClientRect()); return es.length === 11 && r.every((b, i) => b.height >= TOUCH && b.left >= -0.5 && b.right <= innerWidth + 0.5 && es[i].scrollWidth <= es[i].clientWidth + 1) && r.every(b => b.bottom <= innerHeight) && document.documentElement.scrollWidth <= innerWidth }, TOUCH)
+  const page = await p.evaluate(TOUCH => { const es = [...document.querySelectorAll('[data-testid^=tab-]')], r = es.map(e => e.getBoundingClientRect()); return es.length === 12 && r.every((b, i) => b.height >= TOUCH && b.left >= -0.5 && b.right <= innerWidth + 0.5 && es[i].scrollWidth <= es[i].clientWidth + 1) && r.every(b => b.bottom <= innerHeight) && document.documentElement.scrollWidth <= innerWidth }, TOUCH)
   await p.getByTestId('back').tap(); await settle(p)
   return head && page
 }
 for (const [w, h, lang] of [[360, 740, 'es'], [360, 740, 'en'], [390, 844, 'es'], [390, 844, 'en']]) todo.push(async () => {
   const { ctx, p } = await open({ width: w, height: h }, true, {}, lang)
-  ok(await chipsFit(p), `${w}px ${lang}: header button is touch sized; the Services page shows all 11, touch sized, on screen, labels not clipped`)
+  ok(await chipsFit(p), `${w}px ${lang}: header button is touch sized; the Services page shows all 12, touch sized, on screen, labels not clipped`)
   await ctx.close()
 })
 const reload = async p => { await p.reload(); await ready(p) }
@@ -596,7 +598,7 @@ todo.push(async () => {
   ok(await p.title() === 'Zaragoza a mano · Lo que necesitas, cerca de ti', 'page title in Spanish')
   const man = await p.evaluate(() => fetch('/manifest.webmanifest').then(r => r.json()))
   ok(man.lang === 'es' && man.name === 'Zaragoza a mano', `manifest lang es (${man.lang}, ${man.name})`)
-  // the header shows Toilets (first visit); the Services page lists all 11 in three groups, in Spanish
+  // the header shows Toilets (first visit); the Services page lists all 12 in three groups, in Spanish
   ok(await p.locator('[data-testid^=goal-]').count() === 0 && await layerOn(p) !== 'water' && /^aseos/i.test(await p.getByTestId('nearest').innerText()), 'header: Toilets on show on a first visit (the card names the service)')
   ok(await chipsFit(p), 'header button and Services page fit')
   await p.getByTestId('services-open').tap(); await p.getByTestId('tab-bus').waitFor(); await settle(p)

@@ -14,9 +14,9 @@ describe('seasonOf (device date)', () => {
   })
   it('every layer is listed once, in chip order', () => {
     const warm = layerOrder(new Date('2026-12-01T12:00:00')), hot = layerOrder(new Date('2026-07-01T12:00:00'))
-    expect(hot).toEqual(['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries'])
-    expect(warm).toEqual(['toilets', 'water', 'shelter', 'pharmacy', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries'])
-    for (const o of [warm, hot]) { expect(new Set(o).size).toBe(11); expect(o).not.toContain('racks') }
+    expect(hot).toEqual(['toilets', 'water', 'pharmacy', 'shelter', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries', 'post'])
+    expect(warm).toEqual(['toilets', 'water', 'shelter', 'pharmacy', 'bus', 'tram', 'bizi', 'cercanias', 'wifi', 'charge', 'libraries', 'post'])
+    for (const o of [warm, hot]) { expect(new Set(o).size).toBe(12); expect(o).not.toContain('racks') }
   })
   it('a first-time visitor always lands on toilets, in any season', () => {
     expect(defaultLayer()).toBe('toilets')

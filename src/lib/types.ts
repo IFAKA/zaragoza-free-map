@@ -1,10 +1,10 @@
 import type { CitySched } from './cityHours'
 
-export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'shelter' | 'bus' | 'pharmacy' | 'tram' | 'cercanias'
+export type LayerId = 'water' | 'toilets' | 'charge' | 'wifi' | 'libraries' | 'bizi' | 'shelter' | 'bus' | 'pharmacy' | 'tram' | 'cercanias' | 'post'
 /** Where a record comes from: the city's open data, OpenStreetMap, or the toiletsgo community list. */
 export type PartKey = 'city' | 'osm' | 'tgo'
 export type LatLon = [number, number]
-export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter' | 'bus' | 'pharmacy' | 'tram' | 'train'
+export type IconKey = 'drop' | 'toilet' | 'charge' | 'wifi' | 'library' | 'bike' | 'lock' | 'shelter' | 'bus' | 'pharmacy' | 'tram' | 'train' | 'mail'
 
 export interface Item {
   id: string
@@ -32,6 +32,8 @@ export interface Item {
   note?: string
   /** University of Zaragoza library (has a live occupancy page). */
   buz?: boolean
+  /** Mailbox: when the post is collected (OpenStreetMap collection_times), not opening hours. */
+  collect?: string
   /** Always available (e.g. an outdoor charger with no opening hours): never hidden by "Open now". */
   always?: boolean
   /** Bus stop: comma list of lines ("58" or "34,N1"). */

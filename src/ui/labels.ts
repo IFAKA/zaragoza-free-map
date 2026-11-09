@@ -9,7 +9,7 @@ export function srcLabel(t: TF, it: Item): string {
   if (it.part === 'tgo') return [t('srcTgo'), snap, t('notVerified')].filter(Boolean).join(', ')
   return [t('srcCity'), it.yr ? String(it.yr) : snap].filter(Boolean).join(', ')
 }
-export const srcExplain = (t: TF, it: Item): string => (it.part === 'osm' ? t('srcInfoOsm') : it.part === 'tgo' ? t('srcInfoTgo') : t('srcInfoCity'))
+export const srcExplain = (t: TF, it: Item): string => (it.type === 'postbox' ? t('srcInfoPostbox') : it.part === 'osm' ? t('srcInfoOsm') : it.part === 'tgo' ? t('srcInfoTgo') : t('srcInfoCity'))
 /** One tap to tell the map's owners something is wrong: opens the OpenStreetMap note form at this spot. */
 export const reportUrl = (it: Item) => `https://www.openstreetmap.org/note/new#map=19/${it.lat}/${it.lon}`
 /** The bus company's live times page for a city stop (third-party; it sends no CORS header, so the app links to it and never fetches it). */
