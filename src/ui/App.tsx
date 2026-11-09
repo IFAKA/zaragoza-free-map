@@ -11,7 +11,7 @@ import { installEnv, installWay, promptInstall } from '../lib/install'
 import { rankOrAll, unavailable } from '../lib/rank'
 import { DATA } from '../data'
 import { loadBusRoutes, loadCercaniasTimes, type CercaniasTimes } from '../data/lazy'
-import { decodePolyline, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
+import { decodePolyline, lineKey, pickDirection, stopIndex, type BusRoutes } from '../lib/transit'
 import { CENTER, dist } from '../lib/geo'
 import type { LatLon, LayerId, RankedItem } from '../lib/types'
 import { LAYERS, defaultLayer, loadHeavyLayers } from '../layers'
@@ -367,10 +367,10 @@ export function App() {
     if (it) pos ? flyTo([it.lat, it.lon], 17, { fitUser: pos }) : flyTo([it.lat, it.lon], 18)
   }
   // a line chip on the stop card: draw that line's route, in the direction this stop is on
-  const pickLine = (line: string) => {
-    if (!routes || !focus) return
+  const pickLine = (name: string) => {
+    const line = lineKey(routes, name)
+    if (!routes || !focus || !line) return
     const ln = routes.lines[line]
-    if (!ln) return
     track('bus-line', line)
     setLineSel({ line, dir: pickDirection(ln, routes.stops, focus.stop, [focus.lat, focus.lon]).dir, anchor: focus.id })
     if (!desktop) setLevel(PEEK)

@@ -15,7 +15,7 @@ import { installEnv, installWay, promptInstall } from '../lib/install'
 import { loadRailAlerts, type RailAlert } from '../lib/alerts'
 import detours from '../data/detours.json'
 import routecheck from '../data/routecheck.json'
-import { nextDepartures, type BusRoutes } from '../lib/transit'
+import { lineKey, nextDepartures, type BusRoutes } from '../lib/transit'
 import { nowMadrid } from '../lib/hours'
 import type { CercaniasTimes } from '../data/lazy'
 import type { Key, Lang } from '../lib/i18n'
@@ -529,7 +529,7 @@ export function NearestBlock({ layer, item, isSelected, hasPos, origin, cat, rou
       {item.type === 'lib' && (item.buz ? <div className="mt-0.5"><Occupancy item={item} /></div> : <More><div className="px-4 pt-3"><Occupancy item={item} /></div></More>)}
       {item.type === 'bizi' && biziLine(t, item) && <div className="mt-0.5 font-semibold" data-testid="bizi-counts"><Tick>{biziLine(t, item, true)}</Tick></div>}
       {item.type === 'pharmacy' && <PharmacyInfo item={item} />}
-      {item.type === 'bus' ? <BusActions item={item} origin={origin} fav={favBtn} onLine={onLine} lineOk={line => !!routes?.lines[line]} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} fav={favBtn} /> : <Actions fav={favBtn} />}
+      {item.type === 'bus' ? <BusActions item={item} origin={origin} fav={favBtn} onLine={onLine} lineOk={line => !!lineKey(routes, line)} /> : item.type === 'tram' ? <TramActions item={item} origin={origin} fav={favBtn} /> : item.type === 'train' ? <TrainActions item={item} origin={origin} times={times} fav={favBtn} /> : item.type === 'pharmacy' ? <PharmacyActions item={item} fav={favBtn} /> : <Actions fav={favBtn} />}
     </m.section>
   )
 }

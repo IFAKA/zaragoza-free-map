@@ -105,6 +105,9 @@ export interface BusDirection {
 export interface BusLine { n: string; d: BusDirection[] }
 export interface BusRoutes { src: string; updated: string | null; stops: Record<string, [string, number, number]>; lines: Record<string, BusLine> }
 
+/** The key of a line in the routes file for a name from the live API: the city writes circulars "CI4" there and "Ci4" in its route data. */
+export const lineKey = (r: BusRoutes | null | undefined, name: string): string | undefined => (r?.lines[name] ? name : r ? Object.keys(r.lines).find(k => k.toLowerCase() === name.toLowerCase()) : undefined)
+
 /** Index of the stop in an ordered list of post numbers: the exact post, else the nearest stop within `tol` metres (80), else -1. */
 export function stopIndex(order: number[], stops: BusRoutes['stops'], post: string | undefined, at: LatLon, tol = 80): number {
   const i = post ? order.indexOf(+post) : -1

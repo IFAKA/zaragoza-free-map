@@ -3,7 +3,7 @@ import busroutes from '../data/busroutes.json'
 import cercanias from '../data/cercanias.json'
 import times from '../data/cercanias-times.json'
 import tram from '../data/tram.json'
-import { alongPath, chipSplit, dayType, decodePolyline, encodePolyline, nextDepartures, orderAlong, pickDirection, pointAt, simplify, stopIndex, type BusRoutes, type Timetable } from './transit'
+import { alongPath, chipSplit, dayType, decodePolyline, lineKey, encodePolyline, nextDepartures, orderAlong, pickDirection, pointAt, simplify, stopIndex, type BusRoutes, type Timetable } from './transit'
 import type { LatLon } from './types'
 
 describe('polyline', () => {
@@ -152,4 +152,10 @@ describe('spliceDetour', () => {
   it('does nothing when the stops are not on the route', () => {
     expect(_splice(route, [41.7, -0.91], [41.7, -0.87], [[41.7, -0.91], [41.7, -0.87]])).toBeNull()
   })
+})
+
+describe('lineKey', () => {
+  const r = { src: '', updated: null, stops: {}, lines: { Ci4: { n: 'Circular 4', d: [] }, '24': { n: '24', d: [] } } } as BusRoutes
+  it('finds a circular the live API spells in capitals', () => { expect(lineKey(r, 'CI4')).toBe('Ci4') })
+  it('keeps an exact name and returns nothing for an unknown line', () => { expect(lineKey(r, '24')).toBe('24'); expect(lineKey(r, 'X9')).toBeUndefined(); expect(lineKey(null, '24')).toBeUndefined() })
 })
