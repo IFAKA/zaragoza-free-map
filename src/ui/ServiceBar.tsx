@@ -57,7 +57,7 @@ export function ServiceGroups({ layer, onPick }: { layer: LayerId; onPick: (id: 
               const J = ICONS[LAYERS[id].icon], on = id === layer
               return (
                 <m.button {...tap} key={id} type="button" onClick={() => onPick(id)} aria-pressed={on} data-testid={`tab-${id}`}
-                  className={'flex min-h-[44px] min-w-0 grow items-center justify-center gap-1.5 rounded-btn border-0 px-2.5 text-[0.87em] font-semibold ' + (on ? 'bg-brand text-on-brand hov:bg-brand-pressed' : 'bg-surface text-ink hov:bg-line') + ' [transition:background-color_var(--dur-press)]'}>
+                  className={'flex min-h-[44px] min-w-0 items-center justify-center gap-1.5 rounded-btn border-0 px-2.5 text-[0.87em] font-semibold ' + (on ? 'bg-brand text-on-brand hov:bg-brand-pressed' : 'bg-surface text-ink hov:bg-line') + ' [transition:background-color_var(--dur-press)]'}>
                   <J size="1.3em" className="shrink-0" weight={on ? 'fill' : 'regular'} aria-hidden /><span className="min-w-0 truncate">{LAYERS[id].short[lang]}</span>
                 </m.button>
               )
